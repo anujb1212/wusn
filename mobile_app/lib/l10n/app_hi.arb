@@ -1,0 +1,21 @@
+{
+  "appTitle": "मिट्टी निगरानी",
+  "dashboard": "डैशबोर्ड",
+  "node": "नोड",
+  "moisture": "मिट्टी की नमी",
+  "temperature": "तापमान",
+  "humidity": "आर्द्रता",
+  "goodCondition": "अच्छी स्थिति",
+  "needsWater": "पानी चाहिए",
+  "tooWet": "बहुत गीला",
+  "recommendations": "सुझाव",
+  "waterNow": "अभी पानी दें। मिट्टी सूखी है।",
+  "dontWater": "आज पानी न दें। मिट्टी में पर्याप्त नमी है।",
+  "checkDrainage": "जल निकासी जांचें। मिट्टी बहुत गीली है।",
+  "idealTemp": "तापमान फसल के लिए सही है।",
+  "lastUpdated": "अंतिम अपडेट",
+  "settings": "सेटिंग्स",
+  "language": "भाषा",
+  "refresh": "रीफ्रेश करें"
+}
+
