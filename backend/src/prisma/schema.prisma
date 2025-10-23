@@ -1,0 +1,17 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model SensorData {
+  id          Int      @id @default(autoincrement())
+  nodeId      Int
+  cropType    String
+  moisture    Int
+  temperature Int
+  timestamp   DateTime @default(now())
+}
