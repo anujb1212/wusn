@@ -1,40 +1,59 @@
 import 'package:flutter/foundation.dart';
 import '../models/sensor_data.dart';
 import '../services/api_service.dart';
-import '../services/websocket_service.dart';
+import '../services/mqtt_service.dart';
 
 class SensorProvider extends ChangeNotifier {
   List<SensorData> _sensors = [];
   bool _isLoading = false;
   String _errorMessage = '';
-  final WebSocketService _wsService = WebSocketService();
+  late MqttService _mqttService;
+  bool _isMqttConnected = false;
 
   List<SensorData> get sensors => _sensors;
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
-  bool get isWebSocketConnected => _wsService.isConnected;
+  bool get isWebSocketConnected => _isMqttConnected;  // Keep name for compatibility
 
   SensorProvider() {
-    _initWebSocket();
+    _initMqtt();
     fetchData();
   }
 
-  void _initWebSocket() {
-    _wsService.connect();
-    _wsService.stream.listen((sensorData) {
-      _updateSensorData(sensorData);
-    });
+  void _initMqtt() async {
+    _mqttService = MqttService(
+      onMessageReceived: _handleMqttMessage,
+    );
+
+    final connected = await _mqttService.connect();
+    _isMqttConnected = connected;
+    notifyListeners();
   }
 
-  void _updateSensorData(SensorData newData) {
-    final index = _sensors.indexWhere((sensor) => sensor.id == newData.id);
-    if (index != -1) {
-      _sensors[index] = newData;
-    } else {
-      _sensors.add(newData);
+  void _handleMqttMessage(Map<String, dynamic> data) {
+    try {
+      final sensorData = SensorData.fromJson(data);
+      
+      // Update or add
+      final index = _sensors.indexWhere((s) => s.nodeId == sensorData.nodeId);
+      if (index != -1) {
+        _sensors[index] = sensorData;
+      } else {
+        _sensors.insert(0, sensorData);
+      }
+      
+      // Sort by nodeId
+      _sensors.sort((a, b) => a.nodeId.compareTo(b.nodeId));
+      
+      // Keep max 20 items
+      if (_sensors.length > 20) {
+        _sensors = _sensors.sublist(0, 20);
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      print('Error handling MQTT message: $e');
     }
-    _sensors.sort((a, b) => a.id.compareTo(b.id));
-    notifyListeners();
   }
 
   Future<void> fetchData() async {
@@ -55,7 +74,7 @@ class SensorProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _wsService.dispose();
+    _mqttService.disconnect();
     super.dispose();
   }
 }
