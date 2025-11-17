@@ -1,10 +1,16 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AppConfig {
-  static String get backendUrl => dotenv.env['BACKEND_URL'] ?? 'http://localhost:3000';
-  static String get wsUrl => dotenv.env['WS_URL'] ?? 'ws://localhost:3000';
+  static String get backendUrl => 
+      dotenv.env['BACKEND_URL'] ?? 'http://localhost:3000';
+  
+  static String get mqttBroker => 
+      dotenv.env['MQTT_BROKER'] ?? 'localhost';
+  
+  static int get mqttPort => 
+      int.tryParse(dotenv.env['MQTT_PORT'] ?? '1883') ?? 1883;
   
   static const String appTitle = 'Soil Monitor';
-  static const Duration wsReconnectDelay = Duration(seconds: 5);
   static const Duration httpTimeout = Duration(seconds: 10);
+  static const Duration mqttReconnectDelay = Duration(seconds: 5);
 }

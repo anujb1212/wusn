@@ -7,11 +7,73 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model SensorData {
-  id          Int      @id @default(autoincrement())
+model Node {
+  id          Int             @id @default(autoincrement())
+  nodeId      Int             @unique
+  location    String?
+  burialDepth Int?
+  installDate DateTime        @default(now())
+  lastSeen    DateTime        @default(now())
+  isActive    Boolean         @default(true)
+  readings    SensorReading[]
+
+  @@index([nodeId])
+}
+
+model SensorReading {
+  id          Int       @id @default(autoincrement())
   nodeId      Int
-  cropType    String
   moisture    Int
   temperature Int
-  timestamp   DateTime @default(now())
+  rssi        Int?
+  timestamp   DateTime  @default(now())
+  node        Node      @relation(fields: [nodeId], references: [nodeId])
+  analysis    Analysis?
+
+  @@index([nodeId, timestamp])
+  @@index([timestamp])
+}
+
+model Analysis {
+  id                  Int                  @id @default(autoincrement())
+  readingId           Int                  @unique
+  timestamp           DateTime             @default(now())
+  fuzzyDryScore       Int
+  fuzzyOptimalScore   Int
+  fuzzyWetScore       Int
+  soilStatus          String
+  confidence          Int
+  irrigationAdvice    String
+  urgency             String
+  reading             SensorReading        @relation(fields: [readingId], references: [id])
+  cropRecommendations CropRecommendation[]
+
+  @@index([readingId])
+  @@index([timestamp])
+}
+
+model CropRecommendation {
+  id          Int      @id @default(autoincrement())
+  analysisId  Int
+  cropName    String
+  suitability Int
+  reason      String
+  rank        Int
+  analysis    Analysis @relation(fields: [analysisId], references: [id])
+
+  @@index([analysisId])
+  @@index([cropName])
+}
+
+model Alert {
+  id           Int      @id @default(autoincrement())
+  nodeId       Int
+  readingId    Int
+  alertType    String
+  message      String
+  sentAt       DateTime @default(now())
+  acknowledged Boolean  @default(false)
+
+  @@index([nodeId, sentAt])
+  @@index([acknowledged])
 }
