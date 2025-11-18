@@ -1,92 +1,123 @@
-const cropRequirements = {
-    wheat: {
-        moistureMin: 350,
-        moistureMax: 700,
-        moistureIdeal: 500,
-        tempMin: 15,
-        tempMax: 25,
-        tempIdeal: 20
-    },
-    rice: {
-        moistureMin: 600,
-        moistureMax: 900,
-        moistureIdeal: 750,
-        tempMin: 20,
-        tempMax: 35,
-        tempIdeal: 28
-    },
-    vegetables: {
-        moistureMin: 400,
-        moistureMax: 750,
-        moistureIdeal: 575,
-        tempMin: 18,
-        tempMax: 30,
-        tempIdeal: 24
-    },
-    bajra: {
-        moistureMin: 250,
-        moistureMax: 600,
-        moistureIdeal: 425,
-        tempMin: 25,
-        tempMax: 40,
-        tempIdeal: 32
-    }
-};
-function calculateSuitability(moisture, temperature, cropName) {
-    const req = cropRequirements[cropName];
-    let moistureScore = 0;
-    if (moisture >= req.moistureMin && moisture <= req.moistureMax) {
-        const distanceFromIdeal = Math.abs(moisture - req.moistureIdeal);
-        const maxDistance = (req.moistureMax - req.moistureMin) / 2;
-        moistureScore = 50 * (1 - distanceFromIdeal / maxDistance);
-    }
-    let tempScore = 0;
-    if (temperature >= req.tempMin && temperature <= req.tempMax) {
-        const distanceFromIdeal = Math.abs(temperature - req.tempIdeal);
-        const maxDistance = (req.tempMax - req.tempMin) / 2;
-        tempScore = 50 * (1 - distanceFromIdeal / maxDistance);
-    }
-    return Math.max(0, Math.round(moistureScore + tempScore));
-}
-export function recommendCrop(moisture, temperature) {
-    const cropNames = ['wheat', 'rice', 'vegetables', 'bajra'];
-    const crops = cropNames.map(cropName => {
-        const suitability = calculateSuitability(moisture, temperature, cropName);
+import { datasetService } from './datasetService.js';
+/**
+ * Generate crop recommendations using ICAR dataset + fuzzy logic
+ */
+export function recommendCrop(moisture, temperature, fuzzyResult) {
+    // Get seasonal crops for North India
+    const seasonalCrops = datasetService.getSeasonalCrops(temperature);
+    // Calculate suitability for each crop
+    const crops = seasonalCrops.map(cropName => {
+        // Dataset-based suitability score
+        const datasetScore = datasetService.calculateCropSuitability(moisture, temperature, cropName);
+        // If fuzzy logic result available, combine scores
+        let finalScore = datasetScore;
+        if (fuzzyResult) {
+            const fuzzyWeight = 0.4; // Fuzzy logic weight
+            const datasetWeight = 0.6; // ICAR dataset weight
+            finalScore = Math.round((fuzzyResult.confidence * fuzzyWeight) +
+                (datasetScore * datasetWeight));
+        }
+        // Generate reason based on score
         let reason;
-        if (suitability > 80)
-            reason = 'Excellent conditions';
-        else if (suitability > 60)
-            reason = 'Good conditions';
-        else if (suitability > 40)
-            reason = 'Moderate conditions';
-        else
-            reason = 'Poor conditions';
-        return { cropName, suitability, reason };
+        if (finalScore > 80) {
+            reason = 'Excellent: Ideal conditions from ICAR data';
+        }
+        else if (finalScore > 60) {
+            reason = 'Good: Suitable conditions for cultivation';
+        }
+        else if (finalScore > 40) {
+            reason = 'Moderate: Acceptable with proper management';
+        }
+        else if (finalScore > 20) {
+            reason = 'Poor: Sub-optimal conditions, risks involved';
+        }
+        else {
+            reason = 'Not Recommended: Conditions unfavorable';
+        }
+        return {
+            cropName,
+            suitability: finalScore,
+            reason
+        };
     });
+    // Sort by suitability score (highest first)
     crops.sort((a, b) => b.suitability - a.suitability);
     const bestCrop = crops[0];
     const secondBest = crops[1];
+    const thirdBest = crops[2];
+    // Generate summary
     let summary;
+    const season = temperature < 25 ? 'Rabi (Winter)' : 'Kharif (Monsoon)';
     if (bestCrop.suitability > 80) {
-        summary = `Highly suitable for ${bestCrop.cropName}. `;
+        summary = `${season} season: Highly suitable for ${bestCrop.cropName}. `;
     }
     else if (bestCrop.suitability > 60) {
-        summary = `Suitable for ${bestCrop.cropName}. `;
+        summary = `${season} season: Suitable for ${bestCrop.cropName}. `;
     }
     else if (bestCrop.suitability > 40) {
-        summary = `Marginal for ${bestCrop.cropName}. `;
+        summary = `${season} season: Marginal conditions for ${bestCrop.cropName}. `;
     }
     else {
-        summary = `Poor conditions for most crops. Consider soil improvement. `;
+        summary = `${season} season: Poor conditions. Consider soil improvement. `;
     }
+    // Add alternatives
+    const alternatives = [];
     if (secondBest && secondBest.suitability > 60) {
-        summary += `${secondBest.cropName} is also a good alternative.`;
+        alternatives.push(secondBest.cropName);
+    }
+    if (thirdBest && thirdBest.suitability > 60) {
+        alternatives.push(thirdBest.cropName);
+    }
+    if (alternatives.length > 0) {
+        summary += `Alternatives: ${alternatives.join(', ')}.`;
     }
     return {
         bestCrop: bestCrop.cropName,
         confidence: bestCrop.suitability,
-        allCrops: crops,
+        allCrops: crops.slice(0, 5), // Top 5 crops
         summary
+    };
+}
+/**
+ * Validate conditions for North India (RWCS region)
+ */
+export function validateNorthIndiaConditions(cropName, temperature, moisture) {
+    const warnings = [];
+    // Rice-Wheat Cropping System (RWCS) specific rules
+    if (cropName === 'rice') {
+        if (temperature < 20) {
+            warnings.push('Rice unsuitable below 20°C in North India');
+        }
+        if (moisture < 700) {
+            warnings.push('Rice requires high moisture (700-900 SMU) in RWCS region');
+        }
+    }
+    if (cropName === 'wheat') {
+        if (temperature > 30) {
+            warnings.push('High temperature stress for wheat (optimal 15-25°C)');
+        }
+        if (temperature < 10) {
+            warnings.push('Wheat growth stunted below 10°C');
+        }
+        if (moisture > 700) {
+            warnings.push('Excess moisture may cause wheat root rot');
+        }
+    }
+    if (cropName === 'maize') {
+        if (temperature < 18) {
+            warnings.push('Maize germination poor below 18°C');
+        }
+    }
+    // General extreme warnings
+    if (temperature > 40) {
+        warnings.push('Extreme heat stress - all crops at risk');
+    }
+    if (temperature < 5) {
+        warnings.push('Freezing risk - protect crops immediately');
+    }
+    return {
+        valid: warnings.length === 0,
+        warnings
     };
 }
 //# sourceMappingURL=cropRecommendationService.js.map

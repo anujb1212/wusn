@@ -4,7 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import cors from "cors";
 import { createServer } from "http";
 import { analyzeSoilConditions } from "./fuzzyService.js";
-import { recommendCrop } from "./cropRecommendationService.js";
+import { recommendCrop, validateNorthIndiaConditions } from "./cropRecommendationService.js";
 import { initMqtt, publishToDashboard } from "./mqttService.js";
 
 const prisma = new PrismaClient();
@@ -71,9 +71,19 @@ async function processSensorData(payload: SensorPayload) {
     const fuzzyResult = analyzeSoilConditions(moisture, temperature);
     console.log(`🧮 Fuzzy Analysis: ${fuzzyResult.recommendation} (${fuzzyResult.confidence}%)`);
 
-    // Step 4: Run crop recommendation
-    const cropRecommendation = recommendCrop(moisture, temperature);
+    // Step 4: Run crop recommendation (DATASET INTEGRATED)
+    const cropRecommendation = recommendCrop(moisture, temperature, fuzzyResult);
     console.log(`🌾 Best Crop: ${cropRecommendation.bestCrop} (${cropRecommendation.confidence}%)`);
+
+    // Step 4.5: Validate for North India RWCS region
+    const validation = validateNorthIndiaConditions(
+        cropRecommendation.bestCrop,
+        temperature,
+        moisture
+    );
+    if (!validation.valid) {
+        console.log(`⚠️  North India Warnings:`, validation.warnings);
+    }
 
     // Step 5: Save analysis results
     const analysis = await prisma.analysis.create({
@@ -91,7 +101,7 @@ async function processSensorData(payload: SensorPayload) {
     });
     console.log(`✅ Saved analysis ID: ${analysis.id}`);
 
-    // Step 6: Save crop recommendations
+    // Step 6: Save crop recommendations (Top 5 from dataset)
     const cropPromises = cropRecommendation.allCrops.map((crop, index) =>
         prisma.cropRecommendation.create({
             data: {
@@ -121,6 +131,19 @@ async function processSensorData(payload: SensorPayload) {
         console.log(`🚨 Created alert for Node ${nodeId}`);
     }
 
+    // Step 7.5: Create alert for North India validation warnings
+    if (!validation.valid && validation.warnings.length > 0) {
+        await prisma.alert.create({
+            data: {
+                nodeId,
+                readingId: reading.id,
+                alertType: 'warning',
+                message: `Regional Warning: ${validation.warnings.join('; ')}`
+            }
+        });
+        console.log(`⚠️  Created regional warning alert`);
+    }
+
     // Step 8: Publish to dashboard via MQTT
     const dashboardUpdate = {
         nodeId,
@@ -134,8 +157,9 @@ async function processSensorData(payload: SensorPayload) {
         fuzzyScores: fuzzyResult.fuzzyScores,
         bestCrop: cropRecommendation.bestCrop,
         cropConfidence: cropRecommendation.confidence,
-        alternativeCrops: cropRecommendation.allCrops.slice(1, 3),
-        summary: cropRecommendation.summary
+        alternativeCrops: cropRecommendation.allCrops.slice(1, 4), // Top 3 alternatives
+        summary: cropRecommendation.summary,
+        regionalWarnings: validation.warnings
     };
 
     publishToDashboard(dashboardUpdate);
@@ -184,7 +208,7 @@ app.get("/api/data/latest", async (req: Request, res: Response): Promise<any> =>
                     include: {
                         cropRecommendations: {
                             orderBy: { rank: "asc" },
-                            take: 3
+                            take: 5  // Top 5 crops
                         }
                     }
                 }
@@ -222,6 +246,33 @@ app.get("/api/alerts/active", async (req: Request, res: Response): Promise<any> 
     }
 });
 
+/**
+ * GET crop dataset info (for testing)
+ */
+app.get("/api/crops/info", async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { datasetService } = await import('./datasetService.js');
+
+        const allCrops = datasetService.getAllCrops();
+        const rabiCrops = datasetService.getSeasonalCrops(20);  // Winter
+        const kharifCrops = datasetService.getSeasonalCrops(30); // Summer
+
+        return res.json({
+            totalCrops: allCrops.length,
+            allCrops,
+            rabiSeasonCrops: rabiCrops,
+            kharifSeasonCrops: kharifCrops,
+            datasetLoaded: true
+        });
+    } catch (error) {
+        console.error("❌ Error fetching crop info:", error);
+        return res.status(500).json({
+            status: "error",
+            message: "Dataset not loaded"
+        });
+    }
+});
+
 // Create HTTP server
 const server = createServer(app);
 
@@ -230,6 +281,7 @@ server.listen(PORT, () => {
     console.log(`\n✅ Server running on port ${PORT}`);
     console.log(`   HTTP API: http://localhost:${PORT}`);
     console.log(`   MQTT Broker: mqtt://localhost:1883`);
+    console.log(`   Dataset: ICAR Crop Recommendation (22 crops)`);
     console.log(`\n📡 Waiting for sensor data...\n`);
 });
 
