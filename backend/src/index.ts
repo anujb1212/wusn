@@ -170,6 +170,165 @@ async function processSensorData(payload: SensorPayload) {
 }
 
 /**
+ * NEW: POST endpoint for aggregated multi-node data
+ */
+interface AggregatedPayload {
+    timestamp: string;
+    nodes: Array<{
+        nodeId: number;
+        moisture: number;
+        temperature: number;
+        rssi: number;
+        batteryLevel: number;
+        depth: number;
+        distance: number;
+    }>;
+}
+
+app.post("/api/sensor/aggregated", async (req: Request, res: Response): Promise<any> => {
+    try {
+        const payload: AggregatedPayload = req.body;
+
+        if (!payload.nodes || payload.nodes.length === 0) {
+            return res.status(400).json({
+                status: "error",
+                message: "No nodes data provided"
+            });
+        }
+
+        console.log(`\nReceived aggregated data from ${payload.nodes.length} nodes`);
+
+        // Import node selection service
+        const { selectBestNode, filterBlockedNodes } = await import('./nodeSelectionService.js');
+
+        // Filter out blocked nodes
+        const { activeNodes, blockedNodes } = filterBlockedNodes(payload.nodes);
+
+        console.log(`Active nodes: ${activeNodes.length}, Blocked nodes: ${blockedNodes.length}`);
+
+        if (activeNodes.length === 0) {
+            return res.status(400).json({
+                status: "error",
+                message: "All nodes are blocked (low battery or weak signal)"
+            });
+        }
+
+        // Select best node
+        const selection = selectBestNode(activeNodes);
+        const bestNode = selection.bestNode;
+
+        console.log(`Selected Node ${bestNode.nodeId}: ${selection.reason}`);
+
+        // Save aggregated reading
+        const aggregatedReading = await prisma.aggregatedReading.create({
+            data: {
+                timestamp: new Date(payload.timestamp),
+                selectedNodeId: bestNode.nodeId,
+                allNodesData: payload.nodes as any,
+                selectionScore: selection.score,
+                selectionReason: selection.reason
+            }
+        });
+
+        // Run fuzzy logic on best node data
+        const fuzzyResult = analyzeSoilConditions(bestNode.moisture, bestNode.temperature);
+        console.log(`Fuzzy Analysis: ${fuzzyResult.recommendation} (${fuzzyResult.confidence}%)`);
+
+        // Run crop recommendation
+        const cropRecommendation = recommendCrop(bestNode.moisture, bestNode.temperature, fuzzyResult);
+        console.log(`Best Crop: ${cropRecommendation.bestCrop} (${cropRecommendation.confidence}%)`);
+
+        // Validate for North India
+        const validation = validateNorthIndiaConditions(
+            cropRecommendation.bestCrop,
+            bestNode.temperature,
+            bestNode.moisture
+        );
+
+        // Save aggregated analysis
+        const aggregatedAnalysis = await prisma.aggregatedAnalysis.create({
+            data: {
+                aggregatedReadingId: aggregatedReading.id,
+                fuzzyDryScore: fuzzyResult.fuzzyScores.dry,
+                fuzzyOptimalScore: fuzzyResult.fuzzyScores.optimal,
+                fuzzyWetScore: fuzzyResult.fuzzyScores.wet,
+                soilStatus: fuzzyResult.recommendation,
+                confidence: fuzzyResult.confidence,
+                irrigationAdvice: fuzzyResult.irrigationAdvice,
+                urgency: fuzzyResult.confidence > 80 ? 'critical' :
+                    fuzzyResult.confidence > 50 ? 'moderate' : 'low'
+            }
+        });
+
+        // Save crop recommendations
+        const cropPromises = cropRecommendation.allCrops.map((crop, index) =>
+            prisma.cropRecommendation.create({
+                data: {
+                    aggregatedAnalysisId: aggregatedAnalysis.id,
+                    cropName: crop.cropName,
+                    suitability: crop.suitability,
+                    reason: crop.reason,
+                    rank: index + 1
+                }
+            })
+        );
+        await Promise.all(cropPromises);
+
+        // Create alert if critical
+        if (fuzzyResult.confidence > 80 && fuzzyResult.recommendation !== 'optimal') {
+            await prisma.alert.create({
+                data: {
+                    nodeId: bestNode.nodeId,
+                    readingId: 0,
+                    alertType: fuzzyResult.recommendation === 'needs_water'
+                        ? 'critical_dry'
+                        : 'critical_wet',
+                    message: fuzzyResult.irrigationAdvice
+                }
+            });
+        }
+
+        // Publish to dashboard
+        const dashboardUpdate = {
+            aggregated: true,
+            selectedNodeId: bestNode.nodeId,
+            selectionReason: selection.reason,
+            selectionScore: selection.score,
+            totalNodes: payload.nodes.length,
+            activeNodes: activeNodes.length,
+            blockedNodes: blockedNodes.length,
+            moisture: bestNode.moisture,
+            temperature: bestNode.temperature,
+            rssi: bestNode.rssi,
+            batteryLevel: bestNode.batteryLevel,
+            timestamp: aggregatedReading.timestamp,
+            soilStatus: fuzzyResult.recommendation,
+            irrigationAdvice: fuzzyResult.irrigationAdvice,
+            confidence: fuzzyResult.confidence,
+            fuzzyScores: fuzzyResult.fuzzyScores,
+            bestCrop: cropRecommendation.bestCrop,
+            cropConfidence: cropRecommendation.confidence,
+            alternativeCrops: cropRecommendation.allCrops.slice(1, 4),
+            summary: cropRecommendation.summary,
+            regionalWarnings: validation.warnings,
+            allNodesData: payload.nodes
+        };
+
+        publishToDashboard(dashboardUpdate);
+
+        console.log(`Processing complete for aggregated reading\n`);
+
+        return res.json({ status: "ok", data: dashboardUpdate });
+    } catch (error) {
+        console.error("Error processing aggregated sensor data:", error);
+        return res.status(500).json({
+            status: "error",
+            message: "Internal server error"
+        });
+    }
+});
+
+/**
  * HTTP POST endpoint (fallback for gateway)
  */
 app.post("/api/sensor", async (req: Request, res: Response): Promise<any> => {
