@@ -1,236 +1,255 @@
-// #include <SPI.h>
-// #include <LoRa.h>
-// #include <WiFi.h>
-// #include <HTTPClient.h>
-// #include <ArduinoJson.h>
+#include <SPI.h>
+#include <LoRa.h>
+#include <ArduinoJson.h>
 
-// // LoRa pins
-// #define SS 5
-// #define RST 14
-// #define DIO0 2
-// #define BAND 868E6
+// LoRa pins same as node
+#define LORA_SS 5
+#define LORA_RST 14
+#define LORA_DIO0 2
 
-// // WiFi credentials
-// const char *ssid = "YOUR_WIFI_SSID";
-// const char *password = "YOUR_WIFI_PASSWORD";
+// Aggregation window (ms)
+const unsigned long WINDOW_MS = 30000; // 30s
 
-// // Backend server
-// const char *serverUrl = "http://192.168.1.100:3000/api/sensor/aggregated";
+#pragma pack(push, 1)
+struct WusnPacket
+{
+    uint8_t version;
+    uint8_t nodeId;
+    uint8_t seq;
+    uint16_t moisturePctX10;
+    int16_t tempCX10;
+    uint8_t batteryPct;
+    uint16_t vbat_mV;
+    uint16_t crc;
+};
+#pragma pack(pop)
 
-// // Node configuration (manually set based on your deployment)
-// const int TOTAL_NODES = 4;
-// const float NODE_DEPTHS[4] = {40, 40, 40, 50};          // cm
-// const float NODE_DISTANCES[4] = {7.1, 20.6, 7.1, 25.5}; // meters from gateway
+struct NodeSample
+{
+    bool valid;
+    uint8_t nodeId;
+    float moisturePct;
+    float tempC;
+    uint8_t batteryPct;
+    int16_t rssi; // from LoRa
+    uint8_t seq;
+    unsigned long firstSeen;
+    unsigned long lastSeen;
+    uint8_t packetCount;
+};
 
-// // Data collection window
-// const unsigned long COLLECTION_WINDOW = 30000; // 30 seconds to collect from all nodes
+const int MAX_NODES = 8;
+NodeSample samples[MAX_NODES];
 
-// // Storage for received data
-// struct NodeData
-// {
-//     int nodeId;
-//     int moisture;
-//     int temperature;
-//     int rssi;
-//     int batteryLevel;
-//     bool received;
-//     unsigned long receivedTime;
-// };
+unsigned long windowStart = 0;
 
-// NodeData nodeDataBuffer[TOTAL_NODES];
+// --- CRC same as node ---
+uint16_t simpleCrc16(uint8_t *data, size_t len);
 
-// void setup()
-// {
-//     Serial.begin(115200);
-//     while (!Serial)
-//         ;
+// -------------------------------------------------------------------
 
-//     Serial.println("Initializing LoRa Gateway (Aggregated Mode)...");
+void setup()
+{
+    Serial.begin(115200);
+    delay(500);
 
-//     // Initialize node buffer
-//     for (int i = 0; i < TOTAL_NODES; i++)
-//     {
-//         nodeDataBuffer[i].nodeId = i + 1;
-//         nodeDataBuffer[i].received = false;
-//     }
+    Serial.println("\n====== WUSN GATEWAY BOOT ======");
+    SPI.begin(18, 19, 23, LORA_SS);
+    LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
 
-//     // Connect to WiFi
-//     WiFi.begin(ssid, password);
-//     Serial.print("Connecting to WiFi");
-//     while (WiFi.status() != WL_CONNECTED)
-//     {
-//         delay(500);
-//         Serial.print(".");
-//     }
-//     Serial.println();
-//     Serial.println("WiFi Connected!");
-//     Serial.println("IP Address: " + WiFi.localIP().toString());
+    if (!LoRa.begin(433E6))
+    {
+        Serial.println("LoRa init failed. Check wiring.");
+        while (1)
+            delay(1000);
+    }
 
-//     // Initialize LoRa
-//     LoRa.setPins(SS, RST, DIO0);
-//     while (!LoRa.begin(BAND))
-//     {
-//         Serial.println("LoRa initialization failed. Retrying...");
-//         delay(500);
-//     }
+    LoRa.setSyncWord(0xF3);
+    LoRa.setSpreadingFactor(10);
+    LoRa.setSignalBandwidth(125E3);
+    LoRa.setCodingRate4(5);
 
-//     LoRa.setSyncWord(0xF3);
-//     LoRa.setSpreadingFactor(10);
-//     LoRa.setSignalBandwidth(125E3);
-//     LoRa.setCodingRate4(5);
+    clearWindow();
+    windowStart = millis();
+    Serial.println("Gateway ready, listening...");
+}
 
-//     Serial.println("LoRa Gateway Initialized");
-//     Serial.println("Listening for sensor data from 4 nodes...");
-//     Serial.println();
-// }
+void loop()
+{
+    int packetSize = LoRa.parsePacket();
+    if (packetSize)
+    {
+        handleLoRaPacket(packetSize);
+    }
 
-// void loop()
-// {
-//     // Check for incoming LoRa packets
-//     int packetSize = LoRa.parsePacket();
+    unsigned long now = millis();
+    if (now - windowStart >= WINDOW_MS)
+    {
+        finalizeWindow();
+        clearWindow();
+        windowStart = now;
+    }
+}
 
-//     if (packetSize)
-//     {
-//         String receivedData = "";
+// -------------------------------------------------------------------
 
-//         while (LoRa.available())
-//         {
-//             receivedData += (char)LoRa.read();
-//         }
+void clearWindow()
+{
+    for (int i = 0; i < MAX_NODES; i++)
+    {
+        samples[i].valid = false;
+    }
+}
 
-//         int rssi = LoRa.packetRssi();
+int indexForNode(uint8_t nodeId)
+{
+    for (int i = 0; i < MAX_NODES; i++)
+    {
+        if (samples[i].valid && samples[i].nodeId == nodeId)
+            return i;
+    }
+    for (int i = 0; i < MAX_NODES; i++)
+    {
+        if (!samples[i].valid)
+            return i;
+    }
+    return -1;
+}
 
-//         Serial.println("Received: " + receivedData);
-//         Serial.println("RSSI: " + String(rssi) + " dBm");
+void handleLoRaPacket(int packetSize)
+{
+    if (packetSize != sizeof(WusnPacket))
+    {
+        Serial.print("Unexpected packet size: ");
+        Serial.println(packetSize);
+        // Optionally read & discard
+        while (LoRa.available())
+            LoRa.read();
+        return;
+    }
 
-//         // Parse: "NodeID,Moisture,Temperature,Battery"
-//         int comma1 = receivedData.indexOf(',');
-//         int comma2 = receivedData.indexOf(',', comma1 + 1);
-//         int comma3 = receivedData.indexOf(',', comma2 + 1);
+    WusnPacket p;
+    uint8_t *buf = (uint8_t *)&p;
+    for (int i = 0; i < sizeof(WusnPacket); i++)
+    {
+        if (LoRa.available())
+        {
+            buf[i] = LoRa.read();
+        }
+        else
+        {
+            Serial.println("Packet truncated");
+            return;
+        }
+    }
 
-//         if (comma1 > 0 && comma2 > 0 && comma3 > 0)
-//         {
-//             int nodeId = receivedData.substring(0, comma1).toInt();
-//             int moisture = receivedData.substring(comma1 + 1, comma2).toInt();
-//             int temperature = receivedData.substring(comma2 + 1, comma3).toInt();
-//             int battery = receivedData.substring(comma3 + 1).toInt();
+    int rssi = LoRa.packetRssi();
 
-//             // Store in buffer
-//             if (nodeId >= 1 && nodeId <= TOTAL_NODES)
-//             {
-//                 int index = nodeId - 1;
-//                 nodeDataBuffer[index].moisture = moisture;
-//                 nodeDataBuffer[index].temperature = temperature;
-//                 nodeDataBuffer[index].rssi = rssi;
-//                 nodeDataBuffer[index].batteryLevel = battery;
-//                 nodeDataBuffer[index].received = true;
-//                 nodeDataBuffer[index].receivedTime = millis();
+    uint16_t calcCrc = simpleCrc16((uint8_t *)&p, sizeof(WusnPacket) - 2);
+    if (calcCrc != p.crc)
+    {
+        Serial.println("CRC mismatch, dropping packet");
+        return;
+    }
 
-//                 Serial.println("Stored data for Node " + String(nodeId));
-//             }
-//         }
+    float moisture = p.moisturePctX10 / 10.0;
+    float tempC = p.tempCX10 / 10.0;
 
-//         Serial.println();
-//     }
+    int idx = indexForNode(p.nodeId);
+    if (idx < 0)
+    {
+        Serial.println("No space for new node, dropping");
+        return;
+    }
 
-//     // Check if collection window elapsed
-//     static unsigned long lastSendTime = 0;
-//     unsigned long currentTime = millis();
+    unsigned long now = millis();
+    NodeSample &s = samples[idx];
+    if (!s.valid)
+    {
+        s.valid = true;
+        s.nodeId = p.nodeId;
+        s.firstSeen = now;
+        s.packetCount = 0;
+    }
 
-//     if (currentTime - lastSendTime >= COLLECTION_WINDOW)
-//     {
-//         // Check how many nodes responded
-//         int receivedCount = 0;
-//         for (int i = 0; i < TOTAL_NODES; i++)
-//         {
-//             if (nodeDataBuffer[i].received)
-//             {
-//                 receivedCount++;
-//             }
-//         }
+    // Latest wins; average RSSI over multiple packets
+    s.moisturePct = moisture;
+    s.tempC = tempC;
+    s.batteryPct = p.batteryPct;
+    s.seq = p.seq;
+    s.lastSeen = now;
+    if (s.packetCount == 0)
+    {
+        s.rssi = rssi;
+    }
+    else
+    {
+        s.rssi = (int16_t)((s.rssi * s.packetCount + rssi) / (s.packetCount + 1));
+    }
+    s.packetCount++;
 
-//         if (receivedCount > 0)
-//         {
-//             Serial.println("Collection window complete. Received from " + String(receivedCount) + " nodes");
-//             sendAggregatedData();
-//         }
-//         else
-//         {
-//             Serial.println("No data received in collection window");
-//         }
+    Serial.print("RX node ");
+    Serial.print(p.nodeId);
+    Serial.print(" M=");
+    Serial.print(moisture);
+    Serial.print("% T=");
+    Serial.print(tempC);
+    Serial.print("C B=");
+    Serial.print((int)p.batteryPct);
+    Serial.print("% RSSI=");
+    Serial.println(rssi);
+}
 
-//         // Reset buffer
-//         for (int i = 0; i < TOTAL_NODES; i++)
-//         {
-//             nodeDataBuffer[i].received = false;
-//         }
+void finalizeWindow()
+{
+    // Build JSON for /api/sensor/aggregated
+    StaticJsonDocument<1024> doc;
+    doc["timestamp"] = millis(); // placeholder; ideally real ISO timestamp
 
-//         lastSendTime = currentTime;
-//     }
-// }
+    JsonArray nodesArr = doc.createNestedArray("nodes");
 
-// void sendAggregatedData()
-// {
-//     if (WiFi.status() != WL_CONNECTED)
-//     {
-//         Serial.println("WiFi not connected. Reconnecting...");
-//         WiFi.reconnect();
-//         return;
-//     }
+    for (int i = 0; i < MAX_NODES; i++)
+    {
+        if (!samples[i].valid)
+            continue;
+        NodeSample &s = samples[i];
 
-//     HTTPClient http;
-//     http.begin(serverUrl);
-//     http.addHeader("Content-Type", "application/json");
+        JsonObject n = nodesArr.createNestedObject();
+        n["nodeId"] = s.nodeId;
+        n["moisture"] = s.moisturePct;
+        n["temperature"] = s.tempC;
+        n["batteryLevel"] = s.batteryPct;
+        n["rssi"] = s.rssi;
+        n["seq"] = s.seq;
+        n["gatewaySeenAt"] = s.lastSeen; // ms since boot (placeholder)
+        n["packetCount"] = s.packetCount;
+    }
 
-//     // Create JSON document
-//     StaticJsonDocument<2048> doc;
-//     doc["timestamp"] = getTimestamp();
+    JsonObject meta = doc.createNestedObject("gatewayMeta");
+    meta["gatewayId"] = "gw-01";
+    meta["windowMs"] = WINDOW_MS;
+    meta["windowStart"] = windowStart;
 
-//     JsonArray nodes = doc.createNestedArray("nodes");
+    // Print JSON to Serial (for now)
+    Serial.println("\n--- WINDOW JSON ---");
+    serializeJsonPretty(doc, Serial);
+    Serial.println("\n-------------------");
+}
 
-//     for (int i = 0; i < TOTAL_NODES; i++)
-//     {
-//         if (nodeDataBuffer[i].received)
-//         {
-//             JsonObject node = nodes.createNestedObject();
-//             node["nodeId"] = nodeDataBuffer[i].nodeId;
-//             node["moisture"] = nodeDataBuffer[i].moisture;
-//             node["temperature"] = nodeDataBuffer[i].temperature;
-//             node["rssi"] = nodeDataBuffer[i].rssi;
-//             node["batteryLevel"] = nodeDataBuffer[i].batteryLevel;
-//             node["depth"] = NODE_DEPTHS[i];
-//             node["distance"] = NODE_DISTANCES[i];
-//         }
-//     }
-
-//     String jsonPayload;
-//     serializeJson(doc, jsonPayload);
-
-//     Serial.println("Sending aggregated data:");
-//     Serial.println(jsonPayload);
-
-//     int httpCode = http.POST(jsonPayload);
-
-//     if (httpCode > 0)
-//     {
-//         Serial.println("Backend response: " + String(httpCode));
-//         if (httpCode == 200)
-//         {
-//             String response = http.getString();
-//             Serial.println("Response: " + response);
-//         }
-//     }
-//     else
-//     {
-//         Serial.println("Error sending to backend: " + http.errorToString(httpCode));
-//     }
-
-//     http.end();
-// }
-
-// String getTimestamp()
-// {
-//     // Simple ISO timestamp (you can use NTP for real time)
-//     unsigned long seconds = millis() / 1000;
-//     return "2025-11-26T" + String(seconds % 86400) + "Z";
-// }
+// CRC
+uint16_t simpleCrc16(uint8_t *data, size_t len)
+{
+    uint16_t crc = 0xFFFF;
+    for (size_t i = 0; i < len; i++)
+    {
+        crc ^= data[i];
+        for (int b = 0; b < 8; b++)
+        {
+            if (crc & 1)
+                crc = (crc >> 1) ^ 0xA001;
+            else
+                crc >>= 1;
+        }
+    }
+    return crc;
+}
