@@ -5,6 +5,8 @@ import { createServer } from "http";
 import { analyzeSoilConditions } from "./fuzzyService.js";
 import { recommendCrop, validateNorthIndiaConditions } from "./cropRecommendationService.js";
 import { initMqtt, publishToDashboard } from "./mqttService.js";
+import { translateCropName } from "./cropTranslations.js";
+import { translateIrrigation, translateSummary } from "./irrigationTranslations.js";
 const prisma = new PrismaClient();
 const app = express();
 app.use(express.json());
@@ -123,12 +125,15 @@ async function processSensorData(payload) {
         timestamp: reading.timestamp,
         soilStatus: fuzzyResult.recommendation,
         irrigationAdvice: fuzzyResult.irrigationAdvice,
+        irrigationAdviceHi: translateIrrigation(fuzzyResult.irrigationAdvice),
         confidence: fuzzyResult.confidence,
         fuzzyScores: fuzzyResult.fuzzyScores,
         bestCrop: cropRecommendation.bestCrop,
+        bestCropHi: translateCropName(cropRecommendation.bestCrop, 'hi'),
         cropConfidence: cropRecommendation.confidence,
-        alternativeCrops: cropRecommendation.allCrops.slice(1, 4), // Top 3 alternatives
+        alternativeCrops: cropRecommendation.allCrops.slice(1, 4),
         summary: cropRecommendation.summary,
+        summaryHi: translateSummary(cropRecommendation.summary, translateCropName(cropRecommendation.bestCrop, 'hi')),
         regionalWarnings: validation.warnings
     };
     publishToDashboard(dashboardUpdate);

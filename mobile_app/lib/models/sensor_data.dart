@@ -1,4 +1,5 @@
 class SensorData {
+  // Aggregation flags and metadata
   final bool isAggregated;
   final int? selectedNodeId;
   final String? selectionReason;
@@ -7,23 +8,29 @@ class SensorData {
   final int? activeNodes;
   final int? blockedNodes;
   final List<NodeInfo>? allNodesData;
-  
+
+  // Core sensor values (for selected node or single node)
   final int nodeId;
   final int moisture;
   final int temperature;
   final int rssi;
   final int? batteryLevel;
   final DateTime timestamp;
-  
+
+  // Fuzzy logic results
   final String soilStatus;
   final String irrigationAdvice;
+  final String? irrigationAdviceHi;
   final int confidence;
   final FuzzyScores fuzzyScores;
-  
+
+  // Crop recommendations
   final String bestCrop;
+  final String? bestCropHi;
   final int cropConfidence;
   final List<CropSuitability> alternativeCrops;
   final String summary;
+  final String? summaryHi;
 
   SensorData({
     this.isAggregated = false,
@@ -42,17 +49,19 @@ class SensorData {
     required this.timestamp,
     required this.soilStatus,
     required this.irrigationAdvice,
+    this.irrigationAdviceHi,
     required this.confidence,
     required this.fuzzyScores,
     required this.bestCrop,
+    this.bestCropHi,
     required this.cropConfidence,
     required this.alternativeCrops,
     required this.summary,
+    this.summaryHi,
   });
 
   factory SensorData.fromJson(Map<String, dynamic> json) {
     final bool isAggregated = json['aggregated'] ?? false;
-    
     if (isAggregated) {
       return SensorData._fromAggregatedJson(json);
     } else {
@@ -62,36 +71,43 @@ class SensorData {
 
   factory SensorData._fromAggregatedJson(Map<String, dynamic> json) {
     final allNodes = (json['allNodesData'] as List<dynamic>?)
-        ?.map((node) => NodeInfo.fromJson(node))
-        .toList() ?? [];
+            ?.map((node) => NodeInfo.fromJson(node as Map<String, dynamic>))
+            .toList() ??
+        [];
 
     return SensorData(
       isAggregated: true,
-      selectedNodeId: json['selectedNodeId'],
-      selectionReason: json['selectionReason'],
+      selectedNodeId: json['selectedNodeId'] as int?,
+      selectionReason: json['selectionReason'] as String?,
       selectionScore: (json['selectionScore'] as num?)?.toDouble(),
-      totalNodes: json['totalNodes'],
-      activeNodes: json['activeNodes'],
-      blockedNodes: json['blockedNodes'],
+      totalNodes: json['totalNodes'] as int?,
+      activeNodes: json['activeNodes'] as int?,
+      blockedNodes: json['blockedNodes'] as int?,
       allNodesData: allNodes,
       nodeId: json['selectedNodeId'] ?? 0,
       moisture: json['moisture'] ?? 0,
       temperature: json['temperature'] ?? 0,
       rssi: json['rssi'] ?? -100,
-      batteryLevel: json['batteryLevel'],
+      batteryLevel: json['batteryLevel'] as int?,
       timestamp: json['timestamp'] != null
           ? DateTime.parse(json['timestamp'])
           : DateTime.now(),
       soilStatus: json['soilStatus'] ?? 'unknown',
       irrigationAdvice: json['irrigationAdvice'] ?? 'No data',
+      irrigationAdviceHi: json['irrigationAdviceHi'] as String?,
       confidence: json['confidence'] ?? 0,
-      fuzzyScores: FuzzyScores.fromJson(json['fuzzyScores'] ?? {}),
+      fuzzyScores: FuzzyScores.fromJson(
+          (json['fuzzyScores'] as Map<String, dynamic>? ?? {})),
       bestCrop: json['bestCrop'] ?? 'unknown',
+      bestCropHi: json['bestCropHi'] as String?,
       cropConfidence: json['cropConfidence'] ?? 0,
       alternativeCrops: (json['alternativeCrops'] as List<dynamic>?)
-          ?.map((crop) => CropSuitability.fromJson(crop))
-          .toList() ?? [],
+              ?.map((crop) =>
+                  CropSuitability.fromJson(crop as Map<String, dynamic>))
+              .toList() ??
+          [],
       summary: json['summary'] ?? '',
+      summaryHi: json['summaryHi'] as String?,
     );
   }
 
@@ -102,20 +118,26 @@ class SensorData {
       moisture: json['moisture'] ?? 0,
       temperature: json['temperature'] ?? 0,
       rssi: json['rssi'] ?? -100,
-      batteryLevel: json['batteryLevel'],
+      batteryLevel: json['batteryLevel'] as int?,
       timestamp: json['timestamp'] != null
           ? DateTime.parse(json['timestamp'])
           : DateTime.now(),
       soilStatus: json['soilStatus'] ?? 'unknown',
       irrigationAdvice: json['irrigationAdvice'] ?? 'No data',
+      irrigationAdviceHi: json['irrigationAdviceHi'] as String?,
       confidence: json['confidence'] ?? 0,
-      fuzzyScores: FuzzyScores.fromJson(json['fuzzyScores'] ?? {}),
+      fuzzyScores: FuzzyScores.fromJson(
+          (json['fuzzyScores'] as Map<String, dynamic>? ?? {})),
       bestCrop: json['bestCrop'] ?? 'unknown',
+      bestCropHi: json['bestCropHi'] as String?,
       cropConfidence: json['cropConfidence'] ?? 0,
       alternativeCrops: (json['alternativeCrops'] as List<dynamic>?)
-          ?.map((crop) => CropSuitability.fromJson(crop))
-          .toList() ?? [],
+              ?.map((crop) =>
+                  CropSuitability.fromJson(crop as Map<String, dynamic>))
+              .toList() ??
+          [],
       summary: json['summary'] ?? '',
+      summaryHi: json['summaryHi'] as String?,
     );
   }
 
