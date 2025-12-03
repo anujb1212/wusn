@@ -5,6 +5,8 @@ import '../widgets/sensor_card.dart';
 import '../widgets/dashboard_header.dart';
 import '../widgets/status_indicator.dart';
 import '../l10n/translations.dart';
+import 'crop_confirmation_screen.dart';
+import 'irrigation_advice_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String language;
@@ -95,14 +97,118 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           if (provider.sensors.isEmpty)
                             Center(child: Text(_t('noData')))
                           else
-                            ...provider.sensors.map(
-                              (sensor) => SensorCard(sensor: sensor, language: widget.language),
-                            ),
+                            ...provider.sensors.map((sensor) {
+                              return Column(
+                                children: [
+                                  SensorCard(sensor: sensor, language: widget.language),
+                                  const SizedBox(height: 12),
+                                  
+                                  // NEW: Action buttons for Phase 2 & 3
+                                  _buildActionButtons(sensor),
+                                  
+                                  const SizedBox(height: 20),
+                                ],
+                              );
+                            }),
                         ],
                       ),
                     ),
         );
       },
+    );
+  }
+
+  Widget _buildActionButtons(sensor) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CropConfirmationScreen(
+                            sensorData: sensor,
+                            language: widget.language,
+                          ),
+                        ),
+                      );
+                      
+                      // Refresh data if crop confirmed
+                      if (result == true) {
+                        Provider.of<SensorProvider>(context, listen: false).fetchData();
+                      }
+                    },
+                    icon: const Icon(Icons.agriculture, size: 20),
+                    label: Text(
+                      widget.language == 'hi' ? 'फसल पुष्टि' : 'Confirm Crop',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4CAF50),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => IrrigationAdviceScreen(
+                            fieldId: sensor.nodeId,
+                            language: widget.language,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.water_drop, size: 20),
+                    label: Text(
+                      widget.language == 'hi' ? 'सिंचाई सलाह' : 'Irrigation',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2196F3),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            
+            // Quick info text
+            Text(
+              widget.language == 'hi'
+                  ? 'पहले फसल की पुष्टि करें, फिर सिंचाई सलाह देखें'
+                  : 'Confirm crop first, then check irrigation advice',
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.black54,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -215,7 +215,7 @@ class SensorCard extends StatelessWidget {
         _buildDataRow(
           Icons.thermostat,
           _t('temperature'),
-          '${sensor.temperature}${_t('celsius')}',
+          '${sensor.temperature.toStringAsFixed(1)}${_t('celsius')}',  
           Colors.orange,
         ),
         const SizedBox(height: 18),
@@ -271,7 +271,7 @@ class SensorCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '${_t('fuzzyAnalysis')} (${sensor.confidence}${_t('percent')} ${_t('confidence')})',
+          '${_t('fuzzyAnalysis')} (${sensor.confidence.toStringAsFixed(0)}${_t('percent')} ${_t('confidence')})',  
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
@@ -323,7 +323,7 @@ class SensorCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${sensor.cropConfidence}${_t('percent')}',
+                  '${sensor.cropConfidence.toStringAsFixed(0)}${_t('percent')}',  
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -454,7 +454,7 @@ class SensorCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '${_t('moisture')}: ${node.moisture} ${_t('smu')} | ${_t('temperature')}: ${node.temperature}${_t('celsius')}',
+                '${_t('moisture')}: ${node.moisture} ${_t('smu')} | ${_t('temperature')}: ${node.temperature.toStringAsFixed(1)}${_t('celsius')}',  
                 style: const TextStyle(fontSize: 12),
               ),
               Text(
@@ -515,7 +515,8 @@ class SensorCard extends StatelessWidget {
     );
   }
 
-  Widget _buildFuzzyBar(String label, int value, Color color) {
+  // UPDATED: Changed int to double parameter
+  Widget _buildFuzzyBar(String label, double value, Color color) {
     return Row(
       children: [
         SizedBox(
@@ -559,7 +560,7 @@ class SensorCard extends StatelessWidget {
         SizedBox(
           width: 40,
           child: Text(
-            '$value${_t('percent')}',
+            '${value.toStringAsFixed(0)}${_t('percent')}',  
             textAlign: TextAlign.right,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
           ),

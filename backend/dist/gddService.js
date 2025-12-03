@@ -1,24 +1,13 @@
 /**
- * GDD (Growing Degree Days) Calculation Service
- * For crop growth stage tracking in North India
- *
- * GDD measures heat accumulation above a crop's base temperature.
- * Used to predict growth stages and optimize irrigation timing.
- */
-/**
- * Base temperatures for North India crops (°C)
+ * Base temperatures for ALL dataset crops (°C)
  * Below these temps, crops don't accumulate growth
  */
 export const CROP_BASE_TEMPS = {
     rice: 10,
-    wheat: 0,
     maize: 8,
-    mustard: 0,
     chickpea: 0,
-    cotton: 12,
-    sugarcane: 10,
-    pigeonpeas: 10,
     kidneybeans: 8,
+    pigeonpeas: 10,
     mothbeans: 8,
     mungbean: 10,
     blackgram: 10,
@@ -30,8 +19,10 @@ export const CROP_BASE_TEMPS = {
     watermelon: 15,
     muskmelon: 15,
     apple: 4,
+    orange: 10,
     papaya: 15,
     coconut: 20,
+    cotton: 12,
     jute: 12,
     coffee: 10
 };
@@ -41,14 +32,10 @@ export const CROP_BASE_TEMPS = {
  */
 export const CROP_GDD_REQUIREMENTS = {
     rice: 2200,
-    wheat: 2700,
     maize: 2400,
-    mustard: 2100,
     chickpea: 1800,
-    cotton: 2800,
-    sugarcane: 5000,
-    pigeonpeas: 2500,
     kidneybeans: 1800,
+    pigeonpeas: 2500,
     mothbeans: 1600,
     mungbean: 1400,
     blackgram: 1300,
@@ -60,8 +47,10 @@ export const CROP_GDD_REQUIREMENTS = {
     watermelon: 1800,
     muskmelon: 1600,
     apple: 2500,
+    orange: 2800,
     papaya: 3000,
     coconut: 7000,
+    cotton: 2800,
     jute: 2200,
     coffee: 3200
 };
@@ -71,44 +60,47 @@ export const CROP_GDD_REQUIREMENTS = {
  */
 export const CROP_UPPER_TEMPS = {
     rice: 40,
-    wheat: 35,
     maize: 38,
-    mustard: 35,
     chickpea: 35,
+    kidneybeans: 35,
+    pigeonpeas: 38,
+    mothbeans: 40,
+    mungbean: 38,
+    blackgram: 38,
+    lentil: 35,
+    pomegranate: 42,
+    banana: 38,
+    mango: 42,
+    grapes: 38,
+    watermelon: 42,
+    muskmelon: 42,
+    apple: 32,
+    orange: 38,
+    papaya: 38,
+    coconut: 45,
     cotton: 40,
-    sugarcane: 42,
+    jute: 38,
+    coffee: 35,
     default: 35
 };
 /**
  * Calculate daily GDD using simple average method
  * Formula: GDD = ((Tmax + Tmin) / 2) - Tbase
  * Negative values clamped to 0
- *
- * @param tempMax - Maximum temperature (°C)
- * @param tempMin - Minimum temperature (°C)
- * @param baseTemp - Crop base temperature (°C)
- * @returns Daily GDD value
  */
 export function calculateDailyGDD(tempMax, tempMin, baseTemp) {
     const avgTemp = (tempMax + tempMin) / 2;
     const gdd = Math.max(0, avgTemp - baseTemp);
-    return Math.round(gdd * 10) / 10; // Round to 1 decimal
+    return Math.round(gdd * 10) / 10;
 }
 /**
  * Calculate daily GDD with upper threshold (more accurate)
- * Formula: GDD = ((min(Tmax, Tupper) + max(Tmin, Tbase)) / 2) - Tbase
- *
- * @param tempMax - Maximum temperature (°C)
- * @param tempMin - Minimum temperature (°C)
- * @param baseTemp - Crop base temperature (°C)
- * @param upperTemp - Upper threshold temperature (°C)
- * @returns Daily GDD value
  */
 export function calculateDailyGDDWithThreshold(tempMax, tempMin, baseTemp, upperTemp = 35) {
     const adjustedMax = Math.min(tempMax, upperTemp);
     const adjustedMin = Math.max(tempMin, baseTemp);
     if (adjustedMin >= adjustedMax) {
-        return 0; // No heat accumulation
+        return 0;
     }
     const avgTemp = (adjustedMax + adjustedMin) / 2;
     const gdd = Math.max(0, avgTemp - baseTemp);
@@ -116,10 +108,6 @@ export function calculateDailyGDDWithThreshold(tempMax, tempMin, baseTemp, upper
 }
 /**
  * Calculate GDD from weather forecast (7-day projection)
- *
- * @param cropName - Crop name
- * @param forecast - Array of daily forecasts with temp_max_c and temp_min_c
- * @returns Total GDD accumulated over forecast period
  */
 export function calculateForecastGDD(cropName, forecast) {
     const baseTemp = getCropBaseTemp(cropName);
@@ -131,10 +119,6 @@ export function calculateForecastGDD(cropName, forecast) {
 }
 /**
  * Map accumulated GDD to growth stage
- *
- * @param accumulatedGDD - Total GDD accumulated since sowing
- * @param totalRequiredGDD - Total GDD required for crop maturity
- * @returns Current growth stage
  */
 export function getGrowthStage(accumulatedGDD, totalRequiredGDD) {
     const progress = (accumulatedGDD / totalRequiredGDD) * 100;
@@ -150,12 +134,6 @@ export function getGrowthStage(accumulatedGDD, totalRequiredGDD) {
 }
 /**
  * Get detailed growth stage information
- *
- * @param cropName - Crop name
- * @param accumulatedGDD - Total GDD accumulated
- * @param daysElapsed - Days since sowing
- * @param avgDailyGDD - Average daily GDD (for estimation)
- * @returns Detailed growth stage info
  */
 export function getGrowthStageInfo(cropName, accumulatedGDD, daysElapsed, avgDailyGDD = 20) {
     const normalizedCrop = cropName.toLowerCase().replace(/\s+/g, '');
@@ -163,7 +141,6 @@ export function getGrowthStageInfo(cropName, accumulatedGDD, daysElapsed, avgDai
     const progress = Math.min(100, (accumulatedGDD / requiredGDD) * 100);
     const stage = getGrowthStage(accumulatedGDD, requiredGDD);
     const gddRemaining = Math.max(0, requiredGDD - accumulatedGDD);
-    // Estimate days to maturity based on avg daily GDD
     const estimatedDaysToMaturity = avgDailyGDD > 0
         ? Math.ceil(gddRemaining / avgDailyGDD)
         : 0;
@@ -215,9 +192,6 @@ export function getGrowthStageDescription(stage) {
 }
 /**
  * Get crop-specific base temperature
- *
- * @param cropName - Crop name
- * @returns Base temperature in °C
  */
 export function getCropBaseTemp(cropName) {
     const normalizedCrop = cropName.toLowerCase().replace(/\s+/g, '');
@@ -225,9 +199,6 @@ export function getCropBaseTemp(cropName) {
 }
 /**
  * Get crop-specific GDD requirement
- *
- * @param cropName - Crop name
- * @returns Total GDD required for maturity
  */
 export function getCropGDDRequirement(cropName) {
     const normalizedCrop = cropName.toLowerCase().replace(/\s+/g, '');
@@ -235,9 +206,6 @@ export function getCropGDDRequirement(cropName) {
 }
 /**
  * Get crop-specific upper temperature threshold
- *
- * @param cropName - Crop name
- * @returns Upper temperature threshold in °C
  */
 export function getCropUpperTemp(cropName) {
     const normalizedCrop = cropName.toLowerCase().replace(/\s+/g, '');
@@ -245,11 +213,6 @@ export function getCropUpperTemp(cropName) {
 }
 /**
  * Validate if crop is suitable for current temperature range
- *
- * @param cropName - Crop name
- * @param avgTemp - Average temperature
- * @param minTemp - Minimum temperature
- * @returns Suitability result with reason
  */
 export function isCropSuitableForTemperature(cropName, avgTemp, minTemp) {
     const baseTemp = getCropBaseTemp(cropName);
@@ -278,36 +241,22 @@ export function isCropSuitableForTemperature(cropName, avgTemp, minTemp) {
 }
 /**
  * Update GDD for a field using weather data
- * Called daily or when weather data is fetched
- *
- * @param fieldId - Field ID
- * @param cropName - Crop name
- * @param sowingDate - Date crop was sown
- * @param tempMax - Maximum temperature for the day
- * @param tempMin - Minimum temperature for the day
- * @param prisma - PrismaClient instance
- * @returns GDD update result
  */
 export async function updateFieldGDD(fieldId, cropName, sowingDate, tempMax, tempMin, prisma) {
-    // Get current field data
     const field = await prisma.field.findUnique({
         where: { id: fieldId }
     });
     if (!field) {
         throw new Error(`Field ${fieldId} not found`);
     }
-    // Calculate daily GDD
     const baseTemp = getCropBaseTemp(cropName);
     const upperTemp = getCropUpperTemp(cropName);
     const dailyGDD = calculateDailyGDDWithThreshold(tempMax, tempMin, baseTemp, upperTemp);
-    // Add to accumulated
     const previousGDD = field.accumulatedGDD || 0;
     const newGDD = previousGDD + dailyGDD;
-    // Calculate growth stage
     const requiredGDD = getCropGDDRequirement(cropName);
     const stage = getGrowthStage(newGDD, requiredGDD);
     const progress = (newGDD / requiredGDD) * 100;
-    // Update database
     await prisma.field.update({
         where: { id: fieldId },
         data: {
@@ -327,15 +276,9 @@ export async function updateFieldGDD(fieldId, cropName, sowingDate, tempMax, tem
 }
 /**
  * Batch update GDD for all active fields
- * Should be called once per day
- *
- * @param weatherDataMap - Map of fieldId to weather data { temp_max_c, temp_min_c }
- * @param prisma - PrismaClient instance
- * @returns Array of update results
  */
 export async function batchUpdateGDD(weatherDataMap, prisma) {
     const results = [];
-    // Get all confirmed fields that need update
     const fields = await prisma.field.findMany({
         where: {
             cropConfirmed: true,
@@ -361,10 +304,7 @@ export async function batchUpdateGDD(weatherDataMap, prisma) {
     return results;
 }
 /**
- * Reset GDD for a field (when crop is changed or replanted)
- *
- * @param fieldId - Field ID
- * @param prisma - PrismaClient instance
+ * Reset GDD for a field
  */
 export async function resetFieldGDD(fieldId, prisma) {
     await prisma.field.update({
@@ -377,31 +317,19 @@ export async function resetFieldGDD(fieldId, prisma) {
     });
     console.log(`🔄 GDD reset for field ${fieldId}`);
 }
-/**
- * Calculate days elapsed since sowing
- */
 export function getDaysElapsed(sowingDate) {
     const now = new Date();
     const diffMs = now.getTime() - sowingDate.getTime();
     return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
-/**
- * Calculate average daily GDD from accumulated GDD and days
- */
 export function getAverageDailyGDD(accumulatedGDD, daysElapsed) {
     if (daysElapsed === 0)
         return 0;
     return Math.round((accumulatedGDD / daysElapsed) * 10) / 10;
 }
-/**
- * Get all available crops
- */
 export function getAvailableCrops() {
     return Object.keys(CROP_BASE_TEMPS);
 }
-/**
- * Get crop parameters summary
- */
 export function getCropParameters(cropName) {
     const normalizedCrop = cropName.toLowerCase().replace(/\s+/g, '');
     if (!CROP_BASE_TEMPS[normalizedCrop]) {

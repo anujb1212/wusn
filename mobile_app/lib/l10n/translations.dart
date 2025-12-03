@@ -69,8 +69,91 @@ class AppTranslations {
       'blocked': 'Blocked',
       'lowBattery': 'Low Battery',
       'weakSignal': 'Weak Signal',
+      
+      // NEW: Phase 2 - Crop Confirmation
+      'confirmCrop': 'Confirm Crop',
+      'cropConfirmation': 'Crop Confirmation',
+      'recommendation': 'Recommendation',
+      'selectCrop': 'Select Crop',
+      'soilType': 'Soil Type',
+      'sowingDate': 'Sowing Date',
+      'confirm': 'Confirm',
+      'success': 'Success!',
+      'cropConfirmed': 'Crop confirmed successfully',
+      'cropConfirmedMessage': 'You can now check irrigation advice',
+      'selectCropFirst': 'Please select a crop',
+      'cropFirst': 'Confirm crop first, then check irrigation advice',
+      
+      // Crop names
+      'wheat': 'Wheat',
+      'rice': 'Rice',
+      'maize': 'Maize',
+      'mustard': 'Mustard',
+      'chickpea': 'Chickpea',
+      'cotton': 'Cotton',
+      
+      // Soil types
+      'sandy': 'Sandy',
+      'loam': 'Loam',
+      'clayLoam': 'Clay Loam',
+      
+      // NEW: Phase 3 - Irrigation Decision
+      'irrigation': 'Irrigation',
+      'irrigate': 'IRRIGATE',
+      'skip': 'SKIP',
+      'waitForRain': 'Wait',
+      'irrigateNow': 'Irrigate Now',
+      'skipIrrigation': 'Skip Irrigation',
+      'irrigationDecision': 'Irrigation Decision',
+      'recommendedDepth': 'Recommended Depth',
+      'nextCheck': 'Next Check',
+      'hours': 'hours',
+      'days': 'days',
+      'minutes': 'minutes',
+      
+      // Growth stages
+      'growthStage': 'Growth Stage',
+      'growthProgress': 'Growth Progress',
+      'initial': 'Initial / Germination',
+      'development': 'Vegetative Development',
+      'midSeason': 'Mid-Season / Flowering',
+      'lateSeason': 'Late Season / Grain Filling',
+      'harvestReady': 'Harvest Ready / Maturity',
+      'daysElapsed': 'Days Since Sowing',
+      'accumulatedGDD': 'Accumulated GDD',
+      'waterDemand': 'Water Demand (Kc)',
+      
+      // Field info
+      'fieldInformation': 'Field Information',
+      'fieldDetails': 'Field Details',
+      'sensorData': 'Sensor Data',
+      'lastUpdate': 'Last Update',
+      
+      // Weather
+      'weatherForecast': 'Weather Forecast',
+      'rainForecast': 'Rain Forecast (3 days)',
+      'avgTemperature': 'Avg Temperature (7 days)',
+      'rain3Days': 'Rain (3 days)',
+      'avgTemp7Days': 'Avg temp (7 days)',
+      
+      // Irrigation pattern
+      'irrigationMethod': 'Irrigation Method',
+      'duration': 'Duration',
+      'drip': 'DRIP',
+      'sprinkler': 'SPRINKLER',
+      'flood': 'FLOOD',
+      'skipMethod': 'SKIP',
+      
+      // Common actions
+      'ok': 'OK',
+      'cancel': 'Cancel',
+      'close': 'Close',
+      'refresh': 'Refresh',
+      'viewDetails': 'View Details',
+      'back': 'Back',
     },
     'hi': {
+      // Existing translations
       'appTitle': 'खेत की नमी',
       'dashboard': 'मुख्य पेज',
       
@@ -139,6 +222,88 @@ class AppTranslations {
       'blocked': 'बंद',
       'lowBattery': 'कम बैटरी',
       'weakSignal': 'कमजोर सिग्नल',
+      
+      // NEW: Phase 2 - Crop Confirmation
+      'confirmCrop': 'फसल पुष्टि',
+      'cropConfirmation': 'फसल की पुष्टि करें',
+      'recommendation': 'सिफारिश',
+      'selectCrop': 'फसल चुनें',
+      'soilType': 'मिट्टी का प्रकार',
+      'sowingDate': 'बुवाई की तारीख',
+      'confirm': 'पुष्टि करें',
+      'success': 'सफलता!',
+      'cropConfirmed': 'फसल की पुष्टि सफल रही',
+      'cropConfirmedMessage': 'अब आप सिंचाई सलाह देख सकते हैं',
+      'selectCropFirst': 'कृपया फसल चुनें',
+      'cropFirst': 'पहले फसल की पुष्टि करें, फिर सिंचाई सलाह देखें',
+      
+      // Crop names
+      'wheat': 'गेहूं',
+      'rice': 'चावल',
+      'maize': 'मक्का',
+      'mustard': 'सरसों',
+      'chickpea': 'चना',
+      'cotton': 'कपास',
+      
+      // Soil types
+      'sandy': 'रेतीली',
+      'loam': 'दोमट',
+      'clayLoam': 'चिकनी दोमट',
+      
+      // NEW: Phase 3 - Irrigation Decision
+      'irrigation': 'सिंचाई सलाह',
+      'irrigate': 'सिंचाई करें',
+      'skip': 'प्रतीक्षा करें',
+      'waitForRain': 'प्रतीक्षा',
+      'irrigateNow': 'अभी सिंचाई करें',
+      'skipIrrigation': 'सिंचाई टालें',
+      'irrigationDecision': 'सिंचाई निर्णय',
+      'recommendedDepth': 'सुझाई गई गहराई',
+      'nextCheck': 'अगली जांच',
+      'hours': 'घंटे',
+      'days': 'दिन',
+      'minutes': 'मिनट',
+      
+      // Growth stages
+      'growthStage': 'वृद्धि चरण',
+      'growthProgress': 'वृद्धि की प्रगति',
+      'initial': 'प्रारंभिक / अंकुरण',
+      'development': 'वानस्पतिक विकास',
+      'midSeason': 'मध्य-मौसम / फूल आना',
+      'lateSeason': 'देर से मौसम / अनाज भरना',
+      'harvestReady': 'कटाई के लिए तैयार',
+      'daysElapsed': 'बुवाई के बाद दिन',
+      'accumulatedGDD': 'संचित GDD',
+      'waterDemand': 'पानी की मांग (Kc)',
+      
+      // Field info
+      'fieldInformation': 'खेत की जानकारी',
+      'fieldDetails': 'खेत विवरण',
+      'sensorData': 'सेंसर डेटा',
+      'lastUpdate': 'अंतिम अपडेट',
+      
+      // Weather
+      'weatherForecast': 'मौसम पूर्वानुमान',
+      'rainForecast': 'बारिश का अनुमान (3 दिन)',
+      'avgTemperature': 'औसत तापमान (7 दिन)',
+      'rain3Days': '3 दिन में बारिश',
+      'avgTemp7Days': 'औसत तापमान (7 दिन)',
+      
+      // Irrigation pattern
+      'irrigationMethod': 'सिंचाई विधि',
+      'duration': 'अवधि',
+      'drip': 'ड्रिप',
+      'sprinkler': 'फव्वारा',
+      'flood': 'बाढ़',
+      'skipMethod': 'प्रतीक्षा करें',
+      
+      // Common actions
+      'ok': 'ठीक है',
+      'cancel': 'रद्द करें',
+      'close': 'बंद करें',
+      'refresh': 'रिफ्रेश करें',
+      'viewDetails': 'विवरण देखें',
+      'back': 'वापस',
     },
   };
 
