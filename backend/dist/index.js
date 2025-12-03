@@ -7,6 +7,9 @@ import { recommendCrop, validateNorthIndiaConditions } from "./cropRecommendatio
 import { initMqtt, publishToDashboard } from "./mqttService.js";
 import { translateCropName } from "./cropTranslations.js";
 import { translateIrrigation, translateSummary } from "./irrigationTranslations.js";
+import { fetchWeatherWithCache } from "./weatherService.js";
+import { updateFieldGDD, getGrowthStageInfo, getDaysElapsed } from "./gddService.js";
+import { decideIrrigation } from "./irrigationEngine.js";
 const prisma = new PrismaClient();
 const app = express();
 app.use(express.json());
@@ -353,6 +356,240 @@ app.get("/api/crops/info", async (req, res) => {
         return res.status(500).json({
             status: "error",
             message: "Dataset not loaded"
+        });
+    }
+});
+/**
+ * GET weather forecast for field coordinates
+ */
+app.get("/api/weather/forecast", async (req, res) => {
+    try {
+        const { lat, lon } = req.query;
+        if (!lat || !lon) {
+            return res.status(400).json({
+                status: "error",
+                message: "Missing required parameters: lat, lon"
+            });
+        }
+        const latitude = parseFloat(lat);
+        const longitude = parseFloat(lon);
+        if (isNaN(latitude) || isNaN(longitude)) {
+            return res.status(400).json({
+                status: "error",
+                message: "Invalid coordinates"
+            });
+        }
+        // Fetch weather with cache
+        const weatherData = await fetchWeatherWithCache(latitude, longitude);
+        return res.json({
+            status: "ok",
+            location: { latitude, longitude },
+            data: weatherData
+        });
+    }
+    catch (error) {
+        console.error("❌ Error fetching weather:", error);
+        return res.status(500).json({
+            status: "error",
+            message: "Failed to fetch weather data"
+        });
+    }
+});
+/**
+ * POST /api/crop/confirm
+ * Phase 2: Farmer confirms crop selection after recommendation
+ */
+app.post("/api/crop/confirm", async (req, res) => {
+    try {
+        const { fieldId, cropName, sowingDate, soilType } = req.body;
+        if (!fieldId || !cropName || !sowingDate) {
+            return res.status(400).json({
+                status: "error",
+                message: "Missing required fields: fieldId, cropName, sowingDate"
+            });
+        }
+        // Check if field exists
+        let field = await prisma.field.findUnique({
+            where: { id: fieldId }
+        });
+        if (!field) {
+            // Create new field if doesn't exist
+            field = await prisma.field.create({
+                data: {
+                    fieldName: `Field ${fieldId}`,
+                    latitude: 28.7, // Default Delhi coordinates (update from frontend)
+                    longitude: 77.3,
+                    soilType: soilType || 'LOAM',
+                    selectedCrop: cropName,
+                    sowingDate: new Date(sowingDate),
+                    cropConfirmed: true,
+                    accumulatedGDD: 0,
+                    currentGrowthStage: 'INITIAL'
+                }
+            });
+        }
+        else {
+            // Update existing field
+            field = await prisma.field.update({
+                where: { id: fieldId },
+                data: {
+                    selectedCrop: cropName,
+                    sowingDate: new Date(sowingDate),
+                    cropConfirmed: true,
+                    soilType: soilType || field.soilType || 'LOAM',
+                    accumulatedGDD: 0, // Reset GDD
+                    currentGrowthStage: 'INITIAL'
+                }
+            });
+        }
+        console.log(`✅ Crop confirmed: Field ${fieldId}, Crop: ${cropName}, Sowing: ${sowingDate}`);
+        // Publish to MQTT dashboard
+        publishToDashboard({
+            event: 'crop_confirmed',
+            fieldId: field.id,
+            cropName: field.selectedCrop,
+            sowingDate: field.sowingDate,
+            message: `Farmer confirmed ${cropName} planting`,
+            message_hi: translateCropName(cropName, 'hi') + ' की बुवाई की पुष्टि'
+        });
+        return res.json({
+            status: "ok",
+            message: "Crop confirmed successfully",
+            data: {
+                fieldId: field.id,
+                cropName: field.selectedCrop,
+                sowingDate: field.sowingDate,
+                soilType: field.soilType,
+                currentGrowthStage: field.currentGrowthStage
+            }
+        });
+    }
+    catch (error) {
+        console.error("❌ Error confirming crop:", error);
+        return res.status(500).json({
+            status: "error",
+            message: "Failed to confirm crop"
+        });
+    }
+});
+/**
+ * GET /api/irrigation/check/:fieldId
+ * Phase 3: Get irrigation recommendation for a field
+ */
+app.get("/api/irrigation/check/:fieldId", async (req, res) => {
+    try {
+        const fieldId = parseInt(req.params.fieldId || '0');
+        if (isNaN(fieldId)) {
+            return res.status(400).json({
+                status: "error",
+                message: "Invalid field ID"
+            });
+        }
+        // Get field details
+        const field = await prisma.field.findUnique({
+            where: { id: fieldId }
+        });
+        if (!field) {
+            return res.status(404).json({
+                status: "error",
+                message: `Field ${fieldId} not found`
+            });
+        }
+        if (!field.cropConfirmed || !field.selectedCrop || !field.sowingDate) {
+            return res.status(400).json({
+                status: "error",
+                message: "Crop not confirmed for this field. Complete Phase 2 first."
+            });
+        }
+        // Get latest sensor reading
+        const latestReading = await prisma.sensorReading.findFirst({
+            where: { nodeId: fieldId },
+            orderBy: { timestamp: 'desc' }
+        });
+        if (!latestReading) {
+            return res.status(404).json({
+                status: "error",
+                message: "No sensor data available for this field"
+            });
+        }
+        // Convert moisture (SMU 0-1000 to %)
+        const moisturePct = latestReading.moisture / 10;
+        // Fetch weather and update GDD
+        const weatherData = await fetchWeatherWithCache(field.latitude, field.longitude);
+        // Update GDD with today's weather
+        const todayForecast = weatherData.forecast_7day[0];
+        if (todayForecast) {
+            await updateFieldGDD(field.id, field.selectedCrop, field.sowingDate, todayForecast.temp_max_c, todayForecast.temp_min_c, prisma);
+        }
+        // Refresh field data after GDD update
+        const updatedField = await prisma.field.findUnique({
+            where: { id: fieldId }
+        });
+        if (!updatedField) {
+            throw new Error('Field not found after update');
+        }
+        // Prepare input for irrigation engine
+        const irrigationInput = {
+            fieldId: field.id,
+            cropName: field.selectedCrop,
+            soilType: field.soilType || 'LOAM',
+            currentMoisturePct: moisturePct,
+            currentTempC: latestReading.temperature,
+            latitude: field.latitude,
+            longitude: field.longitude,
+            sowingDate: field.sowingDate,
+            accumulatedGDD: updatedField.accumulatedGDD
+        };
+        // Make irrigation decision
+        const decision = await decideIrrigation(irrigationInput, prisma);
+        // Save decision to database (optional - for analytics)
+        await prisma.field.update({
+            where: { id: fieldId },
+            data: {
+                lastIrrigationCheck: new Date(),
+                lastIrrigationAction: decision.shouldIrrigate ? new Date() : field.lastIrrigationAction
+            }
+        });
+        console.log(`✅ Irrigation decision for field ${fieldId}: ${decision.shouldIrrigate ? 'IRRIGATE' : 'SKIP'}`);
+        // Publish to MQTT dashboard
+        publishToDashboard({
+            event: 'irrigation_decision',
+            fieldId: field.id,
+            decision: decision.shouldIrrigate ? 'IRRIGATE' : 'SKIP',
+            reason: decision.reason_en,
+            reason_hi: decision.reason_hi,
+            recommendedDepthMm: decision.recommendedDepthMm,
+            confidence: decision.confidence,
+            growthStage: decision.growthStageInfo?.stage,
+            moisturePct: moisturePct,
+            weatherForecast: decision.weatherForecast
+        });
+        return res.json({
+            status: "ok",
+            data: {
+                field: {
+                    id: field.id,
+                    cropName: field.selectedCrop,
+                    growthStage: updatedField.currentGrowthStage,
+                    accumulatedGDD: updatedField.accumulatedGDD,
+                    daysElapsed: getDaysElapsed(field.sowingDate)
+                },
+                sensorData: {
+                    moisture: latestReading.moisture,
+                    moisturePct: moisturePct,
+                    temperature: latestReading.temperature,
+                    timestamp: latestReading.timestamp
+                },
+                decision: decision,
+                weather: weatherData
+            }
+        });
+    }
+    catch (error) {
+        console.error("❌ Error checking irrigation:", error);
+        return res.status(500).json({
+            status: "error",
+            message: "Failed to check irrigation"
         });
     }
 });

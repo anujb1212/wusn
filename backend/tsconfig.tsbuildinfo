@@ -1,1 +1,1 @@
-{"root":["./src/cropRecommendationService.ts","./src/cropTranslations.ts","./src/datasetService.ts","./src/fuzzyService.ts","./src/index.ts","./src/irrigationTranslations.ts","./src/mqttService.ts","./src/nodeSelectionService.ts"],"version":"5.9.2"}
+{"root":["./src/cropRecommendationService.ts","./src/cropTranslations.ts","./src/datasetService.ts","./src/fuzzyService.ts","./src/gddService.ts","./src/index.ts","./src/irrigationEngine.ts","./src/irrigationTranslations.ts","./src/mqttService.ts","./src/nodeSelectionService.ts","./src/weatherService.ts"],"version":"5.9.2"}

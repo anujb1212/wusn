@@ -100,6 +100,32 @@ model CropRecommendation {
   @@index([cropName])
 }
 
+model Field {
+  id        Int     @id @default(autoincrement())
+  fieldName String
+  latitude  Float
+  longitude Float
+  soilType  String?
+
+  recommendedCrop String?
+  selectedCrop    String?
+  sowingDate      DateTime?
+  cropConfirmed   Boolean   @default(false)
+
+  accumulatedGDD     Float     @default(0)
+  lastGDDUpdate      DateTime?
+  currentGrowthStage String?
+
+  lastIrrigationCheck  DateTime?
+  lastIrrigationAction DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cropConfirmed, lastGDDUpdate])
+  @@map("fields")
+}
+
 model Alert {
   id           Int      @id @default(autoincrement())
   nodeId       Int
