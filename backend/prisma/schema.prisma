@@ -8,30 +8,62 @@ generator client {
 }
 
 model Node {
-  id          Int             @id @default(autoincrement())
-  nodeId      Int             @unique
-  location    String?
-  burialDepth Int?
-  installDate DateTime        @default(now())
-  lastSeen    DateTime        @default(now())
-  isActive    Boolean         @default(true)
-  readings    SensorReading[]
+  id           Int             @id @default(autoincrement())
+  nodeId       Int             @unique
+  location     String?
+  burialDepth  Int?
+  distanceToGW Float?
+  installDate  DateTime        @default(now())
+  lastSeen     DateTime        @default(now())
+  isActive     Boolean         @default(true)
+  readings     SensorReading[]
 
   @@index([nodeId])
 }
 
 model SensorReading {
-  id          Int       @id @default(autoincrement())
-  nodeId      Int
-  moisture    Int
-  temperature Int
-  rssi        Int?
-  timestamp   DateTime  @default(now())
-  node        Node      @relation(fields: [nodeId], references: [nodeId])
-  analysis    Analysis?
+  id           Int       @id @default(autoincrement())
+  nodeId       Int
+  moisture     Int
+  temperature  Int
+  rssi         Int?
+  batteryLevel Int?
+  timestamp    DateTime  @default(now())
+  node         Node      @relation(fields: [nodeId], references: [nodeId])
+  analysis     Analysis?
 
   @@index([nodeId, timestamp])
   @@index([timestamp])
+}
+
+model AggregatedReading {
+  id              Int                 @id @default(autoincrement())
+  timestamp       DateTime            @default(now())
+  selectedNodeId  Int
+  allNodesData    Json
+  selectionScore  Float
+  selectionReason String
+  analysis        AggregatedAnalysis?
+
+  @@index([timestamp])
+  @@index([selectedNodeId])
+}
+
+model AggregatedAnalysis {
+  id                  Int                  @id @default(autoincrement())
+  aggregatedReadingId Int                  @unique
+  timestamp           DateTime             @default(now())
+  fuzzyDryScore       Int
+  fuzzyOptimalScore   Int
+  fuzzyWetScore       Int
+  soilStatus          String
+  confidence          Int
+  irrigationAdvice    String
+  urgency             String
+  aggregatedReading   AggregatedReading    @relation(fields: [aggregatedReadingId], references: [id])
+  cropRecommendations CropRecommendation[]
+
+  @@index([aggregatedReadingId])
 }
 
 model Analysis {
@@ -53,16 +85,45 @@ model Analysis {
 }
 
 model CropRecommendation {
-  id          Int      @id @default(autoincrement())
-  analysisId  Int
-  cropName    String
-  suitability Int
-  reason      String
-  rank        Int
-  analysis    Analysis @relation(fields: [analysisId], references: [id])
+  id                   Int                 @id @default(autoincrement())
+  analysisId           Int?
+  aggregatedAnalysisId Int?
+  cropName             String
+  suitability          Int
+  reason               String
+  rank                 Int
+  analysis             Analysis?           @relation(fields: [analysisId], references: [id])
+  aggregatedAnalysis   AggregatedAnalysis? @relation(fields: [aggregatedAnalysisId], references: [id])
 
   @@index([analysisId])
+  @@index([aggregatedAnalysisId])
   @@index([cropName])
+}
+
+model Field {
+  id        Int     @id @default(autoincrement())
+  fieldName String
+  latitude  Float
+  longitude Float
+  soilType  String?
+
+  recommendedCrop String?
+  selectedCrop    String?
+  sowingDate      DateTime?
+  cropConfirmed   Boolean   @default(false)
+
+  accumulatedGDD     Float     @default(0)
+  lastGDDUpdate      DateTime?
+  currentGrowthStage String?
+
+  lastIrrigationCheck  DateTime?
+  lastIrrigationAction DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cropConfirmed, lastGDDUpdate])
+  @@map("fields")
 }
 
 model Alert {
