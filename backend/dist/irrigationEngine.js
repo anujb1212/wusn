@@ -1,474 +1,361 @@
-import { fetchWeatherWithCache, getCumulativeRainfall, isSignificantRainExpected } from './weatherService.js';
-import { getGrowthStageInfo, getCropBaseTemp } from './gddService.js';
-/**
- * Crop-specific irrigation parameters for ALL dataset crops
- * Kc = Crop coefficient (water requirement multiplier)
- * min/max_moisture_pct = Optimal soil moisture range for each growth stage
- */
-export const CROP_PARAMETERS = {
+import { PrismaClient } from '@prisma/client';
+import { getLatestGDDStatus } from './gddService.js';
+const prisma = new PrismaClient();
+const SANDY_LOAM_PARAMS = {
+    fieldCapacity: 40,
+    wiltingPoint: 8,
+    saturation: 45,
+    bulkDensity: 1.5,
+    rootingDepth: 60,
+};
+const MAD_BY_STAGE = {
+    INITIAL: 0.5,
+    DEVELOPMENT: 0.4,
+    MID_SEASON: 0.3,
+    LATE_SEASON: 0.5,
+    HARVEST_READY: 0.7,
+};
+const CROP_MOISTURE_REQUIREMENTS = {
     rice: {
-        name_hi: 'चावल',
-        name_en: 'Rice',
-        season: 'KHARIF',
-        stages: {
-            INITIAL: { Kc: 0.5, min_moisture_pct: 75, max_moisture_pct: 100, duration_days: 30 },
-            DEVELOPMENT: { Kc: 0.8, min_moisture_pct: 80, max_moisture_pct: 100, duration_days: 30 },
-            MID_SEASON: { Kc: 1.2, min_moisture_pct: 85, max_moisture_pct: 100, duration_days: 80 },
-            LATE_SEASON: { Kc: 0.8, min_moisture_pct: 75, max_moisture_pct: 100, duration_days: 30 },
-            HARVEST_READY: { Kc: 0.5, min_moisture_pct: 60, max_moisture_pct: 90, duration_days: 10 }
-        }
+        min: 60,
+        optimal: 70,
+        max: 80,
+        criticalStages: ['MID_SEASON', 'LATE_SEASON'],
     },
-    maize: {
-        name_hi: 'मक्का',
-        name_en: 'Maize',
-        season: 'KHARIF',
-        stages: {
-            INITIAL: { Kc: 0.3, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 25 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 35 },
-            MID_SEASON: { Kc: 1.2, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 50 },
-            LATE_SEASON: { Kc: 0.6, min_moisture_pct: 50, max_moisture_pct: 75, duration_days: 30 },
-            HARVEST_READY: { Kc: 0.4, min_moisture_pct: 40, max_moisture_pct: 70, duration_days: 10 }
-        }
+    wheat: {
+        min: 30,
+        optimal: 40,
+        max: 50,
+        criticalStages: ['MID_SEASON'],
     },
     chickpea: {
-        name_hi: 'चना',
-        name_en: 'Chickpea',
-        season: 'RABI',
-        stages: {
-            INITIAL: { Kc: 0.3, min_moisture_pct: 45, max_moisture_pct: 75, duration_days: 25 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 35 },
-            MID_SEASON: { Kc: 1.0, min_moisture_pct: 55, max_moisture_pct: 80, duration_days: 50 },
-            LATE_SEASON: { Kc: 0.5, min_moisture_pct: 45, max_moisture_pct: 70, duration_days: 25 },
-            HARVEST_READY: { Kc: 0.3, min_moisture_pct: 40, max_moisture_pct: 65, duration_days: 10 }
-        }
-    },
-    kidneybeans: {
-        name_hi: 'राजमा',
-        name_en: 'Kidney Beans',
-        season: 'KHARIF',
-        stages: {
-            INITIAL: { Kc: 0.3, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 20 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 30 },
-            MID_SEASON: { Kc: 1.05, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 40 },
-            LATE_SEASON: { Kc: 0.65, min_moisture_pct: 50, max_moisture_pct: 75, duration_days: 25 },
-            HARVEST_READY: { Kc: 0.4, min_moisture_pct: 40, max_moisture_pct: 70, duration_days: 10 }
-        }
-    },
-    pigeonpeas: {
-        name_hi: 'अरहर',
-        name_en: 'Pigeon Peas',
-        season: 'KHARIF',
-        stages: {
-            INITIAL: { Kc: 0.3, min_moisture_pct: 45, max_moisture_pct: 75, duration_days: 30 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 40 },
-            MID_SEASON: { Kc: 1.0, min_moisture_pct: 55, max_moisture_pct: 80, duration_days: 60 },
-            LATE_SEASON: { Kc: 0.6, min_moisture_pct: 45, max_moisture_pct: 70, duration_days: 30 },
-            HARVEST_READY: { Kc: 0.4, min_moisture_pct: 40, max_moisture_pct: 65, duration_days: 10 }
-        }
-    },
-    mothbeans: {
-        name_hi: 'मोठ',
-        name_en: 'Moth Beans',
-        season: 'KHARIF',
-        stages: {
-            INITIAL: { Kc: 0.3, min_moisture_pct: 45, max_moisture_pct: 75, duration_days: 20 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 30 },
-            MID_SEASON: { Kc: 1.05, min_moisture_pct: 55, max_moisture_pct: 80, duration_days: 40 },
-            LATE_SEASON: { Kc: 0.6, min_moisture_pct: 45, max_moisture_pct: 70, duration_days: 20 },
-            HARVEST_READY: { Kc: 0.4, min_moisture_pct: 40, max_moisture_pct: 65, duration_days: 10 }
-        }
-    },
-    mungbean: {
-        name_hi: 'मूंग',
-        name_en: 'Mung Bean',
-        season: 'KHARIF',
-        stages: {
-            INITIAL: { Kc: 0.3, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 20 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 25 },
-            MID_SEASON: { Kc: 1.05, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 35 },
-            LATE_SEASON: { Kc: 0.65, min_moisture_pct: 50, max_moisture_pct: 75, duration_days: 20 },
-            HARVEST_READY: { Kc: 0.4, min_moisture_pct: 40, max_moisture_pct: 70, duration_days: 10 }
-        }
-    },
-    blackgram: {
-        name_hi: 'उड़द',
-        name_en: 'Black Gram',
-        season: 'KHARIF',
-        stages: {
-            INITIAL: { Kc: 0.3, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 20 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 25 },
-            MID_SEASON: { Kc: 1.05, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 35 },
-            LATE_SEASON: { Kc: 0.65, min_moisture_pct: 50, max_moisture_pct: 75, duration_days: 20 },
-            HARVEST_READY: { Kc: 0.4, min_moisture_pct: 40, max_moisture_pct: 70, duration_days: 10 }
-        }
+        min: 25,
+        optimal: 35,
+        max: 45,
+        criticalStages: ['MID_SEASON'],
     },
     lentil: {
-        name_hi: 'मसूर',
-        name_en: 'Lentil',
-        season: 'RABI',
-        stages: {
-            INITIAL: { Kc: 0.3, min_moisture_pct: 45, max_moisture_pct: 75, duration_days: 25 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 35 },
-            MID_SEASON: { Kc: 1.0, min_moisture_pct: 55, max_moisture_pct: 80, duration_days: 50 },
-            LATE_SEASON: { Kc: 0.5, min_moisture_pct: 45, max_moisture_pct: 70, duration_days: 25 },
-            HARVEST_READY: { Kc: 0.3, min_moisture_pct: 40, max_moisture_pct: 65, duration_days: 10 }
-        }
-    },
-    pomegranate: {
-        name_hi: 'अनार',
-        name_en: 'Pomegranate',
-        season: 'PERENNIAL',
-        stages: {
-            INITIAL: { Kc: 0.3, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 40 },
-            DEVELOPMENT: { Kc: 0.6, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 60 },
-            MID_SEASON: { Kc: 0.9, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 100 },
-            LATE_SEASON: { Kc: 0.7, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 50 },
-            HARVEST_READY: { Kc: 0.5, min_moisture_pct: 45, max_moisture_pct: 75, duration_days: 20 }
-        }
-    },
-    banana: {
-        name_hi: 'केला',
-        name_en: 'Banana',
-        season: 'PERENNIAL',
-        stages: {
-            INITIAL: { Kc: 0.5, min_moisture_pct: 60, max_moisture_pct: 90, duration_days: 60 },
-            DEVELOPMENT: { Kc: 0.8, min_moisture_pct: 65, max_moisture_pct: 90, duration_days: 90 },
-            MID_SEASON: { Kc: 1.1, min_moisture_pct: 70, max_moisture_pct: 95, duration_days: 120 },
-            LATE_SEASON: { Kc: 0.9, min_moisture_pct: 65, max_moisture_pct: 90, duration_days: 60 },
-            HARVEST_READY: { Kc: 0.75, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 30 }
-        }
-    },
-    mango: {
-        name_hi: 'आम',
-        name_en: 'Mango',
-        season: 'PERENNIAL',
-        stages: {
-            INITIAL: { Kc: 0.4, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 60 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 90 },
-            MID_SEASON: { Kc: 0.95, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 120 },
-            LATE_SEASON: { Kc: 0.75, min_moisture_pct: 55, max_moisture_pct: 80, duration_days: 60 },
-            HARVEST_READY: { Kc: 0.6, min_moisture_pct: 50, max_moisture_pct: 75, duration_days: 30 }
-        }
-    },
-    grapes: {
-        name_hi: 'अंगूर',
-        name_en: 'Grapes',
-        season: 'PERENNIAL',
-        stages: {
-            INITIAL: { Kc: 0.3, min_moisture_pct: 45, max_moisture_pct: 75, duration_days: 40 },
-            DEVELOPMENT: { Kc: 0.6, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 50 },
-            MID_SEASON: { Kc: 0.85, min_moisture_pct: 55, max_moisture_pct: 80, duration_days: 70 },
-            LATE_SEASON: { Kc: 0.65, min_moisture_pct: 50, max_moisture_pct: 75, duration_days: 40 },
-            HARVEST_READY: { Kc: 0.5, min_moisture_pct: 45, max_moisture_pct: 70, duration_days: 20 }
-        }
-    },
-    watermelon: {
-        name_hi: 'तरबूज',
-        name_en: 'Watermelon',
-        season: 'SUMMER',
-        stages: {
-            INITIAL: { Kc: 0.4, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 20 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 30 },
-            MID_SEASON: { Kc: 1.0, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 40 },
-            LATE_SEASON: { Kc: 0.75, min_moisture_pct: 50, max_moisture_pct: 75, duration_days: 20 },
-            HARVEST_READY: { Kc: 0.6, min_moisture_pct: 45, max_moisture_pct: 70, duration_days: 10 }
-        }
-    },
-    muskmelon: {
-        name_hi: 'खरबूजा',
-        name_en: 'Muskmelon',
-        season: 'SUMMER',
-        stages: {
-            INITIAL: { Kc: 0.4, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 20 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 30 },
-            MID_SEASON: { Kc: 0.95, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 35 },
-            LATE_SEASON: { Kc: 0.75, min_moisture_pct: 50, max_moisture_pct: 75, duration_days: 20 },
-            HARVEST_READY: { Kc: 0.6, min_moisture_pct: 45, max_moisture_pct: 70, duration_days: 10 }
-        }
-    },
-    apple: {
-        name_hi: 'सेब',
-        name_en: 'Apple',
-        season: 'PERENNIAL',
-        stages: {
-            INITIAL: { Kc: 0.4, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 50 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 70 },
-            MID_SEASON: { Kc: 0.95, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 90 },
-            LATE_SEASON: { Kc: 0.75, min_moisture_pct: 55, max_moisture_pct: 80, duration_days: 50 },
-            HARVEST_READY: { Kc: 0.6, min_moisture_pct: 50, max_moisture_pct: 75, duration_days: 20 }
-        }
-    },
-    orange: {
-        name_hi: 'संतरा',
-        name_en: 'Orange',
-        season: 'PERENNIAL',
-        stages: {
-            INITIAL: { Kc: 0.4, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 60 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 90 },
-            MID_SEASON: { Kc: 0.9, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 120 },
-            LATE_SEASON: { Kc: 0.75, min_moisture_pct: 55, max_moisture_pct: 80, duration_days: 60 },
-            HARVEST_READY: { Kc: 0.6, min_moisture_pct: 50, max_moisture_pct: 75, duration_days: 30 }
-        }
-    },
-    papaya: {
-        name_hi: 'पपीता',
-        name_en: 'Papaya',
-        season: 'PERENNIAL',
-        stages: {
-            INITIAL: { Kc: 0.5, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 60 },
-            DEVELOPMENT: { Kc: 0.8, min_moisture_pct: 60, max_moisture_pct: 90, duration_days: 90 },
-            MID_SEASON: { Kc: 1.05, min_moisture_pct: 65, max_moisture_pct: 90, duration_days: 120 },
-            LATE_SEASON: { Kc: 0.85, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 60 },
-            HARVEST_READY: { Kc: 0.7, min_moisture_pct: 55, max_moisture_pct: 80, duration_days: 30 }
-        }
-    },
-    coconut: {
-        name_hi: 'नारियल',
-        name_en: 'Coconut',
-        season: 'PERENNIAL',
-        stages: {
-            INITIAL: { Kc: 0.5, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 90 },
-            DEVELOPMENT: { Kc: 0.8, min_moisture_pct: 60, max_moisture_pct: 90, duration_days: 150 },
-            MID_SEASON: { Kc: 1.0, min_moisture_pct: 65, max_moisture_pct: 90, duration_days: 200 },
-            LATE_SEASON: { Kc: 0.9, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 100 },
-            HARVEST_READY: { Kc: 0.8, min_moisture_pct: 55, max_moisture_pct: 80, duration_days: 60 }
-        }
+        min: 25,
+        optimal: 35,
+        max: 45,
+        criticalStages: ['MID_SEASON'],
     },
     cotton: {
-        name_hi: 'कपास',
-        name_en: 'Cotton',
-        season: 'KHARIF',
-        stages: {
-            INITIAL: { Kc: 0.35, min_moisture_pct: 45, max_moisture_pct: 75, duration_days: 30 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 50 },
-            MID_SEASON: { Kc: 1.15, min_moisture_pct: 55, max_moisture_pct: 80, duration_days: 60 },
-            LATE_SEASON: { Kc: 0.7, min_moisture_pct: 45, max_moisture_pct: 70, duration_days: 45 },
-            HARVEST_READY: { Kc: 0.5, min_moisture_pct: 40, max_moisture_pct: 65, duration_days: 15 }
-        }
+        min: 35,
+        optimal: 45,
+        max: 55,
+        criticalStages: ['MID_SEASON', 'LATE_SEASON'],
     },
-    jute: {
-        name_hi: 'जूट',
-        name_en: 'Jute',
-        season: 'KHARIF',
-        stages: {
-            INITIAL: { Kc: 0.35, min_moisture_pct: 50, max_moisture_pct: 80, duration_days: 25 },
-            DEVELOPMENT: { Kc: 0.7, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 35 },
-            MID_SEASON: { Kc: 1.05, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 50 },
-            LATE_SEASON: { Kc: 0.65, min_moisture_pct: 50, max_moisture_pct: 75, duration_days: 30 },
-            HARVEST_READY: { Kc: 0.5, min_moisture_pct: 45, max_moisture_pct: 70, duration_days: 10 }
-        }
+    maize: {
+        min: 40,
+        optimal: 50,
+        max: 60,
+        criticalStages: ['MID_SEASON'],
     },
-    coffee: {
-        name_hi: 'कॉफी',
-        name_en: 'Coffee',
-        season: 'PERENNIAL',
-        stages: {
-            INITIAL: { Kc: 0.5, min_moisture_pct: 55, max_moisture_pct: 85, duration_days: 60 },
-            DEVELOPMENT: { Kc: 0.8, min_moisture_pct: 60, max_moisture_pct: 90, duration_days: 90 },
-            MID_SEASON: { Kc: 0.95, min_moisture_pct: 65, max_moisture_pct: 90, duration_days: 120 },
-            LATE_SEASON: { Kc: 0.8, min_moisture_pct: 60, max_moisture_pct: 85, duration_days: 60 },
-            HARVEST_READY: { Kc: 0.7, min_moisture_pct: 55, max_moisture_pct: 80, duration_days: 30 }
+    pigeonpeas: {
+        min: 30,
+        optimal: 40,
+        max: 50,
+        criticalStages: ['MID_SEASON'],
+    },
+    mothbeans: {
+        min: 20,
+        optimal: 30,
+        max: 40,
+        criticalStages: ['MID_SEASON'],
+    },
+    mungbean: {
+        min: 30,
+        optimal: 40,
+        max: 50,
+        criticalStages: ['MID_SEASON'],
+    },
+    blackgram: {
+        min: 30,
+        optimal: 40,
+        max: 50,
+        criticalStages: ['MID_SEASON'],
+    },
+    kidneybeans: {
+        min: 35,
+        optimal: 45,
+        max: 55,
+        criticalStages: ['MID_SEASON'],
+    },
+};
+export async function makeIrrigationDecision(nodeId, weatherData) {
+    try {
+        console.log(`[Irrigation] 💧 Evaluating irrigation need for node ${nodeId}`);
+        const latestReading = await prisma.sensorReading.findFirst({
+            where: { nodeId },
+            orderBy: { timestamp: 'desc' },
+        });
+        if (!latestReading || latestReading.soilMoistureVWC === null) {
+            throw new Error(`No soil moisture data available for node ${nodeId}`);
         }
-    }
-};
-/**
- * Soil-specific water holding capacity
- */
-export const SOIL_PARAMETERS = {
-    SANDY: { fieldCapacity_pct: 15, wiltingPoint_pct: 8, rootingDepth_cm: 60 },
-    LOAM: { fieldCapacity_pct: 25, wiltingPoint_pct: 12, rootingDepth_cm: 70 },
-    CLAY_LOAM: { fieldCapacity_pct: 35, wiltingPoint_pct: 18, rootingDepth_cm: 80 }
-};
-/**
- * Irrigation decision thresholds
- */
-export const IRRIGATION_THRESHOLDS = {
-    RAIN_FORECAST_THRESHOLD_MM: 20,
-    MOISTURE_CRITICAL_PCT: 40,
-    MOISTURE_OPTIMAL_PCT: 85,
-    CHECK_INTERVAL_HOURS: 24
-};
-export async function decideIrrigation(input, prisma) {
-    console.log(`\n🌾 Making irrigation decision for field ${input.fieldId} (${input.cropName})...`);
-    // Get crop parameters
-    const normalizedCrop = input.cropName.toLowerCase();
-    const cropParams = CROP_PARAMETERS[normalizedCrop];
-    if (!cropParams) {
-        console.warn(`⚠️  Crop '${input.cropName}' not found in irrigation engine (normalized: ${normalizedCrop})`);
+        const currentVWC = latestReading.soilMoistureVWC;
+        const gddStatus = await getLatestGDDStatus(nodeId);
+        const fieldConfig = gddStatus.fieldConfig;
+        if (!fieldConfig || !fieldConfig.cropType) {
+            throw new Error(`No crop configured for node ${nodeId}`);
+        }
+        const cropType = fieldConfig.cropType;
+        const growthStage = gddStatus.latestGDD?.growthStage || 'INITIAL';
+        console.log(`[Irrigation] Crop: ${cropType}, Stage: ${growthStage}, Current VWC: ${currentVWC.toFixed(2)}%`);
+        const moistureReq = getCropMoistureRequirement(cropType, growthStage);
+        const targetVWC = moistureReq.target;
+        const criticalVWC = moistureReq.critical;
+        const FC = SANDY_LOAM_PARAMS.fieldCapacity;
+        const WP = SANDY_LOAM_PARAMS.wiltingPoint;
+        const MAD = moistureReq.mad;
+        const RAW_threshold = FC - (FC - WP) * MAD;
+        console.log(`[Irrigation] Target: ${targetVWC.toFixed(1)}%, RAW: ${RAW_threshold.toFixed(1)}%, Critical: ${criticalVWC.toFixed(1)}%`);
+        // RULE 1: CRITICAL
+        if (currentVWC <= criticalVWC) {
+            const waterNeeded = calculateWaterNeeded(currentVWC, targetVWC, cropType, growthStage);
+            await logIrrigationDecision(nodeId, true, 'CRITICAL', currentVWC, targetVWC, waterNeeded, cropType, growthStage);
+            return {
+                shouldIrrigate: true,
+                reason: `CRITICAL: Soil moisture (${currentVWC.toFixed(1)}%) at or below critical threshold (${criticalVWC.toFixed(1)}%). Immediate irrigation required!`,
+                currentVWC,
+                targetVWC,
+                urgency: 'CRITICAL',
+                estimatedWaterNeeded: waterNeeded,
+                recommendedMethod: 'drip',
+                durationMinutes: Math.round(waterNeeded * 3),
+                nextCheckHours: 24,
+                confidence: 0.95,
+                ruleTriggered: 'CRITICAL_LOW_MOISTURE',
+                growthStage,
+            };
+        }
+        // RULE 2: HIGH
+        if (currentVWC <= RAW_threshold) {
+            const waterNeeded = calculateWaterNeeded(currentVWC, targetVWC, cropType, growthStage);
+            await logIrrigationDecision(nodeId, true, 'HIGH', currentVWC, targetVWC, waterNeeded, cropType, growthStage);
+            return {
+                shouldIrrigate: true,
+                reason: `Soil moisture (${currentVWC.toFixed(1)}%) below RAW threshold (${RAW_threshold.toFixed(1)}%). Irrigation recommended.`,
+                currentVWC,
+                targetVWC,
+                urgency: 'HIGH',
+                estimatedWaterNeeded: waterNeeded,
+                recommendedMethod: getRecommendedMethod(cropType, growthStage),
+                durationMinutes: Math.round(waterNeeded * 2.5),
+                nextCheckHours: 48,
+                confidence: 0.9,
+                ruleTriggered: 'BELOW_RAW_THRESHOLD',
+                growthStage,
+            };
+        }
+        // RULE 3: Weather check
+        if (weatherData) {
+            const rainForecast = getRainForecast(weatherData);
+            if (rainForecast.expectedRain > 15 && currentVWC >= criticalVWC) {
+                await logIrrigationDecision(nodeId, false, 'LOW', currentVWC, targetVWC, 0, cropType, growthStage);
+                return {
+                    shouldIrrigate: false,
+                    reason: `Rain (${rainForecast.expectedRain.toFixed(1)} mm) expected in ${rainForecast.days} days. Current moisture adequate. Postpone irrigation.`,
+                    currentVWC,
+                    targetVWC,
+                    urgency: 'LOW',
+                    estimatedWaterNeeded: 0,
+                    nextCheckHours: 72,
+                    confidence: 0.85,
+                    ruleTriggered: 'RAIN_FORECAST_ADEQUATE',
+                    growthStage,
+                    weatherConsideration: `${rainForecast.expectedRain.toFixed(1)} mm in ${rainForecast.days} days`,
+                };
+            }
+        }
+        // RULE 4: MEDIUM
+        const isCriticalStage = moistureReq.criticalStages?.includes(growthStage);
+        if (currentVWC < targetVWC && isCriticalStage) {
+            const waterNeeded = calculateWaterNeeded(currentVWC, targetVWC, cropType, growthStage);
+            await logIrrigationDecision(nodeId, true, 'MEDIUM', currentVWC, targetVWC, waterNeeded, cropType, growthStage);
+            return {
+                shouldIrrigate: true,
+                reason: `Critical stage (${growthStage}). Moisture (${currentVWC.toFixed(1)}%) below optimal (${targetVWC.toFixed(1)}%). Light irrigation recommended.`,
+                currentVWC,
+                targetVWC,
+                urgency: 'MEDIUM',
+                estimatedWaterNeeded: waterNeeded,
+                recommendedMethod: getRecommendedMethod(cropType, growthStage),
+                durationMinutes: Math.round(waterNeeded * 2),
+                nextCheckHours: 72,
+                confidence: 0.8,
+                ruleTriggered: 'CRITICAL_STAGE_SUBOPTIMAL',
+                growthStage,
+            };
+        }
+        // RULE 5: At field capacity
+        if (currentVWC >= FC) {
+            await logIrrigationDecision(nodeId, false, 'LOW', currentVWC, targetVWC, 0, cropType, growthStage);
+            return {
+                shouldIrrigate: false,
+                reason: `Soil at field capacity (${currentVWC.toFixed(1)}%). No irrigation needed.`,
+                currentVWC,
+                targetVWC,
+                urgency: 'LOW',
+                estimatedWaterNeeded: 0,
+                nextCheckHours: 48,
+                confidence: 0.95,
+                ruleTriggered: 'AT_FIELD_CAPACITY',
+                growthStage,
+            };
+        }
+        // DEFAULT
+        await logIrrigationDecision(nodeId, false, 'LOW', currentVWC, targetVWC, 0, cropType, growthStage);
         return {
             shouldIrrigate: false,
-            recommendedDepthMm: 0,
-            reason_en: `Crop '${input.cropName}' configuration is being updated. Check again later.`,
-            reason_hi: `फसल '${input.cropName}' की जानकारी अपडेट हो रही है। बाद में जांचें।`,
+            reason: `Moisture (${currentVWC.toFixed(1)}%) adequate for ${growthStage}. Continue monitoring.`,
+            currentVWC,
+            targetVWC,
+            urgency: 'LOW',
+            estimatedWaterNeeded: 0,
             nextCheckHours: 24,
-            confidence: 0,
-            ruleTriggered: 'UNSUPPORTED_CROP'
+            confidence: 0.75,
+            ruleTriggered: 'MOISTURE_ADEQUATE',
+            growthStage,
         };
-    }
-    // Get weather forecast
-    let weatherData;
-    try {
-        weatherData = await fetchWeatherWithCache(input.latitude, input.longitude);
     }
     catch (error) {
-        console.warn('⚠️  Weather fetch failed, using fallback decision');
-        return fallbackDecision(input, cropParams);
+        console.error(`[Irrigation] ❌ Error:`, error);
+        throw error;
     }
-    const next3DaysRain = getCumulativeRainfall({
-        ...weatherData,
-        forecast_7day: weatherData.forecast_7day.slice(0, 3)
-    });
-    const avgTempNext7Days = weatherData.forecast_7day.reduce((sum, day) => sum + (day.temp_max_c + day.temp_min_c) / 2, 0) / weatherData.forecast_7day.length;
-    // Get growth stage from GDD
-    const daysElapsed = Math.floor((Date.now() - input.sowingDate.getTime()) / (1000 * 60 * 60 * 24));
-    const growthInfo = getGrowthStageInfo(input.cropName, input.accumulatedGDD, daysElapsed, 20);
-    const stageParams = cropParams.stages[growthInfo.stage];
-    console.log(`   📊 Growth stage: ${growthInfo.stage} (${growthInfo.progress.toFixed(1)}%)`);
-    console.log(`   💧 Moisture: ${input.currentMoisturePct}% (optimal: ${stageParams.min_moisture_pct}-${stageParams.max_moisture_pct}%)`);
-    console.log(`   🌧️  Rain forecast (3 days): ${next3DaysRain.toFixed(1)} mm`);
-    // RULE 1: High moisture - No irrigation needed
-    if (input.currentMoisturePct >= IRRIGATION_THRESHOLDS.MOISTURE_OPTIMAL_PCT) {
-        return {
-            shouldIrrigate: false,
-            recommendedDepthMm: 0,
-            reason_en: `Soil moisture is optimal (${input.currentMoisturePct}%). No irrigation needed.`,
-            reason_hi: `मिट्टी की नमी पर्याप्त है (${input.currentMoisturePct}%)। सिंचाई की जरूरत नहीं।`,
-            nextCheckHours: 48,
-            confidence: 0.95,
-            ruleTriggered: 'HIGH_MOISTURE',
-            irrigationPattern: { type: 'skip', notes: 'Soil saturated' },
-            weatherForecast: { next3DaysRainMm: next3DaysRain, avgTempNext7Days },
-            growthStageInfo: { stage: growthInfo.stage, progress: growthInfo.progress, Kc: stageParams.Kc }
-        };
-    }
-    // RULE 2: Significant rain expected + current moisture acceptable
-    if (next3DaysRain >= IRRIGATION_THRESHOLDS.RAIN_FORECAST_THRESHOLD_MM &&
-        input.currentMoisturePct >= stageParams.min_moisture_pct) {
-        return {
-            shouldIrrigate: false,
-            recommendedDepthMm: 0,
-            reason_en: `${next3DaysRain.toFixed(1)} mm rain expected in 3 days. Postpone irrigation.`,
-            reason_hi: `अगले 3 दिनों में ${next3DaysRain.toFixed(1)} मिमी बारिश की संभावना। सिंचाई टालें।`,
-            nextCheckHours: 72,
-            confidence: 0.85,
-            ruleTriggered: 'SUFFICIENT_RAIN_FORECAST',
-            irrigationPattern: { type: 'skip', notes: 'Wait for natural rainfall' },
-            weatherForecast: { next3DaysRainMm: next3DaysRain, avgTempNext7Days },
-            growthStageInfo: { stage: growthInfo.stage, progress: growthInfo.progress, Kc: stageParams.Kc }
-        };
-    }
-    // RULE 3: Critical low moisture + critical growth stage
-    if (input.currentMoisturePct < IRRIGATION_THRESHOLDS.MOISTURE_CRITICAL_PCT &&
-        growthInfo.stage === 'MID_SEASON') {
-        const requiredDepth = calculateRequiredDepth(input.currentMoisturePct, stageParams.max_moisture_pct, input.soilType);
-        return {
-            shouldIrrigate: true,
-            recommendedDepthMm: requiredDepth,
-            reason_en: `CRITICAL: Low moisture (${input.currentMoisturePct}%) during peak growth. Immediate irrigation required.`,
-            reason_hi: `गंभीर: फूल आने के समय कम नमी (${input.currentMoisturePct}%)। तुरंत सिंचाई करें।`,
-            nextCheckHours: 168,
-            confidence: 0.95,
-            ruleTriggered: 'CRITICAL_LOW_MOISTURE_MID_SEASON',
-            irrigationPattern: {
-                type: 'drip',
-                duration_minutes: Math.round(requiredDepth * 2.5),
-                notes: `Apply ${requiredDepth.toFixed(1)} mm to reach optimal moisture`
-            },
-            weatherForecast: { next3DaysRainMm: next3DaysRain, avgTempNext7Days },
-            growthStageInfo: { stage: growthInfo.stage, progress: growthInfo.progress, Kc: stageParams.Kc }
-        };
-    }
-    // RULE 4: Below minimum threshold for current stage
-    if (input.currentMoisturePct < stageParams.min_moisture_pct) {
-        const requiredDepth = calculateRequiredDepth(input.currentMoisturePct, stageParams.max_moisture_pct, input.soilType);
-        return {
-            shouldIrrigate: true,
-            recommendedDepthMm: requiredDepth,
-            reason_en: `Moisture below stage minimum (${input.currentMoisturePct}% < ${stageParams.min_moisture_pct}%). Irrigation needed.`,
-            reason_hi: `नमी न्यूनतम से कम है (${input.currentMoisturePct}% < ${stageParams.min_moisture_pct}%)। सिंचाई करें।`,
-            nextCheckHours: 120,
-            confidence: 0.85,
-            ruleTriggered: 'BELOW_STAGE_MINIMUM',
-            irrigationPattern: {
-                type: stageParams.Kc > 1.0 ? 'drip' : 'sprinkler',
-                duration_minutes: Math.round(requiredDepth * 2),
-                notes: `Restore to optimal range`
-            },
-            weatherForecast: { next3DaysRainMm: next3DaysRain, avgTempNext7Days },
-            growthStageInfo: { stage: growthInfo.stage, progress: growthInfo.progress, Kc: stageParams.Kc }
-        };
-    }
-    // RULE 5: High Kc (water demand) + moderate moisture
-    if (stageParams.Kc > 1.0 &&
-        input.currentMoisturePct < (stageParams.min_moisture_pct + stageParams.max_moisture_pct) / 2) {
-        const lightDepth = calculateRequiredDepth(input.currentMoisturePct, (stageParams.min_moisture_pct + stageParams.max_moisture_pct) / 2, input.soilType);
-        return {
-            shouldIrrigate: true,
-            recommendedDepthMm: lightDepth,
-            reason_en: `High water demand stage (Kc=${stageParams.Kc}). Light irrigation recommended.`,
-            reason_hi: `फसल को अधिक पानी की जरूरत (Kc=${stageParams.Kc})। हल्की सिंचाई करें।`,
-            nextCheckHours: 96,
-            confidence: 0.75,
-            ruleTriggered: 'HIGH_KC_MODERATE_MOISTURE',
-            irrigationPattern: {
-                type: 'drip',
-                duration_minutes: Math.round(lightDepth * 2),
-                notes: 'Light application to sustain peak growth'
-            },
-            weatherForecast: { next3DaysRainMm: next3DaysRain, avgTempNext7Days },
-            growthStageInfo: { stage: growthInfo.stage, progress: growthInfo.progress, Kc: stageParams.Kc }
-        };
-    }
-    // DEFAULT RULE: Conditions stable, monitor
+}
+function getCropMoistureRequirement(cropType, growthStage) {
+    const normalizedCrop = cropType.toLowerCase().replace(/\s+/g, '');
+    const baseReq = CROP_MOISTURE_REQUIREMENTS[normalizedCrop] || {
+        min: 30,
+        optimal: 40,
+        max: 50,
+        criticalStages: ['MID_SEASON'],
+    };
+    const stageAdjustments = {
+        INITIAL: 1.1,
+        DEVELOPMENT: 1.0,
+        MID_SEASON: 1.0,
+        LATE_SEASON: 0.9,
+        HARVEST_READY: 0.7,
+    };
+    const adjustment = stageAdjustments[growthStage] || 1.0;
+    const mad = MAD_BY_STAGE[growthStage];
     return {
-        shouldIrrigate: false,
-        recommendedDepthMm: 0,
-        reason_en: `Conditions stable. Moisture ${input.currentMoisturePct}% is acceptable for ${growthInfo.stage} stage.`,
-        reason_hi: `स्थिति स्थिर है। ${growthInfo.stage} चरण के लिए ${input.currentMoisturePct}% नमी ठीक है।`,
-        nextCheckHours: 24,
-        confidence: 0.65,
-        ruleTriggered: 'STABLE_CONDITIONS',
-        irrigationPattern: { type: 'skip', notes: 'Continue monitoring daily' },
-        weatherForecast: { next3DaysRainMm: next3DaysRain, avgTempNext7Days },
-        growthStageInfo: { stage: growthInfo.stage, progress: growthInfo.progress, Kc: stageParams.Kc }
+        target: baseReq.optimal * adjustment,
+        critical: baseReq.min,
+        mad,
+        criticalStages: baseReq.criticalStages,
     };
 }
-function calculateRequiredDepth(currentMoisturePct, targetMoisturePct, soilType) {
-    const soilParams = SOIL_PARAMETERS[soilType];
-    const availableWater = (soilParams.fieldCapacity_pct - soilParams.wiltingPoint_pct) *
-        (soilParams.rootingDepth_cm / 10);
-    const deficitDepthMm = ((targetMoisturePct - currentMoisturePct) / 100) * availableWater;
-    return Math.max(10, Math.min(50, Math.round(deficitDepthMm)));
+function calculateWaterNeeded(currentVWC, targetVWC, cropType, growthStage) {
+    const rootDepth = getRootZoneDepth(cropType, growthStage);
+    const deficit = Math.max(0, targetVWC - currentVWC);
+    const waterNeeded = (deficit / 100) * rootDepth * 10;
+    return Math.max(10, Math.min(50, Math.round(waterNeeded)));
 }
-function fallbackDecision(input, cropParams) {
-    const daysElapsed = Math.floor((Date.now() - input.sowingDate.getTime()) / (1000 * 60 * 60 * 24));
-    const growthInfo = getGrowthStageInfo(input.cropName, input.accumulatedGDD, daysElapsed, 20);
-    const stageParams = cropParams.stages[growthInfo.stage];
-    if (input.currentMoisturePct < stageParams.min_moisture_pct) {
-        return {
-            shouldIrrigate: true,
-            recommendedDepthMm: 25,
-            reason_en: `Moisture low (${input.currentMoisturePct}%). Weather data unavailable, using conservative irrigation.`,
-            reason_hi: `नमी कम (${input.currentMoisturePct}%)। मौसम डेटा उपलब्ध नहीं, सावधानी से सिंचाई करें।`,
-            nextCheckHours: 48,
-            confidence: 0.6,
-            ruleTriggered: 'FALLBACK_LOW_MOISTURE',
-            irrigationPattern: {
-                type: 'sprinkler',
-                duration_minutes: 50,
-                notes: 'Conservative application due to missing weather data'
-            }
-        };
-    }
-    return {
-        shouldIrrigate: false,
-        recommendedDepthMm: 0,
-        reason_en: `Moisture adequate. Weather data unavailable, monitor closely.`,
-        reason_hi: `नमी पर्याप्त है। मौसम डेटा उपलब्ध नहीं, निगरानी रखें।`,
-        nextCheckHours: 24,
-        confidence: 0.5,
-        ruleTriggered: 'FALLBACK_STABLE',
-        irrigationPattern: { type: 'skip', notes: 'Check weather manually' }
+function getRootZoneDepth(cropType, growthStage) {
+    const depths = {
+        rice: {
+            INITIAL: 15,
+            DEVELOPMENT: 30,
+            MID_SEASON: 40,
+            LATE_SEASON: 40,
+            HARVEST_READY: 40,
+        },
+        wheat: {
+            INITIAL: 20,
+            DEVELOPMENT: 40,
+            MID_SEASON: 60,
+            LATE_SEASON: 60,
+            HARVEST_READY: 60,
+        },
+        chickpea: {
+            INITIAL: 15,
+            DEVELOPMENT: 30,
+            MID_SEASON: 50,
+            LATE_SEASON: 50,
+            HARVEST_READY: 50,
+        },
+        maize: {
+            INITIAL: 20,
+            DEVELOPMENT: 40,
+            MID_SEASON: 70,
+            LATE_SEASON: 70,
+            HARVEST_READY: 70,
+        },
+        cotton: {
+            INITIAL: 20,
+            DEVELOPMENT: 50,
+            MID_SEASON: 100,
+            LATE_SEASON: 100,
+            HARVEST_READY: 100,
+        },
     };
+    const normalizedCrop = cropType.toLowerCase().replace(/\s+/g, '');
+    return depths[normalizedCrop]?.[growthStage] || 50;
+}
+function getRecommendedMethod(cropType, growthStage) {
+    const normalizedCrop = cropType.toLowerCase().replace(/\s+/g, '');
+    if (normalizedCrop === 'rice') {
+        return 'flood';
+    }
+    if (growthStage === 'MID_SEASON' || growthStage === 'LATE_SEASON') {
+        return 'drip';
+    }
+    return 'sprinkler';
+}
+function getRainForecast(weatherData) {
+    let totalRain = 0;
+    const days = 3;
+    if (weatherData.forecast_7day && weatherData.forecast_7day.length > 0) {
+        for (let i = 0; i < Math.min(days, weatherData.forecast_7day.length); i++) {
+            const dayForecast = weatherData.forecast_7day[i];
+            totalRain += dayForecast?.precipitation_mm ?? 0;
+        }
+    }
+    return { expectedRain: totalRain, days };
+}
+async function logIrrigationDecision(nodeId, shouldIrrigate, urgency, currentVWC, targetVWC, estimatedWaterNeeded, cropType, growthStage) {
+    try {
+        await prisma.irrigationLog.create({
+            data: {
+                nodeId,
+                currentVWC,
+                targetVWC,
+                cropType,
+                growthStage: String(growthStage),
+                shouldIrrigate,
+                urgency,
+                reason: `Auto-decision: ${shouldIrrigate ? 'Irrigate' : 'Skip'}`,
+                estimatedWaterNeeded,
+            },
+        });
+    }
+    catch (error) {
+        console.error(`[Irrigation] Failed to log:`, error);
+    }
+}
+export async function recordIrrigationAction(nodeId, waterAppliedMm) {
+    try {
+        const latestLog = await prisma.irrigationLog.findFirst({
+            where: { nodeId },
+            orderBy: { timestamp: 'desc' },
+        });
+        if (latestLog) {
+            await prisma.irrigationLog.update({
+                where: { id: latestLog.id },
+                data: {
+                    actionTaken: true,
+                    actionTimestamp: new Date(),
+                    actualWaterApplied: waterAppliedMm,
+                },
+            });
+            console.log(`[Irrigation] ✅ Recorded ${waterAppliedMm}mm for node ${nodeId}`);
+        }
+    }
+    catch (error) {
+        console.error(`[Irrigation] Failed to record action:`, error);
+    }
 }
 //# sourceMappingURL=irrigationEngine.js.map

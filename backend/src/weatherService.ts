@@ -5,23 +5,34 @@ dotenv.config();
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY;
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
+// ============================================================================
+// INTERFACES
+// ============================================================================
 
 interface CurrentWeather {
     temp_c: number;
-    humidity: number;
-    description: string;
+    humidity_pct: number;
+    wind_speed_kmh: number;
+    condition: string;
 }
 
 interface DailyForecast {
     date: string;
     temp_max_c: number;
     temp_min_c: number;
-    rain_mm: number;
+    precipitation_mm: number; // Changed from rain_mm to match irrigation engine
+    humidity_pct?: number;
+    wind_speed_kmh?: number;
     description: string;
 }
 
 export interface WeatherData {
-    current: CurrentWeather;
+    current: {
+        temp_c: number;
+        humidity_pct: number;
+        wind_speed_kmh: number;
+        condition: string;
+    };
     forecast_7day: DailyForecast[];
 }
 
@@ -74,6 +85,10 @@ interface CacheEntry {
 const weatherCache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
+// ============================================================================
+// CACHE MANAGEMENT
+// ============================================================================
+
 /**
  * Clear expired cache entries (cleanup)
  */
@@ -87,7 +102,7 @@ function clearExpiredCache(): void {
         }
     });
 
-    keysToDelete.forEach(key => weatherCache.delete(key));
+    keysToDelete.forEach((key) => weatherCache.delete(key));
 
     if (keysToDelete.length > 0) {
         console.log(`🗑️  Cleared ${keysToDelete.length} expired weather cache entries`);
@@ -97,11 +112,12 @@ function clearExpiredCache(): void {
 // Run cache cleanup every hour
 setInterval(clearExpiredCache, CACHE_TTL_MS);
 
+// ============================================================================
+// MAIN WEATHER FUNCTIONS
+// ============================================================================
+
 /**
  * Fetch weather forecast for given coordinates (with cache)
- * @param latitude - Field latitude
- * @param longitude - Field longitude
- * @returns Weather data with current + 7-day forecast
  */
 export async function fetchWeatherWithCache(
     latitude: number,
@@ -123,9 +139,6 @@ export async function fetchWeatherWithCache(
 
 /**
  * Fetch weather forecast for given coordinates (direct, no cache)
- * @param latitude - Field latitude
- * @param longitude - Field longitude
- * @returns Weather data with current + 7-day forecast
  */
 export async function fetchWeatherForecast(
     latitude: number,
@@ -150,36 +163,48 @@ export async function fetchWeatherForecast(
         const currentResponse = await fetch(currentUrl);
 
         if (!currentResponse.ok) {
-            throw new Error(`OpenWeather API error: ${currentResponse.status} ${currentResponse.statusText}`);
+            throw new Error(
+                `OpenWeather API error: ${currentResponse.status} ${currentResponse.statusText}`
+            );
         }
 
-        const currentData = await currentResponse.json() as OpenWeatherCurrentResponse;
+        const currentData = (await currentResponse.json()) as OpenWeatherCurrentResponse;
 
         // Fetch 5-day/3-hour forecast
         const forecastUrl = `${OPENWEATHER_BASE_URL}/forecast?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHER_API_KEY}&units=metric`;
         const forecastResponse = await fetch(forecastUrl);
 
         if (!forecastResponse.ok) {
-            throw new Error(`OpenWeather forecast error: ${forecastResponse.status} ${forecastResponse.statusText}`);
+            throw new Error(
+                `OpenWeather forecast error: ${forecastResponse.status} ${forecastResponse.statusText}`
+            );
         }
 
-        const forecastData = await forecastResponse.json() as OpenWeatherForecastResponse;
+        const forecastData = (await forecastResponse.json()) as OpenWeatherForecastResponse;
 
         // Process current weather
         const current: CurrentWeather = {
             temp_c: Math.round(currentData.main.temp * 10) / 10,
-            humidity: currentData.main.humidity,
-            description: currentData.weather[0]?.description || 'unknown'
+            humidity_pct: currentData.main.humidity,
+            wind_speed_kmh: Math.round(currentData.wind.speed * 3.6 * 10) / 10, // m/s to km/h
+            condition: currentData.weather[0]?.description || 'unknown',
         };
 
         // Process 7-day forecast
         const dailyForecasts = processForecastData(forecastData.list);
 
-        console.log(`✅ Weather fetched: Current ${current.temp_c}°C, ${dailyForecasts.length} days forecast`);
+        console.log(
+            `✅ Weather fetched: Current ${current.temp_c}°C, ${dailyForecasts.length} days forecast`
+        );
 
         return {
-            current,
-            forecast_7day: dailyForecasts
+            current: {
+                temp_c: current.temp_c,
+                humidity_pct: current.humidity_pct,
+                wind_speed_kmh: current.wind_speed_kmh,
+                condition: current.condition,
+            },
+            forecast_7day: dailyForecasts,
         };
     } catch (error) {
         console.error('❌ Error fetching weather from OpenWeatherMap:', error);
@@ -188,6 +213,9 @@ export async function fetchWeatherForecast(
     }
 }
 
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
 /**
  * Validate latitude and longitude
@@ -207,11 +235,14 @@ function isValidCoordinate(latitude: number, longitude: number): boolean {
  * Process OpenWeatherMap 5-day/3-hour forecast into daily min/max/rain
  */
 function processForecastData(forecastList: OpenWeatherForecastItem[]): DailyForecast[] {
-    const dailyMap = new Map<string, {
-        temps: number[];
-        rains: number[];
-        descriptions: string[];
-    }>();
+    const dailyMap = new Map<
+        string,
+        {
+            temps: number[];
+            rains: number[];
+            descriptions: string[];
+        }
+    >();
 
     // Group by date
     forecastList.forEach((item) => {
@@ -257,15 +288,13 @@ function processForecastData(forecastList: OpenWeatherForecastItem[]): DailyFore
             date,
             temp_max_c: Math.round(Math.max(...data.temps) * 10) / 10,
             temp_min_c: Math.round(Math.min(...data.temps) * 10) / 10,
-            rain_mm: Math.round(data.rains.reduce((a, b) => a + b, 0) * 10) / 10,
-            description: data.descriptions[0] || 'unknown'
+            precipitation_mm: Math.round(data.rains.reduce((a, b) => a + b, 0) * 10) / 10,
+            description: data.descriptions[0] || 'unknown',
         });
     });
 
     // Return first 7 days (sorted by date)
-    return dailyForecasts
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .slice(0, 7);
+    return dailyForecasts.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 7);
 }
 
 /**
@@ -282,24 +311,25 @@ function getMockWeatherData(): WeatherData {
         // Simulate North India December weather patterns
         const baseMaxTemp = 26;
         const baseMinTemp = 16;
-        const tempVariation = Math.sin(i / 7 * Math.PI) * 4; // Slight wave pattern
+        const tempVariation = Math.sin((i / 7) * Math.PI) * 4; // Slight wave pattern
 
         forecast.push({
             date: date.toISOString().split('T')[0]!,
             temp_max_c: Math.round((baseMaxTemp + tempVariation + Math.random() * 2) * 10) / 10,
             temp_min_c: Math.round((baseMinTemp + tempVariation - Math.random() * 2) * 10) / 10,
-            rain_mm: Math.random() > 0.8 ? Math.round(Math.random() * 12 * 10) / 10 : 0,
-            description: Math.random() > 0.7 ? 'partly cloudy' : 'clear sky'
+            precipitation_mm: Math.random() > 0.8 ? Math.round(Math.random() * 12 * 10) / 10 : 0,
+            description: Math.random() > 0.7 ? 'partly cloudy' : 'clear sky',
         });
     }
 
     return {
         current: {
             temp_c: 24.5,
-            humidity: 62,
-            description: 'partly cloudy'
+            humidity_pct: 62,
+            wind_speed_kmh: 12.5,
+            condition: 'partly cloudy',
         },
-        forecast_7day: forecast
+        forecast_7day: forecast,
     };
 }
 
@@ -307,7 +337,7 @@ function getMockWeatherData(): WeatherData {
  * Calculate 7-day cumulative rainfall from forecast
  */
 export function getCumulativeRainfall(weatherData: WeatherData): number {
-    return weatherData.forecast_7day.reduce((sum, day) => sum + day.rain_mm, 0);
+    return weatherData.forecast_7day.reduce((sum, day) => sum + day.precipitation_mm, 0);
 }
 
 /**
@@ -318,7 +348,7 @@ export function getTemperatureRange(weatherData: WeatherData): {
     max: number;
     avg: number;
 } {
-    const temps = weatherData.forecast_7day.flatMap(day => [day.temp_min_c, day.temp_max_c]);
+    const temps = weatherData.forecast_7day.flatMap((day) => [day.temp_min_c, day.temp_max_c]);
 
     if (temps.length === 0) {
         return { min: 0, max: 0, avg: 0 };
@@ -340,7 +370,7 @@ export function isSignificantRainExpected(
     thresholdMm: number = 15
 ): boolean {
     const nextNDays = weatherData.forecast_7day.slice(0, days);
-    const cumulativeRain = nextNDays.reduce((sum, day) => sum + day.rain_mm, 0);
+    const cumulativeRain = nextNDays.reduce((sum, day) => sum + day.precipitation_mm, 0);
 
     return cumulativeRain >= thresholdMm;
 }
@@ -362,6 +392,6 @@ export function getCacheStats(): {
 } {
     return {
         size: weatherCache.size,
-        keys: Array.from(weatherCache.keys())
+        keys: Array.from(weatherCache.keys()),
     };
 }

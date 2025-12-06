@@ -22,10 +22,17 @@ model Node {
 }
 
 model SensorReading {
-  id           Int       @id @default(autoincrement())
-  nodeId       Int
-  moisture     Int
-  temperature  Int
+  id     Int @id @default(autoincrement())
+  nodeId Int
+
+  // Raw sensor values
+  moisture    Int // Original SMU value (0-1023)
+  temperature Int // Original temperature value
+
+  // NEW: Calculated values for GDD and irrigation
+  soilMoistureVWC Float? // Volumetric Water Content (%)
+  soilTemperature Float? // Soil temperature in Celsius (converted from raw)
+
   rssi         Int?
   batteryLevel Int?
   timestamp    DateTime  @default(now())
@@ -115,6 +122,8 @@ model Field {
   accumulatedGDD     Float     @default(0)
   lastGDDUpdate      DateTime?
   currentGrowthStage String?
+  linkedNodeId       Int? // Connect field to specific node
+  soilTexture        String    @default("SANDY_LOAM") // SANDY_LOAM, CLAY_LOAM, LOAM, etc.
 
   lastIrrigationCheck  DateTime?
   lastIrrigationAction DateTime?
@@ -123,6 +132,7 @@ model Field {
   updatedAt DateTime @updatedAt
 
   @@index([cropConfirmed, lastGDDUpdate])
+  @@index([linkedNodeId])
   @@map("fields")
 }
 
@@ -137,4 +147,97 @@ model Alert {
 
   @@index([nodeId, sentAt])
   @@index([acknowledged])
+}
+
+model GDDHistory {
+  id     Int      @id @default(autoincrement())
+  nodeId Int // Links to Node.nodeId
+  date   DateTime @db.Date // Date for this GDD calculation
+
+  // Daily temperature data
+  avgSoilTemp   Float // Daily average soil temperature (°C)
+  minSoilTemp   Float? // Daily minimum (optional, for advanced analysis)
+  maxSoilTemp   Float? // Daily maximum (optional, for advanced analysis)
+  readingsCount Int // Number of 5-min readings used for average
+
+  // GDD calculations
+  dailyGDD      Float // GDD accumulated on this specific day
+  cumulativeGDD Float // Running total from sowing date
+
+  // Crop context
+  cropType        String? // Crop being grown (rice, wheat, etc.)
+  baseTemperature Float? // Base temp used for this calculation
+  growthStage     String? // INITIAL, DEVELOPMENT, MID_SEASON, LATE_SEASON, HARVEST_READY
+
+  createdAt DateTime @default(now())
+
+  @@unique([nodeId, date])
+  @@index([nodeId])
+  @@index([date])
+  @@index([nodeId, date]) // Composite index for efficient date range queries
+}
+
+model FieldConfig {
+  id                  Int       @id @default(autoincrement())
+  nodeId              Int       @unique // One-to-one with Node.nodeId
+  fieldName           String
+  soilTexture         String    @default("SANDY_LOAM") // SANDY_LOAM, CLAY_LOAM, LOAM, SANDY, CLAY
+  cropType            String? // Current crop (must be from UP_VALID_CROPS)
+  sowingDate          DateTime? // When crop was planted (starts GDD accumulation)
+  expectedHarvestDate DateTime? // Estimated harvest date
+  baseTemperature     Float? // Crop-specific base temperature
+  expectedGDDTotal    Float? // Total GDD needed for maturity
+  location            String? // Description or coordinates
+  latitude            Float?
+  longitude           Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([nodeId])
+  @@index([cropType])
+}
+
+model CropParameters {
+  id       Int    @id @default(autoincrement())
+  cropName String @unique // rice, wheat, chickpea, etc.
+
+  // GDD parameters
+  baseTemperature       Float // Base temp for GDD calculation (°C)
+  totalGDD              Float // Total GDD required for full maturity
+  moistureMin           Float // Minimum acceptable VWC
+  moistureOptimal       Float // Optimal VWC for best growth
+  moistureMax           Float // Maximum VWC (above = waterlogging risk)
+  validForUP            Boolean  @default(true) // Filter out non-UP crops
+  season                String // KHARIF (monsoon), RABI (winter), ZAID (summer)
+  soilTexturePreference String // Preferred soil type
+  initialStageEnd       Float    @default(15) // 0-15% = INITIAL
+  developmentStageEnd   Float    @default(40) // 15-40% = DEVELOPMENT
+  midSeasonEnd          Float    @default(75) // 40-75% = MID_SEASON
+  lateSeasonEnd         Float    @default(95) // 75-95% = LATE_SEASON
+  createdAt             DateTime @default(now())
+
+  @@index([cropName])
+  @@index([validForUP])
+  @@index([season])
+}
+
+model IrrigationLog {
+  id                   Int       @id @default(autoincrement())
+  nodeId               Int
+  timestamp            DateTime  @default(now())
+  currentVWC           Float
+  targetVWC            Float
+  cropType             String?
+  growthStage          String?
+  shouldIrrigate       Boolean
+  urgency              String
+  reason               String
+  estimatedWaterNeeded Float
+  actionTaken          Boolean   @default(false)
+  actionTimestamp      DateTime?
+  actualWaterApplied   Float?
+
+  @@index([nodeId, timestamp])
+  @@index([shouldIrrigate])
 }

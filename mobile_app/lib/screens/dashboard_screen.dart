@@ -7,6 +7,7 @@ import '../widgets/status_indicator.dart';
 import '../l10n/translations.dart';
 import 'crop_confirmation_screen.dart';
 import 'irrigation_advice_screen.dart';
+import 'api_test_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String language;
@@ -26,6 +27,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _t(String key) => AppTranslations.translate(key, widget.language);
 
   @override
+  void initState() {
+    super.initState();
+    // Auto-fetch on screen load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<SensorProvider>(context, listen: false).fetchData();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<SensorProvider>(
       builder: (context, provider, child) {
@@ -37,6 +47,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             foregroundColor: Colors.white,
             elevation: 2,
             actions: [
+              // Test API Debug Button
+              IconButton(
+                icon: const Icon(Icons.bug_report),
+                tooltip: 'Test API',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ApiTestScreen()),
+                  );
+                },
+              ),
+              
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: Center(
@@ -85,7 +107,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     )
                   : RefreshIndicator(
-                      onRefresh: () => provider.fetchData(),
+                      onRefresh: () async {
+                        print('🔄 [Dashboard] Pull to refresh');
+                        await provider.fetchData();
+                      },
                       child: ListView(
                         padding: const EdgeInsets.all(16),
                         children: [
@@ -93,19 +118,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             title: _t('dashboard'),
                             subtitle: '${_t('lastUpdated')}: ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
                           ),
+                          const SizedBox(height: 12),
+                          
+                          // ✅ NEW: Manual Refresh Button
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              print('🔄 [Dashboard] Manual refresh clicked');
+                              await provider.fetchData();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(widget.language == 'hi' 
+                                      ? 'डेटा अपडेट किया गया!'
+                                      : 'Data refreshed!'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.refresh),
+                            label: Text(
+                              widget.language == 'hi' ? 'डेटा रिफ्रेश करें' : 'Refresh Data',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 3,
+                            ),
+                          ),
+                          
                           const SizedBox(height: 20),
+                          
                           if (provider.sensors.isEmpty)
-                            Center(child: Text(_t('noData')))
+                            Center(
+                              child: Column(
+                                children: [
+                                  const SizedBox(height: 40),
+                                  const Icon(Icons.sensors_off, size: 80, color: Colors.grey),
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    _t('noData'),
+                                    style: const TextStyle(fontSize: 18, color: Colors.grey),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    widget.language == 'hi'
+                                        ? 'ऊपर "डेटा रिफ्रेश करें" बटन दबाएं'
+                                        : 'Press "Refresh Data" button above',
+                                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                            )
                           else
                             ...provider.sensors.map((sensor) {
                               return Column(
                                 children: [
                                   SensorCard(sensor: sensor, language: widget.language),
                                   const SizedBox(height: 12),
-                                  
-                                  // NEW: Action buttons for Phase 2 & 3
                                   _buildActionButtons(sensor),
-                                  
                                   const SizedBox(height: 20),
                                 ],
                               );

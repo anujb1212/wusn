@@ -4,6 +4,9 @@ const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY;
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
 const weatherCache = new Map();
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+// ============================================================================
+// CACHE MANAGEMENT
+// ============================================================================
 /**
  * Clear expired cache entries (cleanup)
  */
@@ -15,18 +18,18 @@ function clearExpiredCache() {
             keysToDelete.push(key);
         }
     });
-    keysToDelete.forEach(key => weatherCache.delete(key));
+    keysToDelete.forEach((key) => weatherCache.delete(key));
     if (keysToDelete.length > 0) {
         console.log(`🗑️  Cleared ${keysToDelete.length} expired weather cache entries`);
     }
 }
 // Run cache cleanup every hour
 setInterval(clearExpiredCache, CACHE_TTL_MS);
+// ============================================================================
+// MAIN WEATHER FUNCTIONS
+// ============================================================================
 /**
  * Fetch weather forecast for given coordinates (with cache)
- * @param latitude - Field latitude
- * @param longitude - Field longitude
- * @returns Weather data with current + 7-day forecast
  */
 export async function fetchWeatherWithCache(latitude, longitude) {
     const cacheKey = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
@@ -41,9 +44,6 @@ export async function fetchWeatherWithCache(latitude, longitude) {
 }
 /**
  * Fetch weather forecast for given coordinates (direct, no cache)
- * @param latitude - Field latitude
- * @param longitude - Field longitude
- * @returns Weather data with current + 7-day forecast
  */
 export async function fetchWeatherForecast(latitude, longitude) {
     // Validate inputs
@@ -63,26 +63,32 @@ export async function fetchWeatherForecast(latitude, longitude) {
         if (!currentResponse.ok) {
             throw new Error(`OpenWeather API error: ${currentResponse.status} ${currentResponse.statusText}`);
         }
-        const currentData = await currentResponse.json();
+        const currentData = (await currentResponse.json());
         // Fetch 5-day/3-hour forecast
         const forecastUrl = `${OPENWEATHER_BASE_URL}/forecast?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHER_API_KEY}&units=metric`;
         const forecastResponse = await fetch(forecastUrl);
         if (!forecastResponse.ok) {
             throw new Error(`OpenWeather forecast error: ${forecastResponse.status} ${forecastResponse.statusText}`);
         }
-        const forecastData = await forecastResponse.json();
+        const forecastData = (await forecastResponse.json());
         // Process current weather
         const current = {
             temp_c: Math.round(currentData.main.temp * 10) / 10,
-            humidity: currentData.main.humidity,
-            description: currentData.weather[0]?.description || 'unknown'
+            humidity_pct: currentData.main.humidity,
+            wind_speed_kmh: Math.round(currentData.wind.speed * 3.6 * 10) / 10, // m/s to km/h
+            condition: currentData.weather[0]?.description || 'unknown',
         };
         // Process 7-day forecast
         const dailyForecasts = processForecastData(forecastData.list);
         console.log(`✅ Weather fetched: Current ${current.temp_c}°C, ${dailyForecasts.length} days forecast`);
         return {
-            current,
-            forecast_7day: dailyForecasts
+            current: {
+                temp_c: current.temp_c,
+                humidity_pct: current.humidity_pct,
+                wind_speed_kmh: current.wind_speed_kmh,
+                condition: current.condition,
+            },
+            forecast_7day: dailyForecasts,
         };
     }
     catch (error) {
@@ -91,6 +97,9 @@ export async function fetchWeatherForecast(latitude, longitude) {
         return getMockWeatherData();
     }
 }
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 /**
  * Validate latitude and longitude
  */
@@ -142,14 +151,12 @@ function processForecastData(forecastList) {
             date,
             temp_max_c: Math.round(Math.max(...data.temps) * 10) / 10,
             temp_min_c: Math.round(Math.min(...data.temps) * 10) / 10,
-            rain_mm: Math.round(data.rains.reduce((a, b) => a + b, 0) * 10) / 10,
-            description: data.descriptions[0] || 'unknown'
+            precipitation_mm: Math.round(data.rains.reduce((a, b) => a + b, 0) * 10) / 10,
+            description: data.descriptions[0] || 'unknown',
         });
     });
     // Return first 7 days (sorted by date)
-    return dailyForecasts
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .slice(0, 7);
+    return dailyForecasts.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 7);
 }
 /**
  * Mock weather data (fallback when API fails or no key)
@@ -163,35 +170,36 @@ function getMockWeatherData() {
         // Simulate North India December weather patterns
         const baseMaxTemp = 26;
         const baseMinTemp = 16;
-        const tempVariation = Math.sin(i / 7 * Math.PI) * 4; // Slight wave pattern
+        const tempVariation = Math.sin((i / 7) * Math.PI) * 4; // Slight wave pattern
         forecast.push({
             date: date.toISOString().split('T')[0],
             temp_max_c: Math.round((baseMaxTemp + tempVariation + Math.random() * 2) * 10) / 10,
             temp_min_c: Math.round((baseMinTemp + tempVariation - Math.random() * 2) * 10) / 10,
-            rain_mm: Math.random() > 0.8 ? Math.round(Math.random() * 12 * 10) / 10 : 0,
-            description: Math.random() > 0.7 ? 'partly cloudy' : 'clear sky'
+            precipitation_mm: Math.random() > 0.8 ? Math.round(Math.random() * 12 * 10) / 10 : 0,
+            description: Math.random() > 0.7 ? 'partly cloudy' : 'clear sky',
         });
     }
     return {
         current: {
             temp_c: 24.5,
-            humidity: 62,
-            description: 'partly cloudy'
+            humidity_pct: 62,
+            wind_speed_kmh: 12.5,
+            condition: 'partly cloudy',
         },
-        forecast_7day: forecast
+        forecast_7day: forecast,
     };
 }
 /**
  * Calculate 7-day cumulative rainfall from forecast
  */
 export function getCumulativeRainfall(weatherData) {
-    return weatherData.forecast_7day.reduce((sum, day) => sum + day.rain_mm, 0);
+    return weatherData.forecast_7day.reduce((sum, day) => sum + day.precipitation_mm, 0);
 }
 /**
  * Get temperature range (min/max) for next 7 days
  */
 export function getTemperatureRange(weatherData) {
-    const temps = weatherData.forecast_7day.flatMap(day => [day.temp_min_c, day.temp_max_c]);
+    const temps = weatherData.forecast_7day.flatMap((day) => [day.temp_min_c, day.temp_max_c]);
     if (temps.length === 0) {
         return { min: 0, max: 0, avg: 0 };
     }
@@ -205,7 +213,7 @@ export function getTemperatureRange(weatherData) {
  */
 export function isSignificantRainExpected(weatherData, days = 3, thresholdMm = 15) {
     const nextNDays = weatherData.forecast_7day.slice(0, days);
-    const cumulativeRain = nextNDays.reduce((sum, day) => sum + day.rain_mm, 0);
+    const cumulativeRain = nextNDays.reduce((sum, day) => sum + day.precipitation_mm, 0);
     return cumulativeRain >= thresholdMm;
 }
 /**
@@ -221,7 +229,7 @@ export function clearWeatherCache() {
 export function getCacheStats() {
     return {
         size: weatherCache.size,
-        keys: Array.from(weatherCache.keys())
+        keys: Array.from(weatherCache.keys()),
     };
 }
 //# sourceMappingURL=weatherService.js.map

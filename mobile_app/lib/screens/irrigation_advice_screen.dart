@@ -1,9 +1,7 @@
-// lib/screens/irrigation_advice_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
-import '../models/irrigation_decision.dart';
 
 class IrrigationAdviceScreen extends StatefulWidget {
   final int fieldId;
@@ -22,8 +20,7 @@ class IrrigationAdviceScreen extends StatefulWidget {
 class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
   bool _isLoading = true;
   String? _errorMessage;
-  Map<String, dynamic>? _adviceData;
-  IrrigationDecision? _decision;
+  Map<String, dynamic>? _decisionData;
 
   @override
   void initState() {
@@ -38,20 +35,20 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
     });
 
     try {
-      final data = await ApiService.getIrrigationAdvice(widget.fieldId);
+      // Use new API method that returns decision directly
+      final data = await ApiService.getIrrigationRecommendation(widget.fieldId);
       
-      if (data['status'] == 'ok') {
-        setState(() {
-          _adviceData = data['data'];
-          _decision = IrrigationDecision.fromJson(data['data']['decision']);
-          _isLoading = false;
-        });
-      } else {
-        throw Exception(data['message'] ?? 'Unknown error');
-      }
-    } catch (e) {
+      print('✅ Irrigation data received: $data');
+      
       setState(() {
-        _errorMessage = e.toString();
+        _decisionData = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('❌ Full irrigation error: $e');
+      
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
         _isLoading = false;
       });
     }
@@ -96,6 +93,14 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16),
             ),
+            const SizedBox(height: 8),
+            Text(
+              widget.language == 'hi'
+                  ? 'सुझाव: पहले "फसल पुष्टि" करें'
+                  : 'Hint: Confirm crop first',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, color: Colors.grey, fontStyle: FontStyle.italic),
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _fetchAdvice,
@@ -108,12 +113,14 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
   }
 
   Widget _buildContent() {
-    if (_decision == null || _adviceData == null) {
+    if (_decisionData == null) {
       return const Center(child: Text('No data available'));
     }
 
-    final field = _adviceData!['field'];
-    final sensor = _adviceData!['sensorData'];
+    final shouldIrrigate = _decisionData!['shouldIrrigate'] ?? false;
+    final urgency = _decisionData!['urgency'] ?? 'LOW';
+    final reason = _decisionData!['reason'] ?? 'No recommendation';
+    final confidence = (_decisionData!['confidence'] ?? 0.0) as num;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -121,99 +128,121 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Main decision card
-          _buildDecisionCard(),
+          _buildDecisionCard(shouldIrrigate, urgency, reason, confidence.toDouble()),
           
           const SizedBox(height: 16),
           
-          // Field info
-          _buildFieldInfo(field),
+          // Weather card (if available from response)
+          if (_decisionData!['weather'] != null)
+            _buildWeatherCard(_decisionData!['weather']),
+          
+          if (_decisionData!['weather'] != null)
+            const SizedBox(height: 16),
+          
+          // Field config (if available from response)
+          if (_decisionData!['fieldConfig'] != null)
+            _buildFieldConfigCard(_decisionData!['fieldConfig']),
+          
+          if (_decisionData!['fieldConfig'] != null)
+            const SizedBox(height: 16),
+          
+          // Sensor info
+          _buildSensorInfo(),
           
           const SizedBox(height: 16),
           
-          // Sensor data
-          _buildSensorData(sensor),
-          
-          const SizedBox(height: 16),
-          
-          // Growth stage
-          if (_decision!.growthInfo != null)
-            _buildGrowthStage(),
-          
-          const SizedBox(height: 16),
-          
-          // Weather forecast
-          if (_decision!.weather != null)
-            _buildWeather(),
-          
-          const SizedBox(height: 16),
-          
-          // Irrigation pattern
-          if (_decision!.pattern != null)
-            _buildIrrigationPattern(),
+          // Urgency levels explanation
+          _buildUrgencyGuide(),
         ],
       ),
     );
   }
 
-  Widget _buildDecisionCard() {
-    final shouldIrrigate = _decision!.shouldIrrigate;
-    final color = shouldIrrigate ? const Color(0xFF2196F3) : const Color(0xFF4CAF50);
-    final icon = shouldIrrigate ? Icons.water_drop : Icons.check_circle;
+  Widget _buildDecisionCard(bool shouldIrrigate, String urgency, String reason, double confidence) {
+    Color color;
+    IconData icon;
+    String title;
+    
+    // Determine color based on urgency
+    switch (urgency) {
+      case 'CRITICAL':
+        color = const Color(0xFFD32F2F);
+        icon = Icons.warning;
+        title = widget.language == 'hi' ? 'तुरंत सिंचाई करें!' : 'IRRIGATE NOW!';
+        break;
+      case 'HIGH':
+        color = const Color(0xFFFF9800);
+        icon = Icons.water_drop;
+        title = widget.language == 'hi' ? 'जल्द सिंचाई करें' : 'IRRIGATE SOON';
+        break;
+      case 'MODERATE':
+        color = const Color(0xFF2196F3);
+        icon = Icons.water;
+        title = widget.language == 'hi' ? 'सिंचाई की योजना बनाएं' : 'PLAN IRRIGATION';
+        break;
+      case 'LOW':
+      default:
+        color = const Color(0xFF4CAF50);
+        icon = Icons.check_circle;
+        title = widget.language == 'hi' ? 'प्रतीक्षा करें' : 'SKIP IRRIGATION';
+        break;
+    }
 
     return Card(
       color: color.withOpacity(0.1),
-      elevation: 2,
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Icon(icon, size: 64, color: color),
-            const SizedBox(height: 16),
+            Icon(icon, size: 80, color: color),
+            const SizedBox(height: 20),
             Text(
-              shouldIrrigate
-                  ? (widget.language == 'hi' ? 'सिंचाई करें' : 'IRRIGATE')
-                  : (widget.language == 'hi' ? 'प्रतीक्षा करें' : 'SKIP'),
+              title,
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              widget.language == 'hi' 
-                  ? _decision!.reasonHi 
-                  : _decision!.reasonEn,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
             ),
-            if (shouldIrrigate && _decision!.recommendedDepthMm > 0) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '${_decision!.recommendedDepthMm.toStringAsFixed(0)} mm',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                urgency,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
                 ),
               ),
-            ],
-            const SizedBox(height: 12),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              reason,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, height: 1.5),
+            ),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.verified, size: 16, color: color),
-                const SizedBox(width: 4),
+                Icon(Icons.verified, size: 18, color: color),
+                const SizedBox(width: 6),
                 Text(
-                  '${(_decision!.confidence * 100).toStringAsFixed(0)}% ${widget.language == 'hi' ? 'विश्वास' : 'confidence'}',
-                  style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                  '${(confidence * 100).toStringAsFixed(0)}% ${widget.language == 'hi' ? 'विश्वास' : 'confidence'}',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ],
             ),
@@ -223,159 +252,150 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
     );
   }
 
-  Widget _buildFieldInfo(Map<String, dynamic> field) {
+  Widget _buildWeatherCard(Map<String, dynamic> weather) {
     return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              widget.language == 'hi' ? 'खेत की जानकारी' : 'Field Information',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                Icon(Icons.wb_sunny, color: const Color(0xFFFF9800)),
+                const SizedBox(width: 8),
+                Text(
+                  widget.language == 'hi' ? 'मौसम की जानकारी' : 'Weather Info',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const Divider(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildWeatherItem(
+                  Icons.thermostat,
+                  weather['temperature'] != null 
+                      ? '${weather['temperature'].toStringAsFixed(1)}°C'
+                      : '--',
+                  widget.language == 'hi' ? 'तापमान' : 'Temp',
+                  const Color(0xFFFF9800),
+                ),
+                _buildWeatherItem(
+                  Icons.water_drop,
+                  weather['humidity'] != null
+                      ? '${weather['humidity'].toStringAsFixed(0)}%'
+                      : '--',
+                  widget.language == 'hi' ? 'नमी' : 'Humidity',
+                  const Color(0xFF2196F3),
+                ),
+                _buildWeatherItem(
+                  Icons.cloud,
+                  weather['next3DaysRain'] != null
+                      ? '${weather['next3DaysRain'].toStringAsFixed(1)} mm'
+                      : '0 mm',
+                  widget.language == 'hi' ? '3 दिन बारिश' : '3d Rain',
+                  const Color(0xFF4CAF50),
+                ),
+              ],
+            ),
+            if (weather['next3DaysRain'] != null && weather['next3DaysRain'] > 5) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2196F3).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 20, color: const Color(0xFF2196F3)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.language == 'hi'
+                            ? 'आगामी बारिश - सिंचाई स्थगित करें'
+                            : 'Rain expected - defer irrigation',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeatherItem(IconData icon, String value, String label, Color color) {
+    return Column(
+      children: [
+        Icon(icon, size: 28, color: color),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: Colors.black54),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFieldConfigCard(Map<String, dynamic> fieldConfig) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.agriculture, color: const Color(0xFF4CAF50)),
+                const SizedBox(width: 8),
+                Text(
+                  widget.language == 'hi' ? 'फसल की जानकारी' : 'Crop Info',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
             const Divider(),
             _buildInfoRow(
               widget.language == 'hi' ? 'फसल' : 'Crop',
-              _getCropName(field['cropName']),
+              _getCropName(fieldConfig['cropType'] ?? 'unknown'),
             ),
-            _buildInfoRow(
-              widget.language == 'hi' ? 'वृद्धि चरण' : 'Growth Stage',
-              _getStageNameHi(field['growthStage']),
-            ),
-            _buildInfoRow(
-              widget.language == 'hi' ? 'संचित GDD' : 'Accumulated GDD',
-              '${field['accumulatedGDD'].toStringAsFixed(1)}',
-            ),
-            _buildInfoRow(
-              widget.language == 'hi' ? 'दिन बीते' : 'Days Elapsed',
-              '${field['daysElapsed']} ${widget.language == 'hi' ? 'दिन' : 'days'}',
-            ),
+            if (fieldConfig['sowingDate'] != null)
+              _buildInfoRow(
+                widget.language == 'hi' ? 'बुवाई की तारीख' : 'Sowing Date',
+                DateFormat('dd MMM yyyy').format(DateTime.parse(fieldConfig['sowingDate'])),
+              ),
+            if (fieldConfig['latitude'] != null && fieldConfig['longitude'] != null)
+              _buildInfoRow(
+                widget.language == 'hi' ? 'स्थान' : 'Location',
+                '${fieldConfig['latitude'].toStringAsFixed(4)}, ${fieldConfig['longitude'].toStringAsFixed(4)}',
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSensorData(Map<String, dynamic> sensor) {
+  Widget _buildSensorInfo() {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.language == 'hi' ? 'सेंसर डेटा' : 'Sensor Data',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const Divider(),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildSensorCard(
-                    Icons.water_drop,
-                    '${sensor['moisturePct'].toStringAsFixed(1)}%',
-                    widget.language == 'hi' ? 'नमी' : 'Moisture',
-                    const Color(0xFF2196F3),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildSensorCard(
-                    Icons.thermostat,
-                    '${sensor['temperature'].toStringAsFixed(1)}°C',
-                    widget.language == 'hi' ? 'तापमान' : 'Temperature',
-                    const Color(0xFFFF9800),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${widget.language == 'hi' ? 'अंतिम अपडेट' : 'Last update'}: ${DateFormat('dd MMM, hh:mm a').format(DateTime.parse(sensor['timestamp']))}',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGrowthStage() {
-    final growth = _decision!.growthInfo!;
-    
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.language == 'hi' ? 'वृद्धि की प्रगति' : 'Growth Progress',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            LinearProgressIndicator(
-              value: growth.progress / 100,
-              backgroundColor: Colors.grey.shade200,
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
-              minHeight: 10,
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('${growth.progress.toStringAsFixed(1)}%'),
-                Text(
-                  _getStageNameHi(growth.stage),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${widget.language == 'hi' ? 'पानी की मांग गुणांक (Kc)' : 'Water demand (Kc)'}: ${growth.kc.toStringAsFixed(2)}',
-              style: const TextStyle(color: Colors.black54),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWeather() {
-    final weather = _decision!.weather!;
-    
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.language == 'hi' ? 'मौसम पूर्वानुमान' : 'Weather Forecast',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const Divider(),
-            _buildInfoRow(
-              widget.language == 'hi' ? '3 दिन में बारिश' : 'Rain (3 days)',
-              '${weather.next3DaysRainMm.toStringAsFixed(1)} mm',
-            ),
-            _buildInfoRow(
-              widget.language == 'hi' ? 'औसत तापमान (7 दिन)' : 'Avg temp (7 days)',
-              '${weather.avgTempNext7Days.toStringAsFixed(1)}°C',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildIrrigationPattern() {
-    final pattern = _decision!.pattern!;
-    
-    return Card(
-      color: const Color(0xFFF3E5F5),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -383,30 +403,26 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.water, color: Color(0xFF9C27B0)),
+                Icon(Icons.sensors, color: const Color(0xFF4CAF50)),
                 const SizedBox(width: 8),
                 Text(
-                  widget.language == 'hi' ? 'सिंचाई विधि' : 'Irrigation Method',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  widget.language == 'hi' ? 'सेंसर डेटा' : 'Sensor Data',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              _getPatternType(pattern.type),
-              style: const TextStyle(fontSize: 16),
+            const Divider(),
+            _buildInfoRow(
+              widget.language == 'hi' ? 'खेत ID' : 'Field ID',
+              'Field ${widget.fieldId}',
             ),
-            if (pattern.durationMinutes != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                '${widget.language == 'hi' ? 'अवधि' : 'Duration'}: ${pattern.durationMinutes} ${widget.language == 'hi' ? 'मिनट' : 'minutes'}',
-                style: const TextStyle(color: Colors.black54),
-              ),
-            ],
-            const SizedBox(height: 8),
-            Text(
-              pattern.notes,
-              style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+            _buildInfoRow(
+              widget.language == 'hi' ? 'स्थिति' : 'Status',
+              widget.language == 'hi' ? 'सक्रिय' : 'Active',
+            ),
+            _buildInfoRow(
+              widget.language == 'hi' ? 'अंतिम अपडेट' : 'Last Update',
+              DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now()),
             ),
           ],
         ),
@@ -414,28 +430,83 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
     );
   }
 
-  Widget _buildSensorCard(IconData icon, String value, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+  Widget _buildUrgencyGuide() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.info_outline, color: const Color(0xFF2196F3)),
+                const SizedBox(width: 8),
+                Text(
+                  widget.language == 'hi' ? 'तात्कालिकता गाइड' : 'Urgency Guide',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const Divider(),
+            _buildUrgencyItem(
+              'CRITICAL',
+              widget.language == 'hi' ? 'तुरंत सिंचाई करें' : 'Irrigate immediately',
+              const Color(0xFFD32F2F),
+            ),
+            _buildUrgencyItem(
+              'HIGH',
+              widget.language == 'hi' ? '24 घंटे के भीतर' : 'Within 24 hours',
+              const Color(0xFFFF9800),
+            ),
+            _buildUrgencyItem(
+              'MODERATE',
+              widget.language == 'hi' ? '2-3 दिनों में' : 'Within 2-3 days',
+              const Color(0xFF2196F3),
+            ),
+            _buildUrgencyItem(
+              'LOW',
+              widget.language == 'hi' ? 'कोई सिंचाई की जरूरत नहीं' : 'No irrigation needed',
+              const Color(0xFF4CAF50),
+            ),
+          ],
+        ),
       ),
-      child: Column(
+    );
+  }
+
+  Widget _buildUrgencyItem(String level, String description, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
         children: [
-          Icon(icon, size: 32, color: color),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
               color: color,
+              shape: BoxShape.circle,
             ),
           ),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  level,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+                Text(
+                  description,
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -461,33 +532,12 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
       'rice': widget.language == 'hi' ? 'चावल' : 'Rice',
       'maize': widget.language == 'hi' ? 'मक्का' : 'Maize',
       'mustard': widget.language == 'hi' ? 'सरसों' : 'Mustard',
+      'chickpea': widget.language == 'hi' ? 'चना' : 'Chickpea',
+      'sugarcane': widget.language == 'hi' ? 'गन्ना' : 'Sugarcane',
+      'potato': widget.language == 'hi' ? 'आलू' : 'Potato',
+      'lentil': widget.language == 'hi' ? 'मसूर' : 'Lentil',
+      'pea': widget.language == 'hi' ? 'मटर' : 'Pea',
     };
     return crops[crop.toLowerCase()] ?? crop;
-  }
-
-  String _getStageNameHi(String stage) {
-    if (widget.language != 'hi') return stage;
-    
-    final stages = {
-      'INITIAL': 'प्रारंभिक',
-      'DEVELOPMENT': 'विकास',
-      'MID_SEASON': 'मध्य-मौसम',
-      'LATE_SEASON': 'देर से मौसम',
-      'HARVEST_READY': 'कटाई',
-    };
-    return stages[stage] ?? stage;
-  }
-
-  String _getPatternType(String type) {
-    if (widget.language == 'hi') {
-      final types = {
-        'drip': 'ड्रिप',
-        'sprinkler': 'फव्वारा',
-        'flood': 'बाढ़',
-        'skip': 'प्रतीक्षा करें',
-      };
-      return types[type] ?? type;
-    }
-    return type.toUpperCase();
   }
 }
