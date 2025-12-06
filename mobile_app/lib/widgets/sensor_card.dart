@@ -48,35 +48,23 @@ class SensorCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (sensor.isAggregated) _buildAggregationHeader(),
-            
             _buildMainHeader(statusColor, statusIcon),
-            
             const Divider(height: 32, thickness: 1),
-            
-            _buildSensorReadings(),
-            
+            _buildSensorReadings(),          // sirf moisture + temp
             if (sensor.batteryLevel != null) ...[
               const SizedBox(height: 18),
               _buildBatteryIndicator(),
             ],
-            
             const Divider(height: 32, thickness: 1),
-            
             _buildFuzzyAnalysis(),
-            
             const Divider(height: 32, thickness: 1),
-            
             _buildCropRecommendation(),
-            
             const SizedBox(height: 16),
-            
             _buildIrrigationAdvice(),
-            
             if (sensor.isAggregated && sensor.allNodesData != null) ...[
               const SizedBox(height: 16),
-              _buildAllNodesSection(),
+              _buildAllNodesSection(),      // yahan bhi signal line hata di
             ],
-            
             const SizedBox(height: 16),
             _buildTimestamp(),
           ],
@@ -112,7 +100,9 @@ class SensorCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${_t('totalNodes')}: ${sensor.totalNodes} | ${_t('activeNodes')}: ${sensor.activeNodes} | ${_t('blockedNodes')}: ${sensor.blockedNodes}',
+            '${_t('totalNodes')}: ${sensor.totalNodes} | '
+            '${_t('activeNodes')}: ${sensor.activeNodes} | '
+            '${_t('blockedNodes')}: ${sensor.blockedNodes}',
             style: TextStyle(fontSize: 12, color: Colors.grey[700]),
           ),
           const SizedBox(height: 8),
@@ -203,27 +193,23 @@ class SensorCard extends StatelessWidget {
   }
 
   Widget _buildSensorReadings() {
+    // VWC = SMU / 10
+    final double vwc = sensor.moisture / 10.0;
+
     return Column(
       children: [
         _buildDataRow(
           Icons.water_drop,
           _t('moisture'),
-          '${sensor.moisture} ${_t('smu')}',
+          '${vwc.toStringAsFixed(1)}%',               // VWC %
           Colors.blue,
         ),
         const SizedBox(height: 18),
         _buildDataRow(
           Icons.thermostat,
           _t('temperature'),
-          '${sensor.temperature.toStringAsFixed(1)}${_t('celsius')}',  
+          '${sensor.temperature.toStringAsFixed(1)}${_t('celsius')}',
           Colors.orange,
-        ),
-        const SizedBox(height: 18),
-        _buildDataRow(
-          Icons.signal_cellular_alt,
-          _t('signal'),
-          '${sensor.rssi} ${_t('dbm')}',
-          Colors.purple,
         ),
       ],
     );
@@ -271,7 +257,8 @@ class SensorCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '${_t('fuzzyAnalysis')} (${sensor.confidence.toStringAsFixed(0)}${_t('percent')} ${_t('confidence')})',  
+          '${_t('fuzzyAnalysis')} '
+          '(${sensor.confidence.toStringAsFixed(0)}${_t('percent')} ${_t('confidence')})',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
@@ -317,13 +304,14 @@ class SensorCard extends StatelessWidget {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.green.shade700,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${sensor.cropConfidence.toStringAsFixed(0)}${_t('percent')}',  
+                  '${sensor.cropConfidence.toStringAsFixed(0)}${_t('percent')}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -380,7 +368,8 @@ class SensorCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             sensor.irrigationAdvice,
-            style: TextStyle(fontSize: 15, height: 1.5, color: Colors.grey[800]),
+            style:
+                TextStyle(fontSize: 15, height: 1.5, color: Colors.grey[800]),
           ),
         ],
       ),
@@ -389,7 +378,7 @@ class SensorCard extends StatelessWidget {
 
   Widget _buildAllNodesSection() {
     final nodes = sensor.allNodesData!;
-    
+
     return ExpansionTile(
       title: Text(
         _t('viewAllNodes'),
@@ -398,7 +387,9 @@ class SensorCard extends StatelessWidget {
       children: nodes.map((node) {
         final bool isSelected = node.nodeId == sensor.selectedNodeId;
         final bool isBlocked = node.batteryLevel < 15 || node.rssi < -110;
-        
+
+        final double nodeVwc = node.moisture / 10.0;
+
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(12),
@@ -428,7 +419,8 @@ class SensorCard extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? Colors.green.shade700
@@ -454,15 +446,12 @@ class SensorCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '${_t('moisture')}: ${node.moisture} ${_t('smu')} | ${_t('temperature')}: ${node.temperature.toStringAsFixed(1)}${_t('celsius')}',  
+                '${_t('moisture')}: ${nodeVwc.toStringAsFixed(1)}% | '
+                '${_t('temperature')}: ${node.temperature.toStringAsFixed(1)}${_t('celsius')}',
                 style: const TextStyle(fontSize: 12),
               ),
               Text(
-                '${_t('battery')}: ${node.batteryLevel}${_t('percent')} | ${_t('signal')}: ${node.rssi} ${_t('dbm')}',
-                style: const TextStyle(fontSize: 12),
-              ),
-              Text(
-                '${_t('depth')}: ${node.depth} ${_t('cm')} | ${_t('distance')}: ${node.distance} ${_t('meters')}',
+                '${_t('battery')}: ${node.batteryLevel}${_t('percent')}',
                 style: const TextStyle(fontSize: 12),
               ),
             ],
@@ -515,7 +504,6 @@ class SensorCard extends StatelessWidget {
     );
   }
 
-  // UPDATED: Changed int to double parameter
   Widget _buildFuzzyBar(String label, double value, Color color) {
     return Row(
       children: [
@@ -560,7 +548,7 @@ class SensorCard extends StatelessWidget {
         SizedBox(
           width: 40,
           child: Text(
-            '${value.toStringAsFixed(0)}${_t('percent')}',  
+            '${value.toStringAsFixed(0)}${_t('percent')}',
             textAlign: TextAlign.right,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
           ),
