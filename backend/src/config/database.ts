@@ -1,48 +1,74 @@
-// src/config/database.ts
 /**
- * Singleton Prisma Client
- * 
- * IMPORTANT: Uses console.log for initialization to avoid circular dependency with logger
+ * Database Configuration
  */
 
 import { PrismaClient } from '@prisma/client';
+import { createLogger } from './logger.js';
 import { env, isDevelopment } from './environment.js';
 
-/**
- * Global singleton instance
- */
-let prismaInstance: PrismaClient | undefined;
+const logger = createLogger({ service: 'database' });
 
 /**
- * Get Prisma client instance
+ * Prisma client instance
  */
-export function getPrismaClient(): PrismaClient {
-    if (!prismaInstance) {
-        prismaInstance = new PrismaClient({
-            log: isDevelopment
-                ? ['query', 'error', 'warn']
-                : ['error'],
-        });
+export const prisma = new PrismaClient({
+    log: isDevelopment
+        ? [
+            { level: 'query', emit: 'event' },
+            { level: 'error', emit: 'stdout' },
+            { level: 'warn', emit: 'stdout' },
+        ]
+        : [{ level: 'error', emit: 'stdout' }],
+});
 
-        // Log initialization (using console to avoid circular dependency)
-        console.log('[Database] Prisma Client initialized');
-    }
-
-    return prismaInstance;
+/**
+ * Log Prisma queries in development
+ */
+if (isDevelopment) {
+    prisma.$on('query' as never, (e: any) => {
+        logger.debug({ query: e.query, params: e.params, duration: e.duration }, 'Prisma query');
+    });
 }
 
 /**
- * Disconnect Prisma client
+ * Connect to database
  */
-export async function disconnectPrisma(): Promise<void> {
-    if (prismaInstance) {
-        await prismaInstance.$disconnect();
-        prismaInstance = undefined;
-        console.log('[Database] Prisma Client disconnected');
+export async function connectDatabase(): Promise<void> {
+    try {
+        await prisma.$connect();
+        logger.info('Database connected successfully');
+
+        // Test connection
+        await prisma.$queryRaw`SELECT 1`;
+        logger.info('Database connection verified');
+    } catch (error) {
+        logger.error({ error }, 'Failed to connect to database');
+        throw error;
     }
 }
 
 /**
- * Export singleton instance
+ * Disconnect from database
  */
-export const prisma = getPrismaClient();
+export async function disconnectDatabase(): Promise<void> {
+    try {
+        await prisma.$disconnect();
+        logger.info('Database disconnected');
+    } catch (error) {
+        logger.error({ error }, 'Error disconnecting from database');
+        throw error;
+    }
+}
+
+/**
+ * Health check
+ */
+export async function checkDatabaseHealth(): Promise<boolean> {
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        return true;
+    } catch (error) {
+        logger.error({ error }, 'Database health check failed');
+        return false;
+    }
+}

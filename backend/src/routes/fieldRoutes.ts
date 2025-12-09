@@ -1,4 +1,3 @@
-// src/routes/fieldRoutes.ts
 /**
  * Field Routes
  */
@@ -6,19 +5,24 @@
 import { Router } from 'express';
 import { asyncHandler } from '../api/middleware/asyncHandler.js';
 import {
-    createField,
-    getAllFields,
-    getField,
-    updateField,
-    deleteField
+    createFieldController,
+    getAllFieldsController,
+    getFieldController,
+    updateFieldController,
+    deleteFieldController,
+    setCropController,
 } from '../controllers/fieldController.js';
 
 const router = Router();
 
-router.post('/', asyncHandler(createField));
-router.get('/', asyncHandler(getAllFields));
-router.get('/:nodeId', asyncHandler(getField));
-router.patch('/:nodeId', asyncHandler(updateField));
-router.delete('/:nodeId', asyncHandler(deleteField));
+// Field CRUD
+router.post('/', asyncHandler(createFieldController));
+router.get('/', asyncHandler(getAllFieldsController));
+router.get('/:nodeId', asyncHandler(getFieldController));
+router.patch('/:nodeId', asyncHandler(updateFieldController));
+router.delete('/:nodeId', asyncHandler(deleteFieldController));
+
+// Crop configuration
+router.post('/:nodeId/crop', asyncHandler(setCropController));
 
 export default router;

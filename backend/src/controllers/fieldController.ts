@@ -1,46 +1,44 @@
 // src/controllers/fieldController.ts
-/**
- * Field Configuration Controller
- */
-
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import * as fieldRepo from '../repositories/field.repository.js';
-import { ValidationError } from '../utils/errors.js';
-import type { SoilTexture, UPCropName } from '../utils/constants.js';
+import type { UPCropName } from '../utils/constants.js';
+import { UP_VALID_CROPS, CROP_DATABASE } from '../utils/constants.js';
 
 const createFieldSchema = z.object({
     nodeId: z.number().int().positive(),
-    fieldName: z.string().min(1).max(100),
+    gatewayId: z.string().min(1),
+    fieldName: z.string().min(1),
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
     soilTexture: z.enum(['SANDY', 'SANDY_LOAM', 'LOAM', 'CLAY_LOAM', 'CLAY']),
-    latitude: z.number().min(-90).max(90).optional(),
-    longitude: z.number().min(-180).max(180).optional(),
+    location: z.string().optional(),
 });
 
 const updateFieldSchema = z.object({
-    fieldName: z.string().min(1).max(100).optional(),
-    cropType: z.enum([
-        'chickpea', 'lentil', 'rice', 'maize', 'cotton', 'pigeonpeas',
-        'mothbeans', 'mungbean', 'blackgram', 'kidneybeans', 'watermelon', 'muskmelon'
-    ]).nullable().optional(),
-    sowingDate: z.string().datetime().transform(str => new Date(str)).nullable().optional(),
+    fieldName: z.string().min(1).optional(),
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
     soilTexture: z.enum(['SANDY', 'SANDY_LOAM', 'LOAM', 'CLAY_LOAM', 'CLAY']).optional(),
-    baseTemperature: z.number().min(0).max(30).nullable().optional(),
-    expectedGDDTotal: z.number().min(0).nullable().optional(),
-    latitude: z.number().min(-90).max(90).nullable().optional(),
-    longitude: z.number().min(-180).max(180).nullable().optional(),
+    location: z.string().optional(),
 });
 
-export async function createField(req: Request, res: Response): Promise<void> {
-    const validated = createFieldSchema.parse(req.body);
+const setCropSchema = z.object({
+    cropType: z.enum(UP_VALID_CROPS as any),
+    sowingDate: z.string().datetime(),
+});
 
-    const field = await fieldRepo.createFieldConfig({
-        nodeId: validated.nodeId,
-        fieldName: validated.fieldName,
-        soilTexture: validated.soilTexture as SoilTexture,
-        latitude: validated.latitude,
-        longitude: validated.longitude,
-    });
+const nodeIdSchema = z.object({
+    nodeId: z.coerce.number().int().positive(),
+});
+
+/**
+ * POST /api/fields
+ */
+export async function createFieldController(req: Request, res: Response): Promise<void> {
+    const data = createFieldSchema.parse(req.body);
+
+    const field = await fieldRepo.createField(data);
 
     res.status(201).json({
         status: 'ok',
@@ -49,20 +47,13 @@ export async function createField(req: Request, res: Response): Promise<void> {
     });
 }
 
-export async function getField(req: Request, res: Response): Promise<void> {
-    const nodeIdParam = req.params.nodeId;
+/**
+ * GET /api/fields/:nodeId
+ */
+export async function getFieldController(req: Request, res: Response): Promise<void> {
+    const { nodeId } = nodeIdSchema.parse(req.params);
 
-    if (!nodeIdParam) {
-        throw new ValidationError('nodeId parameter is required');
-    }
-
-    const nodeId = parseInt(nodeIdParam, 10);
-
-    if (isNaN(nodeId) || nodeId <= 0) {
-        throw new ValidationError('Invalid nodeId');
-    }
-
-    const field = await fieldRepo.getFieldConfigOrThrow(nodeId);
+    const field = await fieldRepo.getFieldByNodeId(nodeId);
 
     res.json({
         status: 'ok',
@@ -71,8 +62,11 @@ export async function getField(req: Request, res: Response): Promise<void> {
     });
 }
 
-export async function getAllFields(req: Request, res: Response): Promise<void> {
-    const fields = await fieldRepo.getAllFieldConfigs();
+/**
+ * GET /api/fields
+ */
+export async function getAllFieldsController(_req: Request, res: Response): Promise<void> {
+    const fields = await fieldRepo.getAllFields();
 
     res.json({
         status: 'ok',
@@ -81,30 +75,27 @@ export async function getAllFields(req: Request, res: Response): Promise<void> {
     });
 }
 
-export async function updateField(req: Request, res: Response): Promise<void> {
-    const nodeIdParam = req.params.nodeId;
+/**
+ * PATCH /api/fields/:nodeId
+ */
+export async function updateFieldController(req: Request, res: Response): Promise<void> {
+    const { nodeId } = nodeIdSchema.parse(req.params);
+    const updates = updateFieldSchema.parse(req.body);
 
-    if (!nodeIdParam) {
-        throw new ValidationError('nodeId parameter is required');
-    }
+    const { prisma } = await import('../config/database.js');
 
-    const nodeId = parseInt(nodeIdParam, 10);
+    // Only include fields that were actually provided (not undefined)
+    const updateData: Record<string, string | number> = {};
 
-    if (isNaN(nodeId) || nodeId <= 0) {
-        throw new ValidationError('Invalid nodeId');
-    }
+    if (updates.fieldName !== undefined) updateData.fieldName = updates.fieldName;
+    if (updates.latitude !== undefined) updateData.latitude = updates.latitude;
+    if (updates.longitude !== undefined) updateData.longitude = updates.longitude;
+    if (updates.soilTexture !== undefined) updateData.soilTexture = updates.soilTexture;
+    if (updates.location !== undefined) updateData.location = updates.location;
 
-    const validated = updateFieldSchema.parse(req.body);
-
-    const field = await fieldRepo.updateFieldConfig(nodeId, {
-        fieldName: validated.fieldName,
-        cropType: validated.cropType as UPCropName | null | undefined,
-        sowingDate: validated.sowingDate,
-        soilTexture: validated.soilTexture as SoilTexture | undefined,
-        baseTemperature: validated.baseTemperature,
-        expectedGDDTotal: validated.expectedGDDTotal,
-        latitude: validated.latitude,
-        longitude: validated.longitude,
+    const field = await prisma.field.update({
+        where: { nodeId },
+        data: updateData as any, // Type cast needed due to exactOptionalPropertyTypes
     });
 
     res.json({
@@ -114,20 +105,48 @@ export async function updateField(req: Request, res: Response): Promise<void> {
     });
 }
 
-export async function deleteField(req: Request, res: Response): Promise<void> {
-    const nodeIdParam = req.params.nodeId;
 
-    if (!nodeIdParam) {
-        throw new ValidationError('nodeId parameter is required');
-    }
 
-    const nodeId = parseInt(nodeIdParam, 10);
+/**
+ * POST /api/fields/:nodeId/crop
+ */
+export async function setCropController(req: Request, res: Response): Promise<void> {
+    const { nodeId } = nodeIdSchema.parse(req.params);
+    const { cropType, sowingDate } = setCropSchema.parse(req.body);
 
-    if (isNaN(nodeId) || nodeId <= 0) {
-        throw new ValidationError('Invalid nodeId');
-    }
+    // Type assertion for cropType
+    const validCropType = cropType as UPCropName;
+    const cropParams = CROP_DATABASE[validCropType];
 
-    await fieldRepo.deleteFieldConfig(nodeId);
+    const field = await fieldRepo.updateFieldCrop(nodeId, {
+        cropType: validCropType,
+        sowingDate: new Date(sowingDate),
+        baseTemperature: cropParams.baseTemperature,
+        expectedGDDTotal: cropParams.totalGDD,
+    });
 
-    res.status(204).send();
+    res.json({
+        status: 'ok',
+        data: field,
+        timestamp: new Date().toISOString(),
+    });
+}
+
+/**
+ * DELETE /api/fields/:nodeId
+ */
+export async function deleteFieldController(req: Request, res: Response): Promise<void> {
+    const { nodeId } = nodeIdSchema.parse(req.params);
+
+    const { prisma } = await import('../config/database.js');
+
+    await prisma.field.delete({
+        where: { nodeId },
+    });
+
+    res.json({
+        status: 'ok',
+        data: { nodeId, deleted: true },
+        timestamp: new Date().toISOString(),
+    });
 }

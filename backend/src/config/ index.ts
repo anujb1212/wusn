@@ -1,9 +1,8 @@
-// src/config/index.ts
 /**
- * Configuration exports
+ * Config barrel export
  */
 
-export { env, isProduction, isDevelopment, isTest, type Environment } from './environment.js';
-export { logger, createLogger, flushLogs } from './logger.js';
-export { prisma, getPrismaClient, disconnectPrisma } from './database.js';
-export { MQTT_CONFIG, MQTT_TOPICS, SENSOR_THRESHOLDS } from './mqtt.config.js';
+export { env, isDevelopment, isProduction, isTest } from './environment.js';
+export { createLogger } from './logger.js';
+export { prisma, connectDatabase, disconnectDatabase, checkDatabaseHealth } from './database.js';
+export { MQTT_CONFIG, MQTT_TOPICS } from './mqtt.config.js';

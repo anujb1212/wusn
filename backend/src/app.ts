@@ -4,44 +4,73 @@
  */
 
 import express from 'express';
+import type { Express } from 'express';
 import cors from 'cors';
-import { logger } from './config/logger.js';
-import { errorHandler, notFoundHandler } from './api/middleware/errorHandler.js';
+import helmet from 'helmet';
+import { createLogger } from './config/logger.js';
+import { errorHandler } from './api/middleware/errorHandler.js';
+
+// Import routes
 import sensorRoutes from './routes/sensorRoutes.js';
 import fieldRoutes from './routes/fieldRoutes.js';
+import weatherRoutes from './routes/weather.routes.js';
+import gddRoutes from './routes/gdd.routes.js';
+import cropRoutes from './routes/crop.routes.js';
+import irrigationRoutes from './routes/irrigation.routes.js';
 
-export function createApp(): express.Application {
+const logger = createLogger({ service: 'app' });
+
+/**
+ * Create Express application
+ */
+export function createApp(): Express {
     const app = express();
 
-    // Middleware
+    // Security middleware
+    app.use(helmet());
     app.use(cors());
+
+    // Body parsing middleware
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
     // Request logging
-    app.use((req, res, next) => {
-        logger.info({ method: req.method, path: req.path }, 'Request received');
+    app.use((req, _res, next) => {
+        logger.debug({ method: req.method, path: req.path }, 'Incoming request');
         next();
     });
 
-    // Health check
-    app.get('/health', (req, res) => {
+    // Health check endpoint
+    app.get('/health', (_req, res) => {
         res.json({
             status: 'ok',
+            service: 'wusn-backend',
             timestamp: new Date().toISOString(),
-            service: 'wusn-backend'
+            uptime: process.uptime(),
         });
     });
 
-    // API Routes
+    // API routes
     app.use('/api/sensors', sensorRoutes);
     app.use('/api/fields', fieldRoutes);
+    app.use('/api/weather', weatherRoutes);
+    app.use('/api/gdd', gddRoutes);
+    app.use('/api/crops', cropRoutes);
+    app.use('/api/irrigation', irrigationRoutes);
 
-    // 404 handler (must be after all routes)
-    app.use(notFoundHandler);
+    // 404 handler
+    app.use((_req, res) => {
+        res.status(404).json({
+            status: 'error',
+            message: 'Route not found',
+            timestamp: new Date().toISOString(),
+        });
+    });
 
-    // Error handler (must be last)
+    // Error handling middleware (must be last)
     app.use(errorHandler);
+
+    logger.info('Express application configured');
 
     return app;
 }

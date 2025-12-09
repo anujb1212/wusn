@@ -1,122 +1,249 @@
 // src/repositories/field.repository.ts
 /**
- * Field Configuration Repository
+ * Field Repository
  */
 
-import { Prisma } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { DatabaseError, NotFoundError } from '../utils/errors.js';
 import type { SoilTexture, UPCropName } from '../utils/constants.js';
 
-export interface CreateFieldConfigInput {
+export interface CreateFieldInput {
     nodeId: number;
+    gatewayId: string;
     fieldName: string;
+    latitude: number;
+    longitude: number;
     soilTexture: SoilTexture;
-    latitude?: number | undefined; // ADD | undefined explicitly
-    longitude?: number | undefined; // ADD | undefined explicitly
+    location?: string | undefined;
 }
 
-export interface UpdateFieldConfigInput {
-    fieldName?: string | undefined;
-    cropType?: UPCropName | null | undefined;
-    sowingDate?: Date | null | undefined;
-    soilTexture?: SoilTexture | undefined;
-    baseTemperature?: number | null | undefined;
-    expectedGDDTotal?: number | null | undefined;
-    latitude?: number | null | undefined;
-    longitude?: number | null | undefined;
+export interface UpdateFieldCropInput {
+    cropType: UPCropName;
+    sowingDate: Date;
+    baseTemperature: number;
+    expectedGDDTotal: number;
+    expectedHarvestDate?: Date | undefined;
 }
 
 /**
- * Create field config
+ * Create field
  */
-export async function createFieldConfig(input: CreateFieldConfigInput) {
+export async function createField(input: CreateFieldInput) {
     try {
-        const data: Prisma.FieldConfigCreateInput = {
-            nodeId: input.nodeId,
-            fieldName: input.fieldName,
-            soilTexture: input.soilTexture,
-            latitude: input.latitude ?? null,
-            longitude: input.longitude ?? null,
-        };
-
-        return await prisma.fieldConfig.create({ data });
+        return await prisma.field.create({
+            data: {
+                nodeId: input.nodeId,
+                gatewayId: input.gatewayId,
+                fieldName: input.fieldName,
+                latitude: input.latitude,
+                longitude: input.longitude,
+                soilTexture: input.soilTexture,
+                location: input.location ?? null,
+            },
+        });
     } catch (error) {
-        throw new DatabaseError('createFieldConfig', error as Error);
+        throw new DatabaseError('createField', error as Error);
     }
 }
 
 /**
- * Get field config by nodeId
+ * Get field by node ID
  */
-export async function getFieldConfigByNodeId(nodeId: number) {
+export async function getFieldByNodeId(nodeId: number) {
     try {
-        return await prisma.fieldConfig.findUnique({
+        const field = await prisma.field.findUnique({
+            where: { nodeId },
+        });
+
+        if (!field) {
+            throw new NotFoundError('Field', `nodeId=${nodeId}`);
+        }
+
+        return field;
+    } catch (error) {
+        if (error instanceof NotFoundError) throw error;
+        throw new DatabaseError('getFieldByNodeId', error as Error);
+    }
+}
+
+/**
+ * Get field by ID
+ */
+export async function getFieldById(id: number) {
+    try {
+        const field = await prisma.field.findUnique({
+            where: { id },
+        });
+
+        if (!field) {
+            throw new NotFoundError('Field', `id=${id}`);
+        }
+
+        return field;
+    } catch (error) {
+        if (error instanceof NotFoundError) throw error;
+        throw new DatabaseError('getFieldById', error as Error);
+    }
+}
+
+/**
+ * Get all fields
+ */
+export async function getAllFields() {
+    try {
+        return await prisma.field.findMany({
+            orderBy: { fieldName: 'asc' },
+        });
+    } catch (error) {
+        throw new DatabaseError('getAllFields', error as Error);
+    }
+}
+
+/**
+ * Update field crop configuration
+ */
+export async function updateFieldCrop(nodeId: number, input: UpdateFieldCropInput) {
+    try {
+        return await prisma.field.update({
+            where: { nodeId },
+            data: {
+                cropType: input.cropType,
+                sowingDate: input.sowingDate,
+                baseTemperature: input.baseTemperature,
+                expectedGDDTotal: input.expectedGDDTotal,
+                expectedHarvestDate: input.expectedHarvestDate ?? null,
+                cropConfirmed: true,
+                accumulatedGDD: 0, // Reset GDD on crop change
+                currentGrowthStage: 'INITIAL',
+                lastGDDUpdate: null,
+            },
+        });
+    } catch (error) {
+        throw new DatabaseError('updateFieldCrop', error as Error);
+    }
+}
+
+/**
+ * Update field GDD status
+ */
+export async function updateFieldGDD(
+    nodeId: number,
+    accumulatedGDD: number,
+    growthStage: string
+) {
+    try {
+        return await prisma.field.update({
+            where: { nodeId },
+            data: {
+                accumulatedGDD,
+                currentGrowthStage: growthStage,
+                lastGDDUpdate: new Date(),
+            },
+        });
+    } catch (error) {
+        throw new DatabaseError('updateFieldGDD', error as Error);
+    }
+}
+
+/**
+ * Update last irrigation check
+ */
+export async function updateLastIrrigationCheck(nodeId: number) {
+    try {
+        return await prisma.field.update({
+            where: { nodeId },
+            data: {
+                lastIrrigationCheck: new Date(),
+            },
+        });
+    } catch (error) {
+        throw new DatabaseError('updateLastIrrigationCheck', error as Error);
+    }
+}
+
+/**
+ * Record irrigation action
+ */
+export async function recordIrrigationAction(nodeId: number) {
+    try {
+        return await prisma.field.update({
+            where: { nodeId },
+            data: {
+                lastIrrigationAction: new Date(),
+            },
+        });
+    } catch (error) {
+        throw new DatabaseError('recordIrrigationAction', error as Error);
+    }
+}
+
+/**
+ * Get fields needing GDD update
+ */
+export async function getFieldsNeedingGDDUpdate() {
+    try {
+        const oneDayAgo = new Date();
+        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+        return await prisma.field.findMany({
+            where: {
+                cropConfirmed: true,
+                sowingDate: { not: null },
+                OR: [
+                    { lastGDDUpdate: null },
+                    { lastGDDUpdate: { lt: oneDayAgo } },
+                ],
+            },
+        });
+    } catch (error) {
+        throw new DatabaseError('getFieldsNeedingGDDUpdate', error as Error);
+    }
+}
+
+// In src/repositories/field.repository.ts - ADD this function
+
+/**
+ * Update field (generic update)
+ */
+export async function updateField(
+    nodeId: number,
+    updates: {
+        fieldName?: string;
+        latitude?: number;
+        longitude?: number;
+        soilTexture?: string;
+        location?: string;
+    }
+) {
+    try {
+        // Only include fields that are actually defined
+        const updateData: Record<string, string | number> = {};
+
+        if (updates.fieldName !== undefined) updateData.fieldName = updates.fieldName;
+        if (updates.latitude !== undefined) updateData.latitude = updates.latitude;
+        if (updates.longitude !== undefined) updateData.longitude = updates.longitude;
+        if (updates.soilTexture !== undefined) updateData.soilTexture = updates.soilTexture;
+        if (updates.location !== undefined) updateData.location = updates.location;
+
+        return await prisma.field.update({
+            where: { nodeId },
+            data: updateData as any,
+        });
+    } catch (error) {
+        throw new DatabaseError('updateField', error as Error);
+    }
+}
+
+
+/**
+ * Delete field
+ */
+export async function deleteField(nodeId: number) {
+    try {
+        return await prisma.field.delete({
             where: { nodeId },
         });
     } catch (error) {
-        throw new DatabaseError('getFieldConfigByNodeId', error as Error);
-    }
-}
-
-/**
- * Get field config or throw
- */
-export async function getFieldConfigOrThrow(nodeId: number) {
-    const config = await getFieldConfigByNodeId(nodeId);
-    if (!config) {
-        throw new NotFoundError('FieldConfig', nodeId);
-    }
-    return config;
-}
-
-/**
- * Update field config
- */
-export async function updateFieldConfig(nodeId: number, input: UpdateFieldConfigInput) {
-    try {
-        const data: Prisma.FieldConfigUpdateInput = {};
-
-        if (input.fieldName !== undefined) data.fieldName = input.fieldName;
-        if (input.cropType !== undefined) data.cropType = input.cropType;
-        if (input.sowingDate !== undefined) data.sowingDate = input.sowingDate;
-        if (input.soilTexture !== undefined) data.soilTexture = input.soilTexture;
-        if (input.baseTemperature !== undefined) data.baseTemperature = input.baseTemperature;
-        if (input.expectedGDDTotal !== undefined) data.expectedGDDTotal = input.expectedGDDTotal;
-        if (input.latitude !== undefined) data.latitude = input.latitude;
-        if (input.longitude !== undefined) data.longitude = input.longitude;
-
-        return await prisma.fieldConfig.update({
-            where: { nodeId },
-            data,
-        });
-    } catch (error) {
-        throw new DatabaseError('updateFieldConfig', error as Error);
-    }
-}
-
-/**
- * Get all field configs
- */
-export async function getAllFieldConfigs() {
-    try {
-        return await prisma.fieldConfig.findMany({
-            orderBy: { nodeId: 'asc' },
-        });
-    } catch (error) {
-        throw new DatabaseError('getAllFieldConfigs', error as Error);
-    }
-}
-
-/**
- * Delete field config
- */
-export async function deleteFieldConfig(nodeId: number) {
-    try {
-        return await prisma.fieldConfig.delete({
-            where: { nodeId },
-        });
-    } catch (error) {
-        throw new DatabaseError('deleteFieldConfig', error as Error);
+        throw new DatabaseError('deleteField', error as Error);
     }
 }

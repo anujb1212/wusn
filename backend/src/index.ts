@@ -3,68 +3,90 @@
  * Application Entry Point
  */
 
-import { env } from './config/environment.js';
-import { logger } from './config/logger.js';
-import { disconnectPrisma } from './config/database.js';
-import { flushLogs } from './config/logger.js';
 import { createApp } from './app.js';
+import { env, isDevelopment } from './config/environment.js';
+import { createLogger } from './config/logger.js';
+import { connectDatabase, disconnectDatabase } from './config/database.js';
 import { initializeMQTT, disconnectMQTT } from './services/mqtt.service.js';
+import { startScheduler } from './jobs/scheduler.js';
 
-const app = createApp();
+const logger = createLogger({ service: 'main' });
 
-// Start HTTP server
-const server = app.listen(env.PORT, () => {
-    logger.info(
-        {
-            port: env.PORT,
-            env: env.NODE_ENV,
-            nodeVersion: process.version
-        },
-        'Server started successfully'
-    );
-});
+/**
+ * Start the application
+ */
+async function start(): Promise<void> {
+    try {
+        logger.info('Starting WUSN Backend');
 
-// Initialize MQTT connection
-initializeMQTT();
-logger.info('MQTT service initialized');
+        // Connect to database
+        await connectDatabase();
 
-// Graceful shutdown handler
-async function shutdown(signal: string): Promise<void> {
-    logger.info({ signal }, 'Shutdown signal received');
+        // Initialize MQTT
+        initializeMQTT();
 
-    // Stop accepting new connections
-    server.close(async () => {
-        logger.info('HTTP server closed');
+        // Create Express app
+        const app = createApp();
 
-        try {
-            // Cleanup resources
-            await disconnectMQTT();
-            await disconnectPrisma();
-            await flushLogs();
+        // Start HTTP server
+        const server = app.listen(env.PORT, () => {
+            logger.info(
+                {
+                    port: env.PORT,
+                    env: env.NODE_ENV,
+                    pid: process.pid,
+                },
+                'HTTP server listening'
+            );
+        });
 
-            logger.info('Graceful shutdown completed');
-            process.exit(0);
-        } catch (error) {
-            logger.error({ err: error }, 'Error during shutdown');
-            process.exit(1);
-        }
-    });
+        // Start scheduled jobs
+        startScheduler();
 
-    // Force exit after 10 seconds
-    setTimeout(() => {
-        logger.error('Forcing shutdown after timeout');
+        // Graceful shutdown handler
+        const shutdown = async (signal: string) => {
+            logger.info({ signal }, 'Shutdown signal received');
+
+            // Stop accepting new connections
+            server.close(() => {
+                logger.info('HTTP server closed');
+            });
+
+            try {
+                // Disconnect MQTT
+                await disconnectMQTT();
+
+                // Disconnect database
+                await disconnectDatabase();
+
+                logger.info('Graceful shutdown complete');
+                process.exit(0);
+            } catch (error) {
+                logger.error({ error }, 'Error during shutdown');
+                process.exit(1);
+            }
+        };
+
+        // Handle shutdown signals
+        process.on('SIGTERM', () => shutdown('SIGTERM'));
+        process.on('SIGINT', () => shutdown('SIGINT'));
+
+        // Handle uncaught errors
+        process.on('uncaughtException', (error) => {
+            logger.error({ error }, 'Uncaught exception');
+            shutdown('uncaughtException');
+        });
+
+        process.on('unhandledRejection', (reason) => {
+            logger.error({ reason }, 'Unhandled rejection');
+            shutdown('unhandledRejection');
+        });
+
+    } catch (error) {
+        logger.error({ error }, 'Failed to start application');
         process.exit(1);
-    }, 10000);
+    }
 }
 
-// Register shutdown handlers
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('uncaughtException', (error) => {
-    logger.fatal({ err: error }, 'Uncaught exception');
-    shutdown('uncaughtException');
-});
-process.on('unhandledRejection', (reason) => {
-    logger.fatal({ reason }, 'Unhandled rejection');
-    shutdown('unhandledRejection');
-});
+// Start the application
+start();
