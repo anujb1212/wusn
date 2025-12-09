@@ -230,7 +230,6 @@ model CropParameters {
   id       Int    @id @default(autoincrement())
   cropName String @unique
 
-  // GDD parameters
   baseTemperature       Float
   totalGDD              Float
   moistureMin           Float
@@ -238,16 +237,12 @@ model CropParameters {
   moistureMax           Float
   validForUP            Boolean  @default(true)
   season                String
-  soilTexturePreference String
+  soilTexturePreference String[]
   initialStageEnd       Float    @default(15)
   developmentStageEnd   Float    @default(40)
   midSeasonEnd          Float    @default(75)
   lateSeasonEnd         Float    @default(95)
   createdAt             DateTime @default(now())
-
-  @@index([cropName])
-  @@index([validForUP])
-  @@index([season])
 }
 
 model IrrigationLog {
