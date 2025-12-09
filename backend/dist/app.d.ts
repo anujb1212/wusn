@@ -1,9 +1,2 @@
-/**
- * Express Application Setup
- */
-import type { Express } from 'express';
-/**
- * Create Express application
- */
-export declare function createApp(): Express;
+export declare function createApp(): import("express-serve-static-core").Express;
 //# sourceMappingURL=app.d.ts.map

@@ -3,7 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AppConfig {
   // HTTP backend
   static String get backendUrl =>
-      dotenv.env['BACKEND_URL'] ?? 'http://127.0.0.1:3000';
+      dotenv.env['BACKEND_URL'] ?? 'http://127.0.0.1:3000/api';
 
   // MQTT broker
   static String get mqttBroker =>

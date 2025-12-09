@@ -17,8 +17,10 @@ let client: mqtt.MqttClient | null = null;
 // Validation schemas
 const sensorPayloadSchema = z.object({
     nodeId: z.number().int().positive(),
-    moisture: z.number().min(0).max(1023),
-    temperature: z.number().min(-10).max(60),
+    moisture: z.number().int().min(0).max(1000),
+    temperature: z.number().int().min(-100).max(600),
+    rssi: z.number().int().min(-120).max(0).optional(),
+    batteryLevel: z.number().int().min(0).max(100).optional(),
     timestamp: z.string().optional(),
 });
 
