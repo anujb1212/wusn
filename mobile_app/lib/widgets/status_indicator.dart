@@ -5,10 +5,10 @@ class StatusIndicator extends StatelessWidget {
   final String label;
 
   const StatusIndicator({
-    Key? key,
+    super.key,
     required this.isConnected,
     required this.label,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

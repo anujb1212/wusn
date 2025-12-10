@@ -3,6 +3,8 @@ import '../services/api_service.dart';
 import '../config/app_config.dart';
 
 class ApiTestScreen extends StatefulWidget {
+  const ApiTestScreen({super.key});
+
   @override
   _ApiTestScreenState createState() => _ApiTestScreenState();
 }
@@ -19,12 +21,12 @@ class _ApiTestScreenState extends State<ApiTestScreen> {
 
     try {
       print('🔍 Backend URL: ${AppConfig.backendUrl}');
-      
+
       // Test 1: Fetch latest data (legacy endpoint)
       final data = await ApiService.fetchLatestData();
-      
+
       print('✅ Data fetched: ${data.length} sensors');
-      
+
       if (data.isEmpty) {
         setState(() {
           result = '''
@@ -47,7 +49,7 @@ curl -X POST http://localhost:3000/api/sensor \\
         });
         return;
       }
-      
+
       setState(() {
         result = '''
 ✅ SUCCESS!
@@ -68,7 +70,6 @@ Node ${s.nodeId}:
         ''';
         isLoading = false;
       });
-      
     } catch (e) {
       print('❌ Error: $e');
       setState(() {
@@ -132,9 +133,9 @@ Troubleshooting:
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Test button
             ElevatedButton.icon(
               onPressed: isLoading ? null : testApi,
@@ -158,9 +159,9 @@ Troubleshooting:
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Result display
             Expanded(
               child: Container(

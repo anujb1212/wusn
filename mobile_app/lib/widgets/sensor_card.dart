@@ -7,10 +7,10 @@ class SensorCard extends StatelessWidget {
   final String language;
 
   const SensorCard({
-    Key? key,
+    super.key,
     required this.sensor,
     required this.language,
-  }) : super(key: key);
+  });
 
   String _t(String key) => AppTranslations.translate(key, language);
 
@@ -50,7 +50,7 @@ class SensorCard extends StatelessWidget {
             if (sensor.isAggregated) _buildAggregationHeader(),
             _buildMainHeader(statusColor, statusIcon),
             const Divider(height: 32, thickness: 1),
-            _buildSensorReadings(),          // sirf moisture + temp
+            _buildSensorReadings(), // sirf moisture + temp
             if (sensor.batteryLevel != null) ...[
               const SizedBox(height: 18),
               _buildBatteryIndicator(),
@@ -63,7 +63,7 @@ class SensorCard extends StatelessWidget {
             _buildIrrigationAdvice(),
             if (sensor.isAggregated && sensor.allNodesData != null) ...[
               const SizedBox(height: 16),
-              _buildAllNodesSection(),      // yahan bhi signal line hata di
+              _buildAllNodesSection(), // yahan bhi signal line hata di
             ],
             const SizedBox(height: 16),
             _buildTimestamp(),
@@ -193,15 +193,14 @@ class SensorCard extends StatelessWidget {
   }
 
   Widget _buildSensorReadings() {
-    // VWC = SMU / 10
-    final double vwc = sensor.moisture / 10.0;
+    final double vwc = sensor.moistureVWC;
 
     return Column(
       children: [
         _buildDataRow(
           Icons.water_drop,
           _t('moisture'),
-          '${vwc.toStringAsFixed(1)}%',               // VWC %
+          '${vwc.toStringAsFixed(1)}%',
           Colors.blue,
         ),
         const SizedBox(height: 18),
@@ -333,7 +332,8 @@ class SensorCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             sensor.summary,
-            style: TextStyle(fontSize: 14, color: Colors.grey[800], height: 1.4),
+            style:
+                TextStyle(fontSize: 14, color: Colors.grey[800], height: 1.4),
           ),
         ],
       ),
@@ -388,7 +388,10 @@ class SensorCard extends StatelessWidget {
         final bool isSelected = node.nodeId == sensor.selectedNodeId;
         final bool isBlocked = node.batteryLevel < 15 || node.rssi < -110;
 
-        final double nodeVwc = node.moisture / 10.0;
+        // ✅ FIX: If node.moisture is already VWC from backend, use directly
+        final double nodeVwc = node.moisture is double
+            ? node.moisture
+            : (node.moisture as int).toDouble();
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),

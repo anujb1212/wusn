@@ -5,7 +5,7 @@ import '../widgets/sensor_card.dart';
 import '../widgets/dashboard_header.dart';
 import '../widgets/status_indicator.dart';
 import '../l10n/translations.dart';
-import 'crop_confirmation_screen.dart';
+import 'crop_confirmation_screen.dart'; // ✅ Critical Import
 import 'irrigation_advice_screen.dart';
 import 'api_test_screen.dart';
 
@@ -14,10 +14,10 @@ class DashboardScreen extends StatefulWidget {
   final Function(String) onLanguageChange;
 
   const DashboardScreen({
-    Key? key,
+    super.key,
     required this.language,
     required this.onLanguageChange,
-  }) : super(key: key);
+  });
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -42,7 +42,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Scaffold(
           backgroundColor: const Color(0xFFF5F5F5),
           appBar: AppBar(
-            title: Text(_t('appTitle'), style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(_t('appTitle'),
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             backgroundColor: const Color(0xFF4CAF50),
             foregroundColor: Colors.white,
             elevation: 2,
@@ -54,17 +55,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => ApiTestScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => const ApiTestScreen()),
                   );
                 },
               ),
-              
+
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: Center(
                   child: StatusIndicator(
                     isConnected: provider.isWebSocketConnected,
-                    label: provider.isWebSocketConnected ? _t('realtime') : _t('offline'),
+                    label: provider.isWebSocketConnected
+                        ? _t('realtime')
+                        : _t('offline'),
                   ),
                 ),
               ),
@@ -94,10 +98,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.cloud_off, size: 80, color: Colors.red),
+                          const Icon(Icons.cloud_off,
+                              size: 80, color: Colors.red),
                           const SizedBox(height: 20),
                           Text(_t('error')),
-                          Text(provider.errorMessage),
+                          Text(provider.errorMessage,
+                              textAlign: TextAlign.center),
                           const SizedBox(height: 20),
                           ElevatedButton(
                             onPressed: () => provider.fetchData(),
@@ -108,7 +114,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     )
                   : RefreshIndicator(
                       onRefresh: () async {
-                        print('🔄 [Dashboard] Pull to refresh');
                         await provider.fetchData();
                       },
                       child: ListView(
@@ -116,28 +121,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           DashboardHeader(
                             title: _t('dashboard'),
-                            subtitle: '${_t('lastUpdated')}: ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+                            subtitle:
+                                '${_t('lastUpdated')}: ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
                           ),
                           const SizedBox(height: 12),
-                          
-                          // ✅ NEW: Manual Refresh Button
+
+                          // Manual Refresh Button
                           ElevatedButton.icon(
                             onPressed: () async {
-                              print('🔄 [Dashboard] Manual refresh clicked');
                               await provider.fetchData();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(widget.language == 'hi' 
+                                  content: Text(widget.language == 'hi'
                                       ? 'डेटा अपडेट किया गया!'
                                       : 'Data refreshed!'),
-                                  duration: Duration(seconds: 2),
+                                  duration: const Duration(seconds: 2),
                                 ),
                               );
                             },
                             icon: const Icon(Icons.refresh),
                             label: Text(
-                              widget.language == 'hi' ? 'डेटा रिफ्रेश करें' : 'Refresh Data',
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              widget.language == 'hi'
+                                  ? 'डेटा रिफ्रेश करें'
+                                  : 'Refresh Data',
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.orange,
@@ -146,29 +154,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              elevation: 3,
                             ),
                           ),
-                          
+
                           const SizedBox(height: 20),
-                          
+
                           if (provider.sensors.isEmpty)
                             Center(
                               child: Column(
                                 children: [
                                   const SizedBox(height: 40),
-                                  const Icon(Icons.sensors_off, size: 80, color: Colors.grey),
+                                  const Icon(Icons.sensors_off,
+                                      size: 80, color: Colors.grey),
                                   const SizedBox(height: 20),
                                   Text(
                                     _t('noData'),
-                                    style: const TextStyle(fontSize: 18, color: Colors.grey),
+                                    style: const TextStyle(
+                                        fontSize: 18, color: Colors.grey),
                                   ),
                                   const SizedBox(height: 20),
                                   Text(
                                     widget.language == 'hi'
                                         ? 'ऊपर "डेटा रिफ्रेश करें" बटन दबाएं'
                                         : 'Press "Refresh Data" button above',
-                                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                    style: const TextStyle(
+                                        fontSize: 14, color: Colors.grey),
                                   ),
                                 ],
                               ),
@@ -177,7 +187,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ...provider.sensors.map((sensor) {
                               return Column(
                                 children: [
-                                  SensorCard(sensor: sensor, language: widget.language),
+                                  SensorCard(
+                                      sensor: sensor,
+                                      language: widget.language),
                                   const SizedBox(height: 12),
                                   _buildActionButtons(sensor),
                                   const SizedBox(height: 20),
@@ -192,7 +204,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildActionButtons(sensor) {
+  Widget _buildActionButtons(dynamic sensor) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -214,10 +226,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                       );
-                      
+
                       // Refresh data if crop confirmed
                       if (result == true) {
-                        Provider.of<SensorProvider>(context, listen: false).fetchData();
+                        Provider.of<SensorProvider>(context, listen: false)
+                            .fetchData();
                       }
                     },
                     icon: const Icon(Icons.agriculture, size: 20),
@@ -267,7 +280,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            
+
             // Quick info text
             Text(
               widget.language == 'hi'
