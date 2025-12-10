@@ -73,12 +73,12 @@ class SensorData {
     String? summary,
   }) {
     return SensorData(
-      nodeId: this.nodeId,
-      fieldName: this.fieldName,
+      nodeId: nodeId,
+      fieldName: fieldName,
       moisture: moisture ?? this.moisture,
       temperature: temperature ?? this.temperature,
       rssi: rssi ?? this.rssi,
-      batteryLevel: this.batteryLevel,
+      batteryLevel: batteryLevel,
       timestamp: timestamp ?? this.timestamp,
       soilStatus: soilStatus ?? this.soilStatus,
       irrigationAdvice: irrigationAdvice ?? this.irrigationAdvice,
@@ -88,10 +88,10 @@ class SensorData {
       cropConfidence: cropConfidence ?? this.cropConfidence,
       alternativeCrops: alternativeCrops ?? this.alternativeCrops,
       summary: summary ?? this.summary,
-      isAggregated: this.isAggregated,
-      totalNodes: this.totalNodes,
-      activeNodes: this.activeNodes,
-      allNodesData: this.allNodesData,
+      isAggregated: isAggregated,
+      totalNodes: totalNodes,
+      activeNodes: activeNodes,
+      allNodesData: allNodesData,
     );
   }
 

@@ -3,21 +3,18 @@
  * Sources: FAO CROPWAT, ICAR research, UP agricultural extension data
  */
 /**
- * UP-Valid Crops (12 crops)
+ * UP-Valid Crops (9 crops - Phase 4)
  */
 export const UP_VALID_CROPS = [
-    'chickpea',
-    'lentil',
+    'wheat',
     'rice',
     'maize',
-    'cotton',
-    'pigeonpeas',
-    'mothbeans',
-    'mungbean',
-    'blackgram',
-    'kidneybeans',
-    'watermelon',
-    'muskmelon',
+    'chickpea',
+    'lentil',
+    'pea',
+    'mustard',
+    'sugarcane',
+    'potato',
 ];
 /**
  * Seasons
@@ -26,6 +23,7 @@ export const SEASONS = {
     KHARIF: 'KHARIF', // Jun-Oct (monsoon)
     RABI: 'RABI', // Nov-Mar (winter)
     ZAID: 'ZAID', // Mar-Jun (summer)
+    PERENNIAL: 'PERENNIAL', // Year-round
 };
 /**
  * Growth Stages
@@ -53,7 +51,7 @@ export const SOIL_TEXTURES = {
 export const IRRIGATION_URGENCY = {
     NONE: 'NONE',
     LOW: 'LOW',
-    MEDIUM: 'MEDIUM',
+    MODERATE: 'MODERATE',
     HIGH: 'HIGH',
     CRITICAL: 'CRITICAL',
 };
@@ -71,10 +69,10 @@ export const IRRIGATION_METHODS = {
  */
 export const SOIL_WATER_CONSTANTS = {
     SANDY: {
-        FIELD_CAPACITY: 15, // FC (%)
-        WILTING_POINT: 6, // PWP (%)
-        SATURATION: 43, // Saturation (%)
-        TAW_PER_METER: 90, // Total Available Water (mm/m)
+        FIELD_CAPACITY: 15,
+        WILTING_POINT: 6,
+        SATURATION: 43,
+        TAW_PER_METER: 90,
     },
     SANDY_LOAM: {
         FIELD_CAPACITY: 22,
@@ -102,19 +100,79 @@ export const SOIL_WATER_CONSTANTS = {
     },
 };
 export const CROP_DATABASE = {
+    wheat: {
+        name: 'wheat',
+        baseTemperature: 5,
+        totalGDD: 1800,
+        optimalTempMin: 15,
+        optimalTempMax: 25,
+        vwcMin: 20,
+        vwcOptimal: 27,
+        vwcMax: 35,
+        preferredSoils: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
+        season: 'RABI',
+        rootDepth: 120,
+        mad: 0.55,
+        stages: {
+            initial: 15,
+            development: 35,
+            midSeason: 70,
+            lateSeason: 95,
+        },
+    },
+    rice: {
+        name: 'rice',
+        baseTemperature: 10,
+        totalGDD: 2000,
+        optimalTempMin: 25,
+        optimalTempMax: 35,
+        vwcMin: 35,
+        vwcOptimal: 40,
+        vwcMax: 45,
+        preferredSoils: ['CLAY_LOAM', 'CLAY', 'LOAM'],
+        season: 'KHARIF',
+        rootDepth: 50,
+        mad: 0.20,
+        stages: {
+            initial: 12,
+            development: 30,
+            midSeason: 65,
+            lateSeason: 90,
+        },
+    },
+    maize: {
+        name: 'maize',
+        baseTemperature: 10,
+        totalGDD: 1600,
+        optimalTempMin: 20,
+        optimalTempMax: 30,
+        vwcMin: 22,
+        vwcOptimal: 28,
+        vwcMax: 35,
+        preferredSoils: ['LOAM', 'SANDY_LOAM', 'CLAY_LOAM'],
+        season: 'KHARIF',
+        rootDepth: 120,
+        mad: 0.55,
+        stages: {
+            initial: 10,
+            development: 30,
+            midSeason: 65,
+            lateSeason: 90,
+        },
+    },
     chickpea: {
         name: 'chickpea',
         baseTemperature: 10,
         totalGDD: 1500,
         optimalTempMin: 20,
         optimalTempMax: 30,
-        vwcMin: 15,
-        vwcOptimal: 25,
-        vwcMax: 35,
+        vwcMin: 18,
+        vwcOptimal: 24,
+        vwcMax: 30,
         preferredSoils: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
         season: 'RABI',
         rootDepth: 100,
-        mad: 0.50, // 50% depletion allowed
+        mad: 0.50,
         stages: {
             initial: 15,
             development: 35,
@@ -128,9 +186,9 @@ export const CROP_DATABASE = {
         totalGDD: 1300,
         optimalTempMin: 18,
         optimalTempMax: 28,
-        vwcMin: 14,
+        vwcMin: 18,
         vwcOptimal: 23,
-        vwcMax: 33,
+        vwcMax: 28,
         preferredSoils: ['LOAM', 'SANDY_LOAM'],
         season: 'RABI',
         rootDepth: 80,
@@ -142,204 +200,84 @@ export const CROP_DATABASE = {
             lateSeason: 90,
         },
     },
-    rice: {
-        name: 'rice',
-        baseTemperature: 10,
-        totalGDD: 2000,
-        optimalTempMin: 25,
-        optimalTempMax: 35,
-        vwcMin: 30,
-        vwcOptimal: 40,
-        vwcMax: 50,
-        preferredSoils: ['CLAY_LOAM', 'CLAY', 'LOAM'],
-        season: 'KHARIF',
-        rootDepth: 50,
-        mad: 0.20, // Rice needs high moisture
-        stages: {
-            initial: 12,
-            development: 30,
-            midSeason: 65,
-            lateSeason: 90,
-        },
-    },
-    maize: {
-        name: 'maize',
-        baseTemperature: 10,
-        totalGDD: 1600,
-        optimalTempMin: 25,
-        optimalTempMax: 35,
-        vwcMin: 18,
-        vwcOptimal: 28,
-        vwcMax: 38,
-        preferredSoils: ['LOAM', 'SANDY_LOAM', 'CLAY_LOAM'],
-        season: 'KHARIF',
-        rootDepth: 120,
-        mad: 0.55,
-        stages: {
-            initial: 10,
-            development: 30,
-            midSeason: 65,
-            lateSeason: 90,
-        },
-    },
-    cotton: {
-        name: 'cotton',
-        baseTemperature: 12,
-        totalGDD: 2300,
-        optimalTempMin: 25,
-        optimalTempMax: 35,
-        vwcMin: 16,
-        vwcOptimal: 26,
-        vwcMax: 36,
-        preferredSoils: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
-        season: 'KHARIF',
-        rootDepth: 150,
-        mad: 0.65,
-        stages: {
-            initial: 12,
-            development: 35,
-            midSeason: 70,
-            lateSeason: 92,
-        },
-    },
-    pigeonpeas: {
-        name: 'pigeonpeas',
-        baseTemperature: 10,
-        totalGDD: 2200,
-        optimalTempMin: 22,
-        optimalTempMax: 32,
-        vwcMin: 14,
-        vwcOptimal: 24,
-        vwcMax: 34,
-        preferredSoils: ['LOAM', 'SANDY_LOAM', 'CLAY_LOAM'],
-        season: 'KHARIF',
-        rootDepth: 120,
-        mad: 0.55,
-        stages: {
-            initial: 15,
-            development: 35,
-            midSeason: 70,
-            lateSeason: 92,
-        },
-    },
-    mothbeans: {
-        name: 'mothbeans',
-        baseTemperature: 10,
-        totalGDD: 1100,
-        optimalTempMin: 25,
-        optimalTempMax: 38,
-        vwcMin: 12,
-        vwcOptimal: 20,
-        vwcMax: 30,
-        preferredSoils: ['SANDY', 'SANDY_LOAM', 'LOAM'],
-        season: 'KHARIF',
-        rootDepth: 60,
-        mad: 0.60, // Drought tolerant
-        stages: {
-            initial: 15,
-            development: 35,
-            midSeason: 65,
-            lateSeason: 90,
-        },
-    },
-    mungbean: {
-        name: 'mungbean',
-        baseTemperature: 10,
-        totalGDD: 1000,
-        optimalTempMin: 25,
-        optimalTempMax: 35,
-        vwcMin: 15,
-        vwcOptimal: 24,
-        vwcMax: 34,
-        preferredSoils: ['LOAM', 'SANDY_LOAM'],
-        season: 'KHARIF',
-        rootDepth: 70,
-        mad: 0.50,
-        stages: {
-            initial: 15,
-            development: 30,
-            midSeason: 60,
-            lateSeason: 85,
-        },
-    },
-    blackgram: {
-        name: 'blackgram',
-        baseTemperature: 10,
-        totalGDD: 1050,
-        optimalTempMin: 24,
-        optimalTempMax: 34,
-        vwcMin: 16,
-        vwcOptimal: 25,
-        vwcMax: 35,
-        preferredSoils: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
-        season: 'KHARIF',
-        rootDepth: 70,
-        mad: 0.50,
-        stages: {
-            initial: 15,
-            development: 30,
-            midSeason: 60,
-            lateSeason: 85,
-        },
-    },
-    kidneybeans: {
-        name: 'kidneybeans',
-        baseTemperature: 10,
+    pea: {
+        name: 'pea',
+        baseTemperature: 5,
         totalGDD: 1200,
-        optimalTempMin: 18,
-        optimalTempMax: 28,
+        optimalTempMin: 15,
+        optimalTempMax: 25,
         vwcMin: 18,
-        vwcOptimal: 27,
-        vwcMax: 37,
-        preferredSoils: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
+        vwcOptimal: 25,
+        vwcMax: 32,
+        preferredSoils: ['LOAM', 'CLAY_LOAM'],
         season: 'RABI',
         rootDepth: 90,
         mad: 0.45,
         stages: {
             initial: 15,
-            development: 35,
+            development: 30,
+            midSeason: 60,
+            lateSeason: 85,
+        },
+    },
+    mustard: {
+        name: 'mustard',
+        baseTemperature: 5,
+        totalGDD: 1400,
+        optimalTempMin: 15,
+        optimalTempMax: 25,
+        vwcMin: 18,
+        vwcOptimal: 25,
+        vwcMax: 32,
+        preferredSoils: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
+        season: 'RABI',
+        rootDepth: 100,
+        mad: 0.50,
+        stages: {
+            initial: 15,
+            development: 30,
             midSeason: 65,
             lateSeason: 90,
         },
     },
-    watermelon: {
-        name: 'watermelon',
+    sugarcane: {
+        name: 'sugarcane',
         baseTemperature: 12,
-        totalGDD: 1800,
+        totalGDD: 4000,
         optimalTempMin: 25,
         optimalTempMax: 35,
-        vwcMin: 20,
-        vwcOptimal: 30,
-        vwcMax: 40,
-        preferredSoils: ['SANDY_LOAM', 'LOAM', 'SANDY'],
-        season: 'ZAID',
-        rootDepth: 100,
-        mad: 0.40, // Needs consistent moisture
+        vwcMin: 35,
+        vwcOptimal: 42,
+        vwcMax: 50,
+        preferredSoils: ['LOAM', 'CLAY_LOAM'],
+        season: 'PERENNIAL',
+        rootDepth: 150,
+        mad: 0.65,
         stages: {
-            initial: 10,
-            development: 25,
-            midSeason: 60,
-            lateSeason: 85,
+            initial: 20,
+            development: 60,
+            midSeason: 180,
+            lateSeason: 240,
         },
     },
-    muskmelon: {
-        name: 'muskmelon',
-        baseTemperature: 12,
-        totalGDD: 1600,
-        optimalTempMin: 24,
-        optimalTempMax: 34,
-        vwcMin: 18,
+    potato: {
+        name: 'potato',
+        baseTemperature: 7,
+        totalGDD: 1400,
+        optimalTempMin: 15,
+        optimalTempMax: 25,
+        vwcMin: 20,
         vwcOptimal: 28,
-        vwcMax: 38,
-        preferredSoils: ['SANDY_LOAM', 'LOAM', 'SANDY'],
-        season: 'ZAID',
-        rootDepth: 90,
-        mad: 0.40,
+        vwcMax: 36,
+        preferredSoils: ['SANDY_LOAM', 'LOAM'],
+        season: 'RABI',
+        rootDepth: 60,
+        mad: 0.35,
         stages: {
-            initial: 10,
-            development: 25,
-            midSeason: 60,
-            lateSeason: 85,
+            initial: 12,
+            development: 30,
+            midSeason: 65,
+            lateSeason: 90,
         },
     },
 };
@@ -369,16 +307,16 @@ export const TIME_CONSTANTS = {
  */
 export const WEATHER_CONSTANTS = {
     CACHE_TTL_HOURS: 1,
-    FORECAST_DAYS: 5, // OpenWeatherMap free tier limit
+    FORECAST_DAYS: 5,
     API_TIMEOUT_MS: 5000,
 };
 /**
  * Irrigation Decision Constants
  */
 export const IRRIGATION_CONSTANTS = {
-    RAIN_THRESHOLD_MM: 5, // Significant rain (skip irrigation)
-    RAIN_FORECAST_HOURS: 48, // Look-ahead window
-    MIN_IRRIGATION_DEPTH_MM: 15, // Minimum application depth
-    MAX_IRRIGATION_DEPTH_MM: 75, // Maximum single application
+    RAIN_THRESHOLD_MM: 5,
+    RAIN_FORECAST_HOURS: 48,
+    MIN_IRRIGATION_DEPTH_MM: 15,
+    MAX_IRRIGATION_DEPTH_MM: 75,
 };
 //# sourceMappingURL=constants.js.map

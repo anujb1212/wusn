@@ -44,8 +44,7 @@ class ApiService {
     }
   }
 
-  // --- Core Methods ---
-
+  // Core Methods
   static Future<List<dynamic>> getFields() async {
     final res = await _get('/fields');
     if (res is Map<String, dynamic> && res['data'] is List) {
@@ -66,7 +65,6 @@ class ApiService {
       return {};
     }
 
-    // Map backend field names to Flutter expected names
     return {
       'nodeId': data['nodeId'],
       'moisture': (data['soilMoistureVWC'] ?? 0).toDouble(),
@@ -94,7 +92,6 @@ class ApiService {
     required String cropName,
     required DateTime sowingDate,
   }) async {
-    // ✅ FIX: Format date as YYYY-MM-DDTHH:mm:ss.sssZ (UTC ISO 8601)
     final formattedDate = sowingDate.toUtc().toIso8601String();
 
     final body = {
@@ -116,6 +113,20 @@ class ApiService {
     } catch (e) {
       print('❌ Crop confirmation failed: $e');
       rethrow;
+    }
+  }
+
+  // ⭐ NEW: Weather Forecast
+  static Future<Map<String, dynamic>> getWeatherForecast(int nodeId) async {
+    try {
+      final res = await _get('/weather/$nodeId/forecast');
+      if (res is Map<String, dynamic> && res['data'] != null) {
+        return res['data'] as Map<String, dynamic>;
+      }
+      return res is Map<String, dynamic> ? res : {};
+    } catch (e) {
+      print('⚠️ Weather forecast unavailable: $e');
+      return {};
     }
   }
 

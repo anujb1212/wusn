@@ -7,7 +7,7 @@ import 'services/mqtt_service.dart'; // Added Import
 
 Future<void> main() async {
   await dotenv.load(fileName: ".env");
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {

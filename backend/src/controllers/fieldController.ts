@@ -23,6 +23,7 @@ const updateFieldSchema = z.object({
     location: z.string().optional(),
 });
 
+// ✅ FIXED: Uses UP_VALID_CROPS from constants (9 crops only)
 const setCropSchema = z.object({
     cropType: z.enum(UP_VALID_CROPS as any),
     sowingDate: z.string().datetime(),
@@ -95,7 +96,7 @@ export async function updateFieldController(req: Request, res: Response): Promis
 
     const field = await prisma.field.update({
         where: { nodeId },
-        data: updateData as any, // Type cast needed due to exactOptionalPropertyTypes
+        data: updateData as any,
     });
 
     res.json({
@@ -105,18 +106,27 @@ export async function updateFieldController(req: Request, res: Response): Promis
     });
 }
 
-
-
 /**
  * POST /api/fields/:nodeId/crop
+ * ✅ FIXED: Only accepts 9 crops from UP_VALID_CROPS
  */
 export async function setCropController(req: Request, res: Response): Promise<void> {
     const { nodeId } = nodeIdSchema.parse(req.params);
     const { cropType, sowingDate } = setCropSchema.parse(req.body);
 
-    // Type assertion for cropType
+    // Type assertion for cropType - guaranteed valid by Zod
     const validCropType = cropType as UPCropName;
+
+    // ✅ Validate crop exists in CROP_DATABASE
     const cropParams = CROP_DATABASE[validCropType];
+    if (!cropParams) {
+        res.status(400).json({
+            status: 'error',
+            message: `Crop ${cropType} not found in database`,
+            timestamp: new Date().toISOString(),
+        });
+        return;
+    }
 
     const field = await fieldRepo.updateFieldCrop(nodeId, {
         cropType: validCropType,

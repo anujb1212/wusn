@@ -1,21 +1,21 @@
-// prisma/seed.ts
+
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('🌱 Seeding UP-valid crops with Phase 4 parameters...');
+    console.log('🌱 Seeding UP-valid crop');
 
     const crops = [
         // ====================================================================
-        // RABI SEASON (2 crops) - Nov-Mar
+        // RABI SEASON (Nov-Mar) - 5 crops
         // ====================================================================
         {
-            cropName: 'chickpea',
-            baseTemperature: 10,
-            totalGDD: 1500,
-            moistureMin: 15,
-            moistureOptimal: 25,
+            cropName: 'wheat',
+            baseTemperature: 5,
+            totalGDD: 1800,
+            moistureMin: 20,
+            moistureOptimal: 27,
             moistureMax: 35,
             validForUP: true,
             season: 'RABI',
@@ -25,14 +25,28 @@ async function main() {
             midSeasonEnd: 70,
             lateSeasonEnd: 95,
         },
-
+        {
+            cropName: 'chickpea',
+            baseTemperature: 10,
+            totalGDD: 1500,
+            moistureMin: 18,
+            moistureOptimal: 24,
+            moistureMax: 30,
+            validForUP: true,
+            season: 'RABI',
+            soilTexturePreference: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
+            initialStageEnd: 15,
+            developmentStageEnd: 35,
+            midSeasonEnd: 70,
+            lateSeasonEnd: 95,
+        },
         {
             cropName: 'lentil',
             baseTemperature: 5,
             totalGDD: 1300,
-            moistureMin: 14,
+            moistureMin: 18,
             moistureOptimal: 23,
-            moistureMax: 33,
+            moistureMax: 28,
             validForUP: true,
             season: 'RABI',
             soilTexturePreference: ['LOAM', 'SANDY_LOAM'],
@@ -41,17 +55,47 @@ async function main() {
             midSeasonEnd: 65,
             lateSeasonEnd: 90,
         },
+        {
+            cropName: 'pea',
+            baseTemperature: 5,
+            totalGDD: 1200,
+            moistureMin: 18,
+            moistureOptimal: 25,
+            moistureMax: 32,
+            validForUP: true,
+            season: 'RABI',
+            soilTexturePreference: ['LOAM', 'CLAY_LOAM'],
+            initialStageEnd: 15,
+            developmentStageEnd: 30,
+            midSeasonEnd: 60,
+            lateSeasonEnd: 85,
+        },
+        {
+            cropName: 'mustard',
+            baseTemperature: 5,
+            totalGDD: 1400,
+            moistureMin: 18,
+            moistureOptimal: 25,
+            moistureMax: 32,
+            validForUP: true,
+            season: 'RABI',
+            soilTexturePreference: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
+            initialStageEnd: 15,
+            developmentStageEnd: 30,
+            midSeasonEnd: 65,
+            lateSeasonEnd: 90,
+        },
 
         // ====================================================================
-        // KHARIF SEASON (8 crops) - Jun-Oct
+        // KHARIF SEASON (Jun-Oct) - 2 crops
         // ====================================================================
         {
             cropName: 'rice',
             baseTemperature: 10,
             totalGDD: 2000,
-            moistureMin: 30,
+            moistureMin: 35,
             moistureOptimal: 40,
-            moistureMax: 50,
+            moistureMax: 45,
             validForUP: true,
             season: 'KHARIF',
             soilTexturePreference: ['CLAY_LOAM', 'CLAY', 'LOAM'],
@@ -60,315 +104,54 @@ async function main() {
             midSeasonEnd: 65,
             lateSeasonEnd: 90,
         },
-
         {
             cropName: 'maize',
             baseTemperature: 10,
             totalGDD: 1600,
-            moistureMin: 18,
+            moistureMin: 22,
             moistureOptimal: 28,
-            moistureMax: 38,
-            validForUP: true,
-            season: 'KHARIF',
-            soilTexturePreference: ['LOAM', 'SANDY_LOAM', 'CLAY_LOAM'],
-            initialStageEnd: 10,
-            developmentStageEnd: 30,
-            midSeasonEnd: 65,
-            lateSeasonEnd: 90,
-        },
-
-        {
-            cropName: 'cotton',
-            baseTemperature: 12,
-            totalGDD: 2300,
-            moistureMin: 16,
-            moistureOptimal: 26,
-            moistureMax: 36,
-            validForUP: true,
-            season: 'KHARIF',
-            soilTexturePreference: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
-            initialStageEnd: 12,
-            developmentStageEnd: 35,
-            midSeasonEnd: 70,
-            lateSeasonEnd: 92,
-        },
-
-        {
-            cropName: 'pigeonpeas',
-            baseTemperature: 10,
-            totalGDD: 2200,
-            moistureMin: 14,
-            moistureOptimal: 24,
-            moistureMax: 34,
-            validForUP: true,
-            season: 'KHARIF',
-            soilTexturePreference: ['LOAM', 'SANDY_LOAM', 'CLAY_LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 35,
-            midSeasonEnd: 70,
-            lateSeasonEnd: 92,
-        },
-
-        {
-            cropName: 'mothbeans',
-            baseTemperature: 10,
-            totalGDD: 1100,
-            moistureMin: 12,
-            moistureOptimal: 20,
-            moistureMax: 30,
-            validForUP: true,
-            season: 'KHARIF',
-            soilTexturePreference: ['SANDY', 'SANDY_LOAM', 'LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 35,
-            midSeasonEnd: 65,
-            lateSeasonEnd: 90,
-        },
-
-        {
-            cropName: 'mungbean',
-            baseTemperature: 10,
-            totalGDD: 1000,
-            moistureMin: 15,
-            moistureOptimal: 24,
-            moistureMax: 34,
-            validForUP: true,
-            season: 'KHARIF',
-            soilTexturePreference: ['LOAM', 'SANDY_LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 30,
-            midSeasonEnd: 60,
-            lateSeasonEnd: 85,
-        },
-
-        {
-            cropName: 'blackgram',
-            baseTemperature: 10,
-            totalGDD: 1050,
-            moistureMin: 16,
-            moistureOptimal: 25,
             moistureMax: 35,
             validForUP: true,
             season: 'KHARIF',
-            soilTexturePreference: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
-            initialStageEnd: 15,
+            soilTexturePreference: ['LOAM', 'SANDY_LOAM', 'CLAY_LOAM'],
+            initialStageEnd: 10,
             developmentStageEnd: 30,
-            midSeasonEnd: 60,
-            lateSeasonEnd: 85,
-        },
-
-        {
-            cropName: 'kidneybeans',
-            baseTemperature: 10,
-            totalGDD: 1200,
-            moistureMin: 18,
-            moistureOptimal: 27,
-            moistureMax: 37,
-            validForUP: true,
-            season: 'KHARIF',
-            soilTexturePreference: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 35,
             midSeasonEnd: 65,
             lateSeasonEnd: 90,
         },
 
         // ====================================================================
-        // ZAID SEASON (2 crops) - Mar-Jun
+        // PERENNIAL / CASH CROPS - 2 crops
         // ====================================================================
         {
-            cropName: 'watermelon',
+            cropName: 'sugarcane',
             baseTemperature: 12,
-            totalGDD: 1800,
-            moistureMin: 20,
-            moistureOptimal: 30,
-            moistureMax: 40,
-            validForUP: true,
-            season: 'ZAID',
-            soilTexturePreference: ['SANDY_LOAM', 'LOAM', 'SANDY'],
-            initialStageEnd: 10,
-            developmentStageEnd: 25,
-            midSeasonEnd: 60,
-            lateSeasonEnd: 85,
-        },
-
-        {
-            cropName: 'muskmelon',
-            baseTemperature: 12,
-            totalGDD: 1600,
-            moistureMin: 18,
-            moistureOptimal: 28,
-            moistureMax: 38,
-            validForUP: true,
-            season: 'ZAID',
-            soilTexturePreference: ['SANDY_LOAM', 'LOAM', 'SANDY'],
-            initialStageEnd: 10,
-            developmentStageEnd: 25,
-            midSeasonEnd: 60,
-            lateSeasonEnd: 85,
-        },
-
-        // ====================================================================
-        // NON-UP CROPS (marked as invalid - for reference only)
-        // ====================================================================
-        {
-            cropName: 'pomegranate',
-            baseTemperature: 12,
-            totalGDD: 2400,
-            moistureMin: 20,
-            moistureOptimal: 30,
-            moistureMax: 40,
-            validForUP: false,
-            season: 'PERENNIAL',
-            soilTexturePreference: ['SANDY_LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 40,
-            midSeasonEnd: 75,
-            lateSeasonEnd: 95,
-        },
-
-        {
-            cropName: 'banana',
-            baseTemperature: 14,
-            totalGDD: 2800,
+            totalGDD: 4000,
             moistureMin: 35,
-            moistureOptimal: 45,
-            moistureMax: 55,
-            validForUP: false,
-            season: 'PERENNIAL',
-            soilTexturePreference: ['LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 40,
-            midSeasonEnd: 75,
-            lateSeasonEnd: 95,
-        },
-
-        {
-            cropName: 'mango',
-            baseTemperature: 15,
-            totalGDD: 3200,
-            moistureMin: 25,
-            moistureOptimal: 35,
-            moistureMax: 45,
-            validForUP: false,
-            season: 'PERENNIAL',
-            soilTexturePreference: ['SANDY_LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 40,
-            midSeasonEnd: 75,
-            lateSeasonEnd: 95,
-        },
-
-        {
-            cropName: 'grapes',
-            baseTemperature: 10,
-            totalGDD: 2200,
-            moistureMin: 20,
-            moistureOptimal: 30,
-            moistureMax: 40,
-            validForUP: false,
-            season: 'PERENNIAL',
-            soilTexturePreference: ['SANDY_LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 40,
-            midSeasonEnd: 75,
-            lateSeasonEnd: 95,
-        },
-
-        {
-            cropName: 'apple',
-            baseTemperature: 5,
-            totalGDD: 2000,
-            moistureMin: 22,
-            moistureOptimal: 32,
-            moistureMax: 42,
-            validForUP: false,
-            season: 'PERENNIAL',
-            soilTexturePreference: ['LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 40,
-            midSeasonEnd: 75,
-            lateSeasonEnd: 95,
-        },
-
-        {
-            cropName: 'orange',
-            baseTemperature: 13,
-            totalGDD: 2600,
-            moistureMin: 25,
-            moistureOptimal: 35,
-            moistureMax: 45,
-            validForUP: false,
-            season: 'PERENNIAL',
-            soilTexturePreference: ['SANDY_LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 40,
-            midSeasonEnd: 75,
-            lateSeasonEnd: 95,
-        },
-
-        {
-            cropName: 'papaya',
-            baseTemperature: 15,
-            totalGDD: 2600,
-            moistureMin: 30,
-            moistureOptimal: 40,
-            moistureMax: 50,
-            validForUP: false,
-            season: 'PERENNIAL',
-            soilTexturePreference: ['LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 40,
-            midSeasonEnd: 75,
-            lateSeasonEnd: 95,
-        },
-
-        {
-            cropName: 'coconut',
-            baseTemperature: 15,
-            totalGDD: 3000,
-            moistureMin: 32,
             moistureOptimal: 42,
-            moistureMax: 52,
-            validForUP: false,
+            moistureMax: 50,
+            validForUP: true,
             season: 'PERENNIAL',
-            soilTexturePreference: ['SANDY_LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 40,
-            midSeasonEnd: 75,
-            lateSeasonEnd: 95,
+            soilTexturePreference: ['LOAM', 'CLAY_LOAM'],
+            initialStageEnd: 20,
+            developmentStageEnd: 60,
+            midSeasonEnd: 180,
+            lateSeasonEnd: 240,
         },
-
         {
-            cropName: 'jute',
-            baseTemperature: 12,
-            totalGDD: 2200,
-            moistureMin: 35,
-            moistureOptimal: 45,
-            moistureMax: 55,
-            validForUP: false,
-            season: 'KHARIF',
-            soilTexturePreference: ['CLAY_LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 40,
-            midSeasonEnd: 75,
-            lateSeasonEnd: 95,
-        },
-
-        {
-            cropName: 'coffee',
-            baseTemperature: 12,
-            totalGDD: 2500,
-            moistureMin: 28,
-            moistureOptimal: 38,
-            moistureMax: 48,
-            validForUP: false,
-            season: 'PERENNIAL',
-            soilTexturePreference: ['LOAM'],
-            initialStageEnd: 15,
-            developmentStageEnd: 40,
-            midSeasonEnd: 75,
-            lateSeasonEnd: 95,
+            cropName: 'potato',
+            baseTemperature: 7,
+            totalGDD: 1400,
+            moistureMin: 20,
+            moistureOptimal: 28,
+            moistureMax: 36,
+            validForUP: true,
+            season: 'RABI',
+            soilTexturePreference: ['SANDY_LOAM', 'LOAM'],
+            initialStageEnd: 12,
+            developmentStageEnd: 30,
+            midSeasonEnd: 65,
+            lateSeasonEnd: 90,
         },
     ];
 
@@ -377,47 +160,17 @@ async function main() {
     for (const crop of crops) {
         await prisma.cropParameters.upsert({
             where: { cropName: crop.cropName },
-            create: {
-                cropName: crop.cropName,
-                baseTemperature: crop.baseTemperature,
-                totalGDD: crop.totalGDD,
-                moistureMin: crop.moistureMin,
-                moistureOptimal: crop.moistureOptimal,
-                moistureMax: crop.moistureMax,
-                validForUP: crop.validForUP,
-                season: crop.season,
-                soilTexturePreference: crop.soilTexturePreference,
-                initialStageEnd: crop.initialStageEnd,
-                developmentStageEnd: crop.developmentStageEnd,
-                midSeasonEnd: crop.midSeasonEnd,
-                lateSeasonEnd: crop.lateSeasonEnd,
-            },
-            update: {
-                baseTemperature: crop.baseTemperature,
-                totalGDD: crop.totalGDD,
-                moistureMin: crop.moistureMin,
-                moistureOptimal: crop.moistureOptimal,
-                moistureMax: crop.moistureMax,
-                validForUP: crop.validForUP,
-                season: crop.season,
-                soilTexturePreference: crop.soilTexturePreference,
-                initialStageEnd: crop.initialStageEnd,
-                developmentStageEnd: crop.developmentStageEnd,
-                midSeasonEnd: crop.midSeasonEnd,
-                lateSeasonEnd: crop.lateSeasonEnd,
-            },
+            create: crop,
+            update: crop,
         });
+        console.log(`   ✅ ${crop.cropName} (${crop.season})`);
     }
 
-
-    const upCrops = crops.filter((c) => c.validForUP);
-
     console.log('\n📊 Summary:');
-    console.log(`   Total crops seeded: ${crops.length}`);
-    console.log(`   UP-valid crops: ${upCrops.length}`);
-    console.log(`   RABI: ${upCrops.filter((c) => c.season === 'RABI').length}`);
-    console.log(`   KHARIF: ${upCrops.filter((c) => c.season === 'KHARIF').length}`);
-    console.log(`   ZAID: ${upCrops.filter((c) => c.season === 'ZAID').length}`);
+    console.log(`   Total UP-valid crops: ${crops.length}`);
+    console.log(`   RABI: ${crops.filter((c) => c.season === 'RABI').length}`);
+    console.log(`   KHARIF: ${crops.filter((c) => c.season === 'KHARIF').length}`);
+    console.log(`   PERENNIAL: ${crops.filter((c) => c.season === 'PERENNIAL').length}`);
     console.log('\n✅ Seed completed successfully!\n');
 }
 

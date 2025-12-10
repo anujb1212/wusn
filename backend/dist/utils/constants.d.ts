@@ -3,9 +3,9 @@
  * Sources: FAO CROPWAT, ICAR research, UP agricultural extension data
  */
 /**
- * UP-Valid Crops (12 crops)
+ * UP-Valid Crops (9 crops - Phase 4)
  */
-export declare const UP_VALID_CROPS: readonly ["chickpea", "lentil", "rice", "maize", "cotton", "pigeonpeas", "mothbeans", "mungbean", "blackgram", "kidneybeans", "watermelon", "muskmelon"];
+export declare const UP_VALID_CROPS: readonly ["wheat", "rice", "maize", "chickpea", "lentil", "pea", "mustard", "sugarcane", "potato"];
 export type UPCropName = typeof UP_VALID_CROPS[number];
 /**
  * Seasons
@@ -14,6 +14,7 @@ export declare const SEASONS: {
     readonly KHARIF: "KHARIF";
     readonly RABI: "RABI";
     readonly ZAID: "ZAID";
+    readonly PERENNIAL: "PERENNIAL";
 };
 export type Season = keyof typeof SEASONS;
 /**
@@ -44,7 +45,7 @@ export type SoilTexture = keyof typeof SOIL_TEXTURES;
 export declare const IRRIGATION_URGENCY: {
     readonly NONE: "NONE";
     readonly LOW: "LOW";
-    readonly MEDIUM: "MEDIUM";
+    readonly MODERATE: "MODERATE";
     readonly HIGH: "HIGH";
     readonly CRITICAL: "CRITICAL";
 };
@@ -95,12 +96,7 @@ export declare const SOIL_WATER_CONSTANTS: {
     };
 };
 /**
- * Crop Parameters Database
- * Sources:
- * - ICAR-Indian Institute of Pulses Research (chickpea, lentil, pigeonpeas)
- * - ICAR-Indian Institute of Rice Research
- * - FAO CROPWAT database
- * - UP Agricultural University extension bulletins
+ * Crop Parameters Database (9 UP-Valid Crops)
  */
 export interface CropParameters {
     name: UPCropName;

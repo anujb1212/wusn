@@ -85,28 +85,57 @@ function calculateIrrigationDepth(
 
 /**
  * Determine urgency level
+ * ✅ FIXED: Proper logic to check optimal range first
  */
 function determineUrgency(
     currentVWC: number,
     balance: SoilWaterBalance,
     cropParams: typeof CROP_DATABASE[UPCropName]
 ): { urgency: IrrigationUrgency; score: number } {
-    // Critical: below minimum acceptable VWC
-    if (currentVWC < cropParams.vwcMin) {
-        return { urgency: IRRIGATION_URGENCY.CRITICAL, score: 95 };
+    // ✅ FIX: Check if within crop optimal range FIRST
+    if (currentVWC >= cropParams.vwcMin && currentVWC <= cropParams.vwcMax) {
+        // Within optimal range - check fine-grained position
+        const optimalMid = cropParams.vwcOptimal;
+        const distanceFromOptimal = Math.abs(currentVWC - optimalMid);
+        const optimalRange = (cropParams.vwcMax - cropParams.vwcMin) / 2;
+
+        if (distanceFromOptimal < optimalRange * 0.3) {
+            // Very close to optimal center
+            return { urgency: IRRIGATION_URGENCY.NONE, score: 0 };
+        } else if (distanceFromOptimal < optimalRange * 0.7) {
+            // Within optimal but approaching edges
+            return { urgency: IRRIGATION_URGENCY.LOW, score: 20 };
+        } else {
+            // At edges of optimal range
+            return { urgency: IRRIGATION_URGENCY.LOW, score: 30 };
+        }
     }
 
-    // High: depletion exceeded MAD threshold
+    // Critical: below minimum acceptable VWC
+    if (currentVWC < cropParams.vwcMin) {
+        const deficit = cropParams.vwcMin - currentVWC;
+        if (deficit > 5) {
+            return { urgency: IRRIGATION_URGENCY.CRITICAL, score: 95 };
+        } else if (deficit > 2) {
+            return { urgency: IRRIGATION_URGENCY.HIGH, score: 80 };
+        }
+        return { urgency: IRRIGATION_URGENCY.MODERATE, score: 60 }; // ✅ FIXED: MEDIUM → MODERATE
+    }
+
+    // Above maximum (too wet) - no irrigation needed
+    if (currentVWC > cropParams.vwcMax) {
+        return { urgency: IRRIGATION_URGENCY.NONE, score: 0 };
+    }
+
+    // Fallback to depletion-based logic (only if not in optimal range)
     if (balance.depletion > balance.mad * 100) {
         return { urgency: IRRIGATION_URGENCY.HIGH, score: 80 };
     }
 
-    // Medium: approaching MAD threshold (80-100% of MAD)
     if (balance.depletion > balance.mad * 80) {
-        return { urgency: IRRIGATION_URGENCY.MEDIUM, score: 60 };
+        return { urgency: IRRIGATION_URGENCY.MODERATE, score: 60 }; // ✅ FIXED: MEDIUM → MODERATE
     }
 
-    // Low: some depletion but well within safe range
     if (balance.depletion > balance.mad * 50) {
         return { urgency: IRRIGATION_URGENCY.LOW, score: 30 };
     }
@@ -129,6 +158,12 @@ export async function makeIrrigationDecision(nodeId: number): Promise<Irrigation
             throw new ValidationError('Field must have confirmed crop for irrigation decisions');
         }
 
+        // Validate crop exists in database
+        const cropParams = CROP_DATABASE[field.cropType as UPCropName];
+        if (!cropParams) {
+            throw new ValidationError(`Unknown crop type: ${field.cropType}`);
+        }
+
         // Get latest sensor reading
         const reading = await getLatestReading(nodeId);
         if (!reading || reading.soilMoistureVWC === null) {
@@ -136,7 +171,6 @@ export async function makeIrrigationDecision(nodeId: number): Promise<Irrigation
         }
 
         const currentVWC = reading.soilMoistureVWC;
-        const cropParams = CROP_DATABASE[field.cropType as UPCropName];
         const soilTexture = field.soilTexture as SoilTexture;
         const growthStage = (field.currentGrowthStage as GrowthStage) || null;
 
@@ -173,9 +207,9 @@ export async function makeIrrigationDecision(nodeId: number): Promise<Irrigation
 
                 // Downgrade urgency if rain expected
                 if (baseUrgency === IRRIGATION_URGENCY.HIGH) {
-                    finalUrgency = IRRIGATION_URGENCY.MEDIUM;
+                    finalUrgency = IRRIGATION_URGENCY.MODERATE; // ✅ FIXED: MEDIUM → MODERATE
                     finalScore = Math.max(50, baseScore - 30);
-                } else if (baseUrgency === IRRIGATION_URGENCY.MEDIUM) {
+                } else if (baseUrgency === IRRIGATION_URGENCY.MODERATE) { // ✅ FIXED: MEDIUM → MODERATE
                     finalUrgency = IRRIGATION_URGENCY.LOW;
                     finalScore = Math.max(20, baseScore - 30);
                 } else if (baseUrgency === IRRIGATION_URGENCY.LOW) {
@@ -190,18 +224,27 @@ export async function makeIrrigationDecision(nodeId: number): Promise<Irrigation
 
         // Calculate irrigation depth
         const targetVWC = cropParams.vwcOptimal;
-        const suggestedDepthMm = calculateIrrigationDepth(balance, targetVWC, cropParams.rootDepth);
+        const deficit = Math.max(0, targetVWC - currentVWC);
+        const suggestedDepthMm = finalUrgency === IRRIGATION_URGENCY.NONE
+            ? 0
+            : calculateIrrigationDepth(balance, targetVWC, cropParams.rootDepth);
 
         // Estimate duration (simplified: assume 5mm/hour application rate for drip)
         const applicationRate = 5; // mm/hour
-        const suggestedDurationMin = Math.ceil((suggestedDepthMm / applicationRate) * 60);
+        const suggestedDurationMin = suggestedDepthMm > 0
+            ? Math.ceil((suggestedDepthMm / applicationRate) * 60)
+            : 0;
 
         // Determine decision
         let decision: 'irrigate_now' | 'irrigate_soon' | 'do_not_irrigate';
-        if (finalUrgency === IRRIGATION_URGENCY.CRITICAL || finalUrgency === IRRIGATION_URGENCY.HIGH) {
+        if (finalUrgency === IRRIGATION_URGENCY.CRITICAL) {
             decision = 'irrigate_now';
-        } else if (finalUrgency === IRRIGATION_URGENCY.MEDIUM) {
+        } else if (finalUrgency === IRRIGATION_URGENCY.HIGH) {
+            decision = 'irrigate_now';
+        } else if (finalUrgency === IRRIGATION_URGENCY.MODERATE) { // ✅ FIXED: MEDIUM → MODERATE
             decision = 'irrigate_soon';
+        } else if (finalUrgency === IRRIGATION_URGENCY.LOW) {
+            decision = 'do_not_irrigate';
         } else {
             decision = 'do_not_irrigate';
         }
@@ -228,7 +271,7 @@ export async function makeIrrigationDecision(nodeId: number): Promise<Irrigation
             reason,
             currentVWC: Number(currentVWC.toFixed(1)),
             targetVWC: Number(targetVWC.toFixed(1)),
-            deficit: Number((targetVWC - currentVWC).toFixed(1)),
+            deficit: Number(deficit.toFixed(1)),
             suggestedDepthMm,
             suggestedDurationMin,
             cropType: field.cropType,
@@ -266,21 +309,26 @@ function generateReason(
 
     if (decision === 'irrigate_now') {
         if (currentVWC < cropParams.vwcMin) {
-            reasons.push(`CRITICAL: VWC (${currentVWC.toFixed(1)}%) below crop minimum (${cropParams.vwcMin}%)`);
+            reasons.push(`Severe moisture deficit - irrigate immediately`);
+            reasons.push(`Current VWC (${currentVWC.toFixed(1)}%) below crop minimum (${cropParams.vwcMin}%)`);
         } else if (balance.depletion > balance.mad * 100) {
-            reasons.push(`Soil depletion (${balance.depletion.toFixed(0)}%) exceeded MAD threshold (${(balance.mad * 100).toFixed(0)}%)`);
+            reasons.push(`Soil depletion (${balance.depletion.toFixed(0)}%) exceeded MAD threshold`);
         }
-        reasons.push(`Apply ${balance.raw.toFixed(0)}mm to restore RAW`);
     } else if (decision === 'irrigate_soon') {
-        reasons.push(`VWC approaching stress level (${currentVWC.toFixed(1)}% vs optimal ${targetVWC.toFixed(1)}%)`);
-        reasons.push(`Depletion at ${balance.depletion.toFixed(0)}%, nearing MAD threshold`);
+        reasons.push(`VWC approaching stress level`);
+        reasons.push(`Current ${currentVWC.toFixed(1)}% vs optimal ${targetVWC.toFixed(1)}%`);
     } else {
-        reasons.push(`Soil moisture adequate (${currentVWC.toFixed(1)}% VWC, target ${targetVWC.toFixed(1)}%)`);
-        reasons.push(`Depletion within safe range (${balance.depletion.toFixed(0)}%)`);
+        if (currentVWC >= cropParams.vwcMin && currentVWC <= cropParams.vwcMax) {
+            reasons.push(`Soil moisture within optimal range for ${cropParams.name}`);
+        } else if (currentVWC > cropParams.vwcMax) {
+            reasons.push(`Soil moisture exceeds optimal range - avoid irrigation`);
+        } else {
+            reasons.push(`Soil moisture adequate (${currentVWC.toFixed(1)}% VWC)`);
+        }
     }
 
     if (weatherAdjustment) {
-        reasons.push(`Weather adjustment: ${weatherAdjustment}`);
+        reasons.push(weatherAdjustment);
     }
 
     return reasons.join('. ');

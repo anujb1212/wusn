@@ -55,7 +55,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => ApiTestScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => const ApiTestScreen()),
                   );
                 },
               ),
