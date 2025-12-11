@@ -21,37 +21,48 @@ model Node {
   @@index([nodeId])
 }
 
+// Sensor readings from gateway
+// Gateway provides BOTH soil and air measurements in each payload:
+// - nodeId, soilMoisture, soilTemperature (from buried sensor)
+// - airTemperature, airHumidity, airPressure (from gateway BME280)
 model SensorReading {
   id     Int @id @default(autoincrement())
   nodeId Int
 
-  // Raw sensor values
-  moisture    Int // Original SMU value (0-1023)
-  temperature Int // Original temperature value
+  // Raw soil sensor values (from buried sensor node)
+  moisture    Int // Raw SMU value (0-1023)
+  temperature Int // Raw soil temperature value
 
-  // Calculated values - soil measurements
-  soilMoistureVWC Float? // Volumetric Water Content (%)
-  soilTemperature Float? // Soil temperature in Celsius
+  // Calibrated soil measurements
+  soilMoistureVWC Float // Volumetric Water Content (%)
+  soilTemperature Float // Soil temperature (°C)
 
-  rssi         Int?
-  batteryLevel Int?
-  timestamp    DateTime  @default(now())
-  node         Node      @relation(fields: [nodeId], references: [nodeId])
-  analysis     Analysis?
+  // Air measurements from gateway (BME280 or similar)
+  airTemperature Float // Air temperature (°C) - CRITICAL for GDD and ET calculations
+  airHumidity    Float // Relative humidity (%)
+  airPressure    Float? // Barometric pressure (hPa) - optional
+
+  // Metadata
+  timestamp DateTime @default(now())
+
+  // Relations
+  node     Node      @relation(fields: [nodeId], references: [nodeId])
+  analysis Analysis?
 
   @@index([nodeId, timestamp])
   @@index([timestamp])
 }
 
-// New: Weather readings from gateway sensors (BME280)
+// DEPRECATED: Use SensorReading.airTemperature instead
+// Keeping for backward compatibility during migration
+// Will be removed in future version after data migration
 model WeatherReading {
   id        Int    @id @default(autoincrement())
-  gatewayId String // Gateway identifier (can be same as nodeId or separate)
+  gatewayId String
 
-  // Air measurements from BME280
-  airTemperature Float // Air temperature in Celsius
-  humidity       Float // Relative humidity (%)
-  pressure       Float? // Barometric pressure (hPa)
+  airTemperature Float
+  humidity       Float
+  pressure       Float?
 
   timestamp DateTime @default(now())
 
@@ -59,17 +70,16 @@ model WeatherReading {
   @@index([timestamp])
 }
 
-// New: Cached weather forecasts from OpenWeatherMap
+// Cached weather forecasts from external API (OpenWeatherMap)
 model WeatherForecast {
   id        Int   @id @default(autoincrement())
   latitude  Float
   longitude Float
 
-  // Forecast data (stored as JSON for flexibility)
-  forecastData Json // Array of daily forecasts
+  forecastData Json // Array of daily forecasts: {date, tempMax, tempMin, precipitation, etc.}
 
   fetchedAt DateTime @default(now())
-  expiresAt DateTime // TTL-based expiration
+  expiresAt DateTime
 
   @@index([latitude, longitude, expiresAt])
 }
@@ -138,32 +148,33 @@ model CropRecommendation {
   @@index([cropName])
 }
 
-// Consolidated Field table (replaces Field + FieldConfig)
+// Field configuration
+// Links sensor node to physical field, crop, and agronomic state
 model Field {
   id        Int    @id @default(autoincrement())
-  nodeId    Int    @unique // One field per node
-  gatewayId String // Links to weather readings
+  nodeId    Int    @unique // One field per sensor node
+  gatewayId String // Gateway identifier for this field's sensor
 
   fieldName String
   location  String?
   latitude  Float
   longitude Float
 
-  // Soil properties
-  soilTexture String @default("SANDY_LOAM") // SANDY, SANDY_LOAM, LOAM, CLAY_LOAM, CLAY
+  // Soil properties (default: SANDY_LOAM for Lucknow campus)
+  soilTexture String @default("SANDY_LOAM") // SANDY | SANDY_LOAM | LOAM | CLAY_LOAM | CLAY
 
-  // Crop information
-  cropType            String? // Current crop (from UP_VALID_CROPS)
-  sowingDate          DateTime? // When crop was planted
+  // Crop information (null until crop confirmed by farmer)
+  cropType            String? // Current crop from 20-crop universe
+  sowingDate          DateTime? // Crop planting date
   expectedHarvestDate DateTime? // Estimated harvest date
   cropConfirmed       Boolean   @default(false)
 
-  // GDD tracking (runtime state - updated by GDD service)
+  // GDD tracking (runtime state - updated by GDD service using AIR temperature)
   accumulatedGDD     Float     @default(0)
   lastGDDUpdate      DateTime?
-  currentGrowthStage String? // INITIAL, DEVELOPMENT, MID_SEASON, LATE_SEASON, HARVEST_READY
-  baseTemperature    Float? // Crop-specific base temperature for GDD
-  expectedGDDTotal   Float? // Total GDD needed for maturity
+  currentGrowthStage String? // INITIAL | DEVELOPMENT | MID_SEASON | LATE_SEASON | HARVEST_READY
+  baseTemperature    Float? // Crop-specific Tbase for GDD calculation
+  expectedGDDTotal   Float? // Total GDD required for crop maturity
 
   // Irrigation tracking
   lastIrrigationCheck  DateTime?
@@ -181,26 +192,28 @@ model Field {
   @@map("fields")
 }
 
-// Renamed from GDDHistory to GDDRecord for consistency
+// GDD history records
+// Daily GDD calculations using AIR temperature from SensorReading.airTemperature
+// Formula: GDD = max(0, (Tmax + Tmin)/2 - Tbase)
 model GDDRecord {
   id      Int      @id @default(autoincrement())
-  fieldId Int // Links to Field.id
-  date    DateTime @db.Date // Date for this GDD calculation
+  fieldId Int
+  date    DateTime @db.Date
 
-  // Daily AIR temperature data (critical: must be air temp, not soil)
+  // Daily AIR temperature data (from SensorReading.airTemperature aggregated daily)
   avgAirTemp    Float // Daily average air temperature (°C)
-  minAirTemp    Float? // Daily minimum
-  maxAirTemp    Float? // Daily maximum
-  readingsCount Int // Number of readings used for average
+  minAirTemp    Float? // Daily minimum air temperature (°C)
+  maxAirTemp    Float? // Daily maximum air temperature (°C)
+  readingsCount Int // Number of sensor readings used for daily aggregation
 
-  // GDD calculations
-  dailyGDD      Float // GDD accumulated on this specific day
-  cumulativeGDD Float // Running total from sowing date
+  // GDD calculations: dailyGDD = max(0, (maxAirTemp + minAirTemp)/2 - baseTemperature)
+  dailyGDD      Float // GDD accumulated on this date
+  cumulativeGDD Float // Running total from sowingDate
 
   // Crop context
   cropType        String? // Crop being grown
-  baseTemperature Float // Base temp used for this calculation
-  growthStage     String? // Growth stage at this time
+  baseTemperature Float // Base temperature (Tbase) used for this calculation
+  growthStage     String? // Growth stage at this date
 
   createdAt DateTime @default(now())
 
@@ -225,38 +238,64 @@ model Alert {
   @@index([acknowledged])
 }
 
-// Keep CropParameters for reference data
+// Crop parameters reference data
+// Seeded from seed.ts with 20 UP-valid crops
 model CropParameters {
   id       Int    @id @default(autoincrement())
   cropName String @unique
 
-  baseTemperature       Float
-  totalGDD              Float
-  moistureMin           Float
-  moistureOptimal       Float
-  moistureMax           Float
+  // Temperature parameters
+  soilTempMin     Float // Minimum soil temperature (°C)
+  soilTempOptimal Float // Optimal soil temperature (°C)
+  soilTempMax     Float // Maximum soil temperature (°C)
+
+  // Soil moisture parameters (VWC %)
+  vwcMin     Float // Minimum VWC (%)
+  vwcOptimal Float // Optimal VWC (%)
+  vwcMax     Float // Maximum VWC before waterlogging (%)
+
+  // GDD parameters (uses AIR temperature, not soil)
+  baseTemperature Float // Tbase for GDD calculation (°C)
+  totalGDD        Float // Total GDD required from sowing to harvest
+
+  // Irrigation parameters
+  rootDepthCm Int // Effective root depth (cm)
+  mad         Float // Management Allowed Depletion fraction (0-1)
+
+  // Crop coefficient (Kc) for ET calculation - stored as JSON
+  // Format: {"ini": 0.4, "mid": 1.15, "end": 0.4}
+  kc Json
+
+  // Growth stage thresholds (in GDD, not days)
+  initialStageGDD     Float // GDD to reach end of INITIAL stage
+  developmentStageGDD Float // GDD to reach end of DEVELOPMENT stage
+  midSeasonGDD        Float // GDD to reach end of MID_SEASON stage
+  lateSeasonGDD       Float // GDD to reach end of LATE_SEASON stage
+
+  // Regional and seasonal metadata
   validForUP            Boolean  @default(true)
-  season                String
-  soilTexturePreference String[]
-  initialStageEnd       Float    @default(15)
-  developmentStageEnd   Float    @default(40)
-  midSeasonEnd          Float    @default(75)
-  lateSeasonEnd         Float    @default(95)
-  createdAt             DateTime @default(now())
+  season                String // RABI | KHARIF | ZAID | PERENNIAL
+  soilTexturePreference String[] // Preferred soil textures
+
+  createdAt DateTime @default(now())
+
+  @@map("CropParameters")
 }
 
+// Irrigation decision log
+// Records irrigation recommendations and actions taken
 model IrrigationLog {
   id                   Int       @id @default(autoincrement())
   nodeId               Int
   timestamp            DateTime  @default(now())
-  currentVWC           Float
-  targetVWC            Float
+  currentVWC           Float // Current soil moisture (%)
+  targetVWC            Float // Target soil moisture (%)
   cropType             String?
   growthStage          String?
   shouldIrrigate       Boolean
-  urgency              String
-  reason               String
-  estimatedWaterNeeded Float
+  urgency              String // NONE | LOW | MODERATE | HIGH | CRITICAL
+  reason               String // Human-readable explanation
+  estimatedWaterNeeded Float // Irrigation depth (mm)
   actionTaken          Boolean   @default(false)
   actionTimestamp      DateTime?
   actualWaterApplied   Float?

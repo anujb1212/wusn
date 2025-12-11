@@ -5,7 +5,7 @@
 
 import { prisma } from '../config/database.js';
 import { DatabaseError, NotFoundError } from '../utils/errors.js';
-import type { SoilTexture, UPCropName } from '../utils/constants.js';
+import type { SoilTexture, CropName } from '../utils/constants.js';
 
 export interface CreateFieldInput {
     nodeId: number;
@@ -18,7 +18,7 @@ export interface CreateFieldInput {
 }
 
 export interface UpdateFieldCropInput {
-    cropType: UPCropName;
+    cropType: CropName;
     sowingDate: Date;
     baseTemperature: number;
     expectedGDDTotal: number;

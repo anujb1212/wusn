@@ -2,8 +2,8 @@
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import * as fieldRepo from '../repositories/field.repository.js';
-import type { UPCropName } from '../utils/constants.js';
-import { UP_VALID_CROPS, CROP_DATABASE } from '../utils/constants.js';
+import type { CropName } from '../utils/constants.js';
+import { VALID_CROPS, CROP_DATABASE } from '../utils/constants.js';
 
 const createFieldSchema = z.object({
     nodeId: z.number().int().positive(),
@@ -23,9 +23,9 @@ const updateFieldSchema = z.object({
     location: z.string().optional(),
 });
 
-// ✅ FIXED: Uses UP_VALID_CROPS from constants (9 crops only)
+//  Uses VALID_CROPS from constants (9 crops only)
 const setCropSchema = z.object({
-    cropType: z.enum(UP_VALID_CROPS as any),
+    cropType: z.enum(VALID_CROPS as any),
     sowingDate: z.string().datetime(),
 });
 
@@ -115,7 +115,7 @@ export async function setCropController(req: Request, res: Response): Promise<vo
     const { cropType, sowingDate } = setCropSchema.parse(req.body);
 
     // Type assertion for cropType - guaranteed valid by Zod
-    const validCropType = cropType as UPCropName;
+    const validCropType = cropType as CropName;
 
     // ✅ Validate crop exists in CROP_DATABASE
     const cropParams = CROP_DATABASE[validCropType];
@@ -131,8 +131,8 @@ export async function setCropController(req: Request, res: Response): Promise<vo
     const field = await fieldRepo.updateFieldCrop(nodeId, {
         cropType: validCropType,
         sowingDate: new Date(sowingDate),
-        baseTemperature: cropParams.baseTemperature,
-        expectedGDDTotal: cropParams.totalGDD,
+        baseTemperature: cropParams.baseTemp,
+        expectedGDDTotal: cropParams.lateSeasonGDD,
     });
 
     res.json({

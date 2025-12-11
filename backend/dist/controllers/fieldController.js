@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import * as fieldRepo from '../repositories/field.repository.js';
-import { UP_VALID_CROPS, CROP_DATABASE } from '../utils/constants.js';
+import { VALID_CROPS, CROP_DATABASE } from '../utils/constants.js';
 const createFieldSchema = z.object({
     nodeId: z.number().int().positive(),
     gatewayId: z.string().min(1),
@@ -17,9 +17,9 @@ const updateFieldSchema = z.object({
     soilTexture: z.enum(['SANDY', 'SANDY_LOAM', 'LOAM', 'CLAY_LOAM', 'CLAY']).optional(),
     location: z.string().optional(),
 });
-// ✅ FIXED: Uses UP_VALID_CROPS from constants (9 crops only)
+//  Uses VALID_CROPS from constants (9 crops only)
 const setCropSchema = z.object({
-    cropType: z.enum(UP_VALID_CROPS),
+    cropType: z.enum(VALID_CROPS),
     sowingDate: z.string().datetime(),
 });
 const nodeIdSchema = z.object({
@@ -111,8 +111,8 @@ export async function setCropController(req, res) {
     const field = await fieldRepo.updateFieldCrop(nodeId, {
         cropType: validCropType,
         sowingDate: new Date(sowingDate),
-        baseTemperature: cropParams.baseTemperature,
-        expectedGDDTotal: cropParams.totalGDD,
+        baseTemperature: cropParams.baseTemp,
+        expectedGDDTotal: cropParams.lateSeasonGDD,
     });
     res.json({
         status: 'ok',

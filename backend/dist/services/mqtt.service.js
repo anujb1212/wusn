@@ -1,96 +1,70 @@
 /**
- * MQTT Service - Enhanced for weather data
+ * MQTT Service
+ *
+ * Handles incoming sensor data from gateway via MQTT
+ * Each payload includes BOTH soil measurements (from buried sensor)
+ * and air measurements (from gateway BME280 or similar)
  */
 import mqtt from 'mqtt';
 import { z } from 'zod';
 import { MQTT_CONFIG, MQTT_TOPICS } from '../config/mqtt.config.js';
 import { createLogger } from '../config/logger.js';
 import { processSensorData } from './sensor/sensor.service.js';
-import { createWeatherReading } from '../repositories/weather.repository.js';
 const logger = createLogger({ service: 'mqtt' });
 let client = null;
-// Validation schemas
+/**
+ * Validation schema for sensor payload
+ *
+ * Gateway sends combined payload with:
+ * - Soil measurements: soilMoisture, soilTemperature (from buried sensor)
+ * - Air measurements: airTemperature, airHumidity, airPressure (from gateway BME280)
+ */
 const sensorPayloadSchema = z.object({
     nodeId: z.number().int().positive(),
-    moisture: z.number().int().min(0).max(1000),
-    temperature: z.number().int().min(-100).max(600),
-    rssi: z.number().int().min(-120).max(0).optional(),
-    batteryLevel: z.number().int().min(0).max(100).optional(),
-    timestamp: z.string().optional(),
-});
-const weatherPayloadSchema = z.object({
-    gatewayId: z.string().min(1),
-    airTemperature: z.number().min(-20).max(60),
-    humidity: z.number().min(0).max(100),
-    pressure: z.number().positive().optional(),
-    timestamp: z.string().optional(),
+    // Soil measurements (from buried sensor node)
+    soilMoisture: z.number().min(0).max(1023), // Raw sensor value (0-1023)
+    soilTemperature: z.number().min(-20).max(60), // Soil temp in °C
+    // Air measurements (from gateway sensor)
+    airTemperature: z.number().min(-20).max(60), // Air temp in °C (critical for GDD)
+    airHumidity: z.number().min(0).max(100), // Relative humidity %
+    airPressure: z.number().min(800).max(1100).optional(), // Barometric pressure (hPa)
 });
 /**
- * Process weather data from gateway
- */
-async function processWeatherData(payload) {
-    try {
-        const timestamp = payload.timestamp ? new Date(payload.timestamp) : new Date();
-        await createWeatherReading({
-            gatewayId: payload.gatewayId,
-            airTemperature: payload.airTemperature,
-            humidity: payload.humidity,
-            pressure: payload.pressure,
-            timestamp,
-        });
-        logger.info({ gatewayId: payload.gatewayId, airTemp: payload.airTemperature }, 'Weather data processed');
-    }
-    catch (error) {
-        logger.error({ error, payload }, 'Failed to process weather data');
-        throw error;
-    }
-}
-/**
- * Initialize MQTT connection
+ * Initialize MQTT connection and subscribe to sensor data topic
  */
 export function initializeMQTT() {
     if (client) {
         logger.warn('MQTT already initialized');
         return;
     }
-    logger.info({ broker: MQTT_CONFIG.brokerUrl }, 'Connecting to MQTT');
+    logger.info({ broker: MQTT_CONFIG.brokerUrl }, 'Connecting to MQTT broker');
     client = mqtt.connect(MQTT_CONFIG.brokerUrl, MQTT_CONFIG.options);
     client.on('connect', () => {
-        logger.info('MQTT connected');
+        logger.info('MQTT connected successfully');
         // Subscribe to sensor data topic
         client?.subscribe(MQTT_TOPICS.SENSOR_DATA, { qos: 1 }, (err) => {
             if (err) {
-                logger.error({ err }, 'Failed to subscribe to sensor topic');
+                logger.error({ err, topic: MQTT_TOPICS.SENSOR_DATA }, 'Failed to subscribe to sensor topic');
             }
             else {
-                logger.info({ topic: MQTT_TOPICS.SENSOR_DATA }, 'Subscribed to sensor data');
-            }
-        });
-        // Subscribe to weather data topic
-        const weatherTopic = 'wusn/gateway/+/weather';
-        client?.subscribe(weatherTopic, { qos: 1 }, (err) => {
-            if (err) {
-                logger.error({ err }, 'Failed to subscribe to weather topic');
-            }
-            else {
-                logger.info({ topic: weatherTopic }, 'Subscribed to weather data');
+                logger.info({ topic: MQTT_TOPICS.SENSOR_DATA }, 'Subscribed to sensor data topic');
             }
         });
     });
     client.on('message', async (topic, message) => {
         try {
             const payload = JSON.parse(message.toString());
-            logger.debug({ topic, payload }, 'Message received');
-            // Route based on topic
+            logger.debug({ topic, payload }, 'MQTT message received');
+            // Validate and process sensor data
             if (topic.startsWith('wusn/sensor/') && topic.endsWith('/data')) {
-                // Soil sensor data
                 const validated = sensorPayloadSchema.parse(payload);
                 await processSensorData(validated);
-            }
-            else if (topic.includes('/gateway/') && topic.endsWith('/weather')) {
-                // Weather data from gateway
-                const validated = weatherPayloadSchema.parse(payload);
-                await processWeatherData(validated);
+                logger.info({
+                    nodeId: validated.nodeId,
+                    soilTemp: validated.soilTemperature,
+                    airTemp: validated.airTemperature,
+                    soilMoisture: validated.soilMoisture,
+                }, 'Sensor data processed');
             }
             else {
                 logger.warn({ topic }, 'Unknown topic pattern');
@@ -98,28 +72,40 @@ export function initializeMQTT() {
         }
         catch (error) {
             if (error instanceof z.ZodError) {
-                logger.error({ errors: error.errors, topic }, 'Invalid payload');
+                logger.error({
+                    errors: error.errors,
+                    topic,
+                }, 'Invalid payload - validation failed');
             }
             else {
-                logger.error({ err: error, topic }, 'Processing error');
+                logger.error({ err: error, topic }, 'Failed to process MQTT message');
             }
         }
     });
-    client.on('error', (err) => logger.error({ err }, 'MQTT error'));
-    client.on('reconnect', () => logger.warn('Reconnecting to MQTT'));
-    client.on('close', () => logger.warn('MQTT connection closed'));
+    client.on('error', (err) => {
+        logger.error({ err }, 'MQTT client error');
+    });
+    client.on('reconnect', () => {
+        logger.warn('Reconnecting to MQTT broker');
+    });
+    client.on('close', () => {
+        logger.warn('MQTT connection closed');
+    });
 }
 /**
- * Publish message
+ * Publish message to MQTT topic
+ *
+ * @param topic - MQTT topic to publish to
+ * @param payload - Message payload (will be JSON stringified)
  */
 export function publishMessage(topic, payload) {
     if (!client?.connected) {
-        logger.error('Cannot publish: MQTT not connected');
+        logger.error({ topic }, 'Cannot publish: MQTT not connected');
         return;
     }
     client.publish(topic, JSON.stringify(payload), { qos: 1 }, (err) => {
         if (err) {
-            logger.error({ err, topic }, 'Publish failed');
+            logger.error({ err, topic }, 'Failed to publish message');
         }
         else {
             logger.debug({ topic }, 'Message published');
@@ -127,7 +113,13 @@ export function publishMessage(topic, payload) {
     });
 }
 /**
- * Disconnect MQTT
+ * Check if MQTT client is connected
+ */
+export function isConnected() {
+    return client?.connected ?? false;
+}
+/**
+ * Disconnect MQTT client gracefully
  */
 export async function disconnectMQTT() {
     return new Promise((resolve) => {

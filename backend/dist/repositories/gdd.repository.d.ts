@@ -23,13 +23,13 @@ export declare function createGDDRecord(input: CreateGDDRecordInput): Promise<{
     baseTemperature: number;
     createdAt: Date;
     date: Date;
+    readingsCount: number;
     avgAirTemp: number;
     minAirTemp: number | null;
     maxAirTemp: number | null;
-    readingsCount: number;
+    growthStage: string | null;
     dailyGDD: number;
     cumulativeGDD: number;
-    growthStage: string | null;
     fieldId: number;
 }>;
 /**
@@ -41,13 +41,13 @@ export declare function getGDDRecordForDate(fieldId: number, date: Date): Promis
     baseTemperature: number;
     createdAt: Date;
     date: Date;
+    readingsCount: number;
     avgAirTemp: number;
     minAirTemp: number | null;
     maxAirTemp: number | null;
-    readingsCount: number;
+    growthStage: string | null;
     dailyGDD: number;
     cumulativeGDD: number;
-    growthStage: string | null;
     fieldId: number;
 } | null>;
 /**
@@ -59,13 +59,13 @@ export declare function getGDDRecordsSinceSowing(fieldId: number, sowingDate: Da
     baseTemperature: number;
     createdAt: Date;
     date: Date;
+    readingsCount: number;
     avgAirTemp: number;
     minAirTemp: number | null;
     maxAirTemp: number | null;
-    readingsCount: number;
+    growthStage: string | null;
     dailyGDD: number;
     cumulativeGDD: number;
-    growthStage: string | null;
     fieldId: number;
 }[]>;
 /**
@@ -77,13 +77,13 @@ export declare function getLatestGDDRecord(fieldId: number): Promise<{
     baseTemperature: number;
     createdAt: Date;
     date: Date;
+    readingsCount: number;
     avgAirTemp: number;
     minAirTemp: number | null;
     maxAirTemp: number | null;
-    readingsCount: number;
+    growthStage: string | null;
     dailyGDD: number;
     cumulativeGDD: number;
-    growthStage: string | null;
     fieldId: number;
 } | null>;
 /**

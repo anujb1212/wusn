@@ -1,7 +1,7 @@
 /**
  * Field Repository
  */
-import type { SoilTexture, UPCropName } from '../utils/constants.js';
+import type { SoilTexture, CropName } from '../utils/constants.js';
 export interface CreateFieldInput {
     nodeId: number;
     gatewayId: string;
@@ -12,7 +12,7 @@ export interface CreateFieldInput {
     location?: string | undefined;
 }
 export interface UpdateFieldCropInput {
-    cropType: UPCropName;
+    cropType: CropName;
     sowingDate: Date;
     baseTemperature: number;
     expectedGDDTotal: number;

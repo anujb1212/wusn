@@ -57,7 +57,7 @@ export async function getAverageSensorData(req: Request, res: Response): Promise
         throw new ValidationError('Hours must be between 1 and 168');
     }
 
-    const data = await sensorService.getAverageSensorData(nodeId, hours);
+    const data = await sensorService.getAverageSoilData(nodeId, hours);
 
     res.json({
         status: 'ok',
