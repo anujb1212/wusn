@@ -22,6 +22,8 @@
  * - Crop parameters from CROP_DATABASE (MAD, Kc, root depth)
  *
  * UPDATED: Dec 11, 2025 - Enhanced to use Kc values from new schema
+ * UPDATED: Dec 13, 2025 - Depth/duration only for irrigate decisions, added
+ *                          application rate + score basis metadata
  */
 import type { IrrigationDecision } from '../../models/common.types.js';
 /**

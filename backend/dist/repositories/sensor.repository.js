@@ -1,19 +1,9 @@
 /**
  * Sensor Reading Repository
- *
- * Handles CRUD operations for underground sensor measurements
- * Records: soil moisture (VWC), soil temperature, air temperature, air humidity
- *
- * UPDATED: Dec 12, 2025 - Aligned with Prisma schema and service expectations
  */
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { DatabaseError } from '../utils/errors.js';
-/**
- * Create a new sensor reading
- *
- * @param input - Sensor reading data
- * @returns Created sensor reading
- */
 export async function createSensorReading(input) {
     try {
         return await prisma.sensorReading.create({
@@ -34,12 +24,6 @@ export async function createSensorReading(input) {
         throw new DatabaseError('createSensorReading', error);
     }
 }
-/**
- * Get latest sensor reading for a node
- *
- * @param nodeId - Sensor node ID
- * @returns Latest reading or null
- */
 export async function getLatestReading(nodeId) {
     try {
         return await prisma.sensorReading.findFirst({
@@ -51,26 +35,18 @@ export async function getLatestReading(nodeId) {
         throw new DatabaseError('getLatestReading', error);
     }
 }
-/**
- * Get sensor readings with filters
- *
- * @param filters - Query filters
- * @returns Array of sensor readings
- */
 export async function getReadings(filters) {
     try {
         const where = {};
-        if (filters.nodeId) {
+        if (typeof filters.nodeId === 'number') {
             where.nodeId = filters.nodeId;
         }
         if (filters.startDate || filters.endDate) {
             where.timestamp = {};
-            if (filters.startDate) {
+            if (filters.startDate)
                 where.timestamp.gte = filters.startDate;
-            }
-            if (filters.endDate) {
+            if (filters.endDate)
                 where.timestamp.lte = filters.endDate;
-            }
         }
         return await prisma.sensorReading.findMany({
             where,
@@ -82,36 +58,23 @@ export async function getReadings(filters) {
         throw new DatabaseError('getReadings', error);
     }
 }
-/**
- * Get average soil readings over time period
- *
- * @param nodeId - Sensor node ID
- * @param hours - Number of hours to average (default: 24)
- * @returns Average soil moisture and temperature
- */
 export async function getAverageSoilReadings(nodeId, hours = 24) {
     try {
         const startTime = new Date();
         startTime.setHours(startTime.getHours() - hours);
         const readings = await prisma.sensorReading.findMany({
-            where: {
-                nodeId,
-                timestamp: { gte: startTime },
-            },
-            select: {
-                soilMoistureVWC: true,
-                soilTemperature: true,
-            },
+            where: { nodeId, timestamp: { gte: startTime } },
+            select: { soilMoistureVWC: true, soilTemperature: true },
         });
-        if (readings.length === 0) {
+        const valid = readings.filter((r) => typeof r.soilMoistureVWC === 'number' && typeof r.soilTemperature === 'number');
+        if (valid.length === 0)
             return null;
-        }
-        const avgMoisture = readings.reduce((sum, r) => sum + r.soilMoistureVWC, 0) / readings.length;
-        const avgTemp = readings.reduce((sum, r) => sum + r.soilTemperature, 0) / readings.length;
+        const avgMoisture = valid.reduce((sum, r) => sum + r.soilMoistureVWC, 0) / valid.length;
+        const avgTemp = valid.reduce((sum, r) => sum + r.soilTemperature, 0) / valid.length;
         return {
             avgSoilMoistureVWC: Number(avgMoisture.toFixed(2)),
             avgSoilTemperature: Number(avgTemp.toFixed(2)),
-            readingsCount: readings.length,
+            readingsCount: valid.length,
             periodHours: hours,
         };
     }
@@ -119,48 +82,28 @@ export async function getAverageSoilReadings(nodeId, hours = 24) {
         throw new DatabaseError('getAverageSoilReadings', error);
     }
 }
-/**
- * Get average air readings over time period
- *
- * Includes air temperature, humidity, and pressure (if available)
- *
- * @param nodeId - Sensor node ID
- * @param hours - Number of hours to average (default: 24)
- * @returns Average air temperature, humidity, and pressure
- */
 export async function getAverageAirReadings(nodeId, hours = 24) {
     try {
         const startTime = new Date();
         startTime.setHours(startTime.getHours() - hours);
         const readings = await prisma.sensorReading.findMany({
-            where: {
-                nodeId,
-                timestamp: { gte: startTime },
-            },
-            select: {
-                airTemperature: true,
-                airHumidity: true,
-                airPressure: true,
-            },
+            where: { nodeId, timestamp: { gte: startTime } },
+            select: { airTemperature: true, airHumidity: true, airPressure: true },
         });
-        if (readings.length === 0) {
+        const valid = readings.filter((r) => typeof r.airTemperature === 'number' && typeof r.airHumidity === 'number');
+        if (valid.length === 0)
             return null;
-        }
-        // Calculate averages for required fields
-        const avgTemp = readings.reduce((sum, r) => sum + r.airTemperature, 0) / readings.length;
-        const avgHumidity = readings.reduce((sum, r) => sum + r.airHumidity, 0) / readings.length;
-        // Calculate average air pressure (filter out nulls since it's optional)
+        const avgTemp = valid.reduce((sum, r) => sum + r.airTemperature, 0) / valid.length;
+        const avgHumidity = valid.reduce((sum, r) => sum + r.airHumidity, 0) / valid.length;
         const pressures = readings
-            .map(r => r.airPressure)
-            .filter((p) => p !== null && p !== undefined);
-        const avgPressure = pressures.length > 0
-            ? pressures.reduce((sum, p) => sum + p, 0) / pressures.length
-            : null;
+            .map((r) => r.airPressure)
+            .filter((p) => typeof p === 'number');
+        const avgPressure = pressures.length > 0 ? pressures.reduce((sum, p) => sum + p, 0) / pressures.length : null;
         return {
             avgAirTemperature: Number(avgTemp.toFixed(2)),
             avgAirHumidity: Number(avgHumidity.toFixed(2)),
             avgAirPressure: avgPressure !== null ? Number(avgPressure.toFixed(2)) : null,
-            readingsCount: readings.length,
+            readingsCount: valid.length,
             periodHours: hours,
         };
     }
@@ -168,38 +111,20 @@ export async function getAverageAirReadings(nodeId, hours = 24) {
         throw new DatabaseError('getAverageAirReadings', error);
     }
 }
-/**
- * Get readings count for a node
- *
- * @param nodeId - Sensor node ID
- * @returns Total count of readings
- */
 export async function getReadingsCount(nodeId) {
     try {
-        return await prisma.sensorReading.count({
-            where: { nodeId },
-        });
+        return await prisma.sensorReading.count({ where: { nodeId } });
     }
     catch (error) {
         throw new DatabaseError('getReadingsCount', error);
     }
 }
-/**
- * Delete old sensor readings (maintenance)
- *
- * @param olderThanDays - Delete readings older than this many days
- * @returns Number of deleted records
- */
 export async function deleteOldReadings(olderThanDays) {
     try {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
         const result = await prisma.sensorReading.deleteMany({
-            where: {
-                timestamp: {
-                    lt: cutoffDate,
-                },
-            },
+            where: { timestamp: { lt: cutoffDate } },
         });
         return result.count;
     }

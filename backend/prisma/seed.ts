@@ -1,47 +1,48 @@
-import { PrismaClient } from '@prisma/client';
+// prisma/seed.ts
+import { PrismaClient, Season, SoilTexture, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 /**
- * Seed Database with 20 UP-Valid Crops
- * 
- * Research-backed parameters for precision agriculture
- * All values aligned with src/utils/constants.ts CROP_DATABASE
+ * Seed Database with UP-Valid Crops (current universe: 19 crops)
+ *
+ * Notes:
+ * - Uses Prisma enums (Season, SoilTexture) to match hardened schema types. [web:46][web:355]
+ * - Runs all upserts in a single transaction to avoid partial seeds. [web:155]
+ * - Optionally removes stale CropParameters rows not in this seed list.
  */
 async function main() {
-    console.log('🌱 Seeding 20 UP-valid crops for precision agriculture system...\n');
+    if (process.env.NODE_ENV === 'production' && process.env.SEED_ALLOW_PROD !== 'true') {
+        throw new Error('Refusing to run seed in production. Set SEED_ALLOW_PROD=true to override.');
+    }
 
-    const crops = [
+    console.log('Seeding UP-valid crops for precision agriculture system...\n');
+
+    const crops: Prisma.CropParametersCreateInput[] = [
         // ====================================================================
         // FIELD CROPS / STAPLES
         // ====================================================================
 
         {
             cropName: 'wheat',
-            // Temperature parameters (°C)
             soilTempMin: 10,
             soilTempOptimal: 18,
             soilTempMax: 25,
-            // Moisture parameters (VWC %)
             vwcMin: 20,
             vwcOptimal: 25,
             vwcMax: 30,
-            // GDD parameters
             baseTemperature: 0,
             totalGDD: 1400,
-            // Irrigation parameters
             rootDepthCm: 120,
             mad: 0.55,
             kc: { ini: 0.4, mid: 1.15, end: 0.4 },
-            // Growth stages (GDD thresholds)
             initialStageGDD: 210,
             developmentStageGDD: 490,
             midSeasonGDD: 980,
             lateSeasonGDD: 1400,
-            // Metadata
             validForUP: true,
-            season: 'RABI',
-            soilTexturePreference: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
+            season: Season.RABI,
+            soilTexturePreference: [SoilTexture.LOAM, SoilTexture.CLAY_LOAM, SoilTexture.SANDY_LOAM],
         },
 
         {
@@ -55,15 +56,15 @@ async function main() {
             baseTemperature: 10,
             totalGDD: 2000,
             rootDepthCm: 50,
-            mad: 0.20,
-            kc: { ini: 1.05, mid: 1.20, end: 0.90 },
+            mad: 0.2,
+            kc: { ini: 1.05, mid: 1.2, end: 0.9 },
             initialStageGDD: 300,
             developmentStageGDD: 600,
             midSeasonGDD: 1400,
             lateSeasonGDD: 2000,
             validForUP: true,
-            season: 'KHARIF',
-            soilTexturePreference: ['CLAY_LOAM', 'CLAY', 'LOAM'],
+            season: Season.KHARIF,
+            soilTexturePreference: [SoilTexture.CLAY_LOAM, SoilTexture.CLAY, SoilTexture.LOAM],
         },
 
         {
@@ -78,14 +79,14 @@ async function main() {
             totalGDD: 1600,
             rootDepthCm: 100,
             mad: 0.55,
-            kc: { ini: 0.3, mid: 1.20, end: 0.35 },
+            kc: { ini: 0.3, mid: 1.2, end: 0.35 },
             initialStageGDD: 200,
             developmentStageGDD: 480,
             midSeasonGDD: 1120,
             lateSeasonGDD: 1600,
             validForUP: true,
-            season: 'KHARIF',
-            soilTexturePreference: ['LOAM', 'SANDY_LOAM', 'CLAY_LOAM'],
+            season: Season.KHARIF,
+            soilTexturePreference: [SoilTexture.LOAM, SoilTexture.SANDY_LOAM, SoilTexture.CLAY_LOAM],
         },
 
         {
@@ -99,15 +100,15 @@ async function main() {
             baseTemperature: 5,
             totalGDD: 1500,
             rootDepthCm: 100,
-            mad: 0.50,
+            mad: 0.5,
             kc: { ini: 0.4, mid: 1.05, end: 0.35 },
             initialStageGDD: 225,
             developmentStageGDD: 525,
             midSeasonGDD: 1050,
             lateSeasonGDD: 1500,
             validForUP: true,
-            season: 'RABI',
-            soilTexturePreference: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
+            season: Season.RABI,
+            soilTexturePreference: [SoilTexture.LOAM, SoilTexture.CLAY_LOAM, SoilTexture.SANDY_LOAM],
         },
 
         {
@@ -121,15 +122,15 @@ async function main() {
             baseTemperature: 2,
             totalGDD: 1300,
             rootDepthCm: 80,
-            mad: 0.50,
-            kc: { ini: 0.4, mid: 1.10, end: 0.30 },
+            mad: 0.5,
+            kc: { ini: 0.4, mid: 1.1, end: 0.3 },
             initialStageGDD: 195,
             developmentStageGDD: 455,
             midSeasonGDD: 910,
             lateSeasonGDD: 1300,
             validForUP: true,
-            season: 'RABI',
-            soilTexturePreference: ['LOAM', 'SANDY_LOAM'],
+            season: Season.RABI,
+            soilTexturePreference: [SoilTexture.LOAM, SoilTexture.SANDY_LOAM],
         },
 
         {
@@ -144,14 +145,14 @@ async function main() {
             totalGDD: 1200,
             rootDepthCm: 70,
             mad: 0.45,
-            kc: { ini: 0.5, mid: 1.15, end: 0.30 },
+            kc: { ini: 0.5, mid: 1.15, end: 0.3 },
             initialStageGDD: 180,
             developmentStageGDD: 420,
             midSeasonGDD: 840,
             lateSeasonGDD: 1200,
             validForUP: true,
-            season: 'RABI',
-            soilTexturePreference: ['LOAM', 'CLAY_LOAM'],
+            season: Season.RABI,
+            soilTexturePreference: [SoilTexture.LOAM, SoilTexture.CLAY_LOAM],
         },
 
         {
@@ -165,15 +166,15 @@ async function main() {
             baseTemperature: 5,
             totalGDD: 1400,
             rootDepthCm: 90,
-            mad: 0.50,
-            kc: { ini: 0.35, mid: 1.10, end: 0.35 },
+            mad: 0.5,
+            kc: { ini: 0.35, mid: 1.1, end: 0.35 },
             initialStageGDD: 210,
             developmentStageGDD: 490,
             midSeasonGDD: 980,
             lateSeasonGDD: 1400,
             validForUP: true,
-            season: 'RABI',
-            soilTexturePreference: ['LOAM', 'CLAY_LOAM', 'SANDY_LOAM'],
+            season: Season.RABI,
+            soilTexturePreference: [SoilTexture.LOAM, SoilTexture.CLAY_LOAM, SoilTexture.SANDY_LOAM],
         },
 
         {
@@ -194,8 +195,8 @@ async function main() {
             midSeasonGDD: 3200,
             lateSeasonGDD: 4000,
             validForUP: true,
-            season: 'PERENNIAL',
-            soilTexturePreference: ['LOAM', 'CLAY_LOAM'],
+            season: Season.PERENNIAL,
+            soilTexturePreference: [SoilTexture.LOAM, SoilTexture.CLAY_LOAM],
         },
 
         {
@@ -216,8 +217,8 @@ async function main() {
             midSeasonGDD: 980,
             lateSeasonGDD: 1400,
             validForUP: true,
-            season: 'RABI',
-            soilTexturePreference: ['SANDY_LOAM', 'LOAM'],
+            season: Season.RABI,
+            soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
 
         // ====================================================================
@@ -235,15 +236,15 @@ async function main() {
             baseTemperature: 4.5,
             totalGDD: 600,
             rootDepthCm: 30,
-            mad: 0.40,
-            kc: { ini: 0.7, mid: 0.90, end: 0.85 },
+            mad: 0.4,
+            kc: { ini: 0.7, mid: 0.9, end: 0.85 },
             initialStageGDD: 90,
             developmentStageGDD: 210,
             midSeasonGDD: 420,
             lateSeasonGDD: 600,
             validForUP: true,
-            season: 'RABI',
-            soilTexturePreference: ['SANDY_LOAM', 'LOAM'],
+            season: Season.RABI,
+            soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
 
         {
@@ -257,15 +258,15 @@ async function main() {
             baseTemperature: 6,
             totalGDD: 1300,
             rootDepthCm: 50,
-            mad: 0.40,
+            mad: 0.4,
             kc: { ini: 0.7, mid: 1.05, end: 0.95 },
             initialStageGDD: 195,
             developmentStageGDD: 455,
             midSeasonGDD: 910,
             lateSeasonGDD: 1300,
             validForUP: true,
-            season: 'RABI',
-            soilTexturePreference: ['SANDY_LOAM', 'LOAM'],
+            season: Season.RABI,
+            soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
 
         {
@@ -279,15 +280,15 @@ async function main() {
             baseTemperature: 7,
             totalGDD: 1900,
             rootDepthCm: 70,
-            mad: 0.40,
-            kc: { ini: 0.6, mid: 1.15, end: 0.70 },
+            mad: 0.4,
+            kc: { ini: 0.6, mid: 1.15, end: 0.7 },
             initialStageGDD: 285,
             developmentStageGDD: 665,
             midSeasonGDD: 1330,
             lateSeasonGDD: 1900,
             validForUP: true,
-            season: 'RABI',
-            soilTexturePreference: ['LOAM', 'SANDY_LOAM'],
+            season: Season.RABI,
+            soilTexturePreference: [SoilTexture.LOAM, SoilTexture.SANDY_LOAM],
         },
 
         {
@@ -302,14 +303,14 @@ async function main() {
             totalGDD: 700,
             rootDepthCm: 30,
             mad: 0.35,
-            kc: { ini: 0.7, mid: 1.00, end: 0.95 },
+            kc: { ini: 0.7, mid: 1.0, end: 0.95 },
             initialStageGDD: 105,
             developmentStageGDD: 245,
             midSeasonGDD: 490,
             lateSeasonGDD: 700,
             validForUP: true,
-            season: 'RABI',
-            soilTexturePreference: ['LOAM', 'SANDY_LOAM'],
+            season: Season.RABI,
+            soilTexturePreference: [SoilTexture.LOAM, SoilTexture.SANDY_LOAM],
         },
 
         {
@@ -323,15 +324,15 @@ async function main() {
             baseTemperature: 0,
             totalGDD: 1200,
             rootDepthCm: 40,
-            mad: 0.40,
-            kc: { ini: 0.6, mid: 1.15, end: 1.10 },
+            mad: 0.4,
+            kc: { ini: 0.6, mid: 1.15, end: 1.1 },
             initialStageGDD: 180,
             developmentStageGDD: 420,
             midSeasonGDD: 840,
             lateSeasonGDD: 1200,
             validForUP: true,
-            season: 'PERENNIAL',
-            soilTexturePreference: ['LOAM', 'SANDY_LOAM'],
+            season: Season.PERENNIAL,
+            soilTexturePreference: [SoilTexture.LOAM, SoilTexture.SANDY_LOAM],
         },
 
         {
@@ -345,15 +346,15 @@ async function main() {
             baseTemperature: 10,
             totalGDD: 1200,
             rootDepthCm: 70,
-            mad: 0.50,
-            kc: { ini: 0.6, mid: 1.00, end: 0.75 },
+            mad: 0.5,
+            kc: { ini: 0.6, mid: 1.0, end: 0.75 },
             initialStageGDD: 180,
             developmentStageGDD: 420,
             midSeasonGDD: 840,
             lateSeasonGDD: 1200,
             validForUP: true,
-            season: 'ZAID',
-            soilTexturePreference: ['SANDY_LOAM', 'LOAM'],
+            season: Season.ZAID,
+            soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
 
         {
@@ -367,15 +368,15 @@ async function main() {
             baseTemperature: 10,
             totalGDD: 1400,
             rootDepthCm: 100,
-            mad: 0.40,
-            kc: { ini: 0.4, mid: 1.00, end: 0.75 },
+            mad: 0.4,
+            kc: { ini: 0.4, mid: 1.0, end: 0.75 },
             initialStageGDD: 210,
             developmentStageGDD: 490,
             midSeasonGDD: 980,
             lateSeasonGDD: 1400,
             validForUP: true,
-            season: 'ZAID',
-            soilTexturePreference: ['SANDY_LOAM', 'LOAM'],
+            season: Season.ZAID,
+            soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
 
         {
@@ -396,8 +397,8 @@ async function main() {
             midSeasonGDD: 980,
             lateSeasonGDD: 1400,
             validForUP: true,
-            season: 'ZAID',
-            soilTexturePreference: ['SANDY_LOAM', 'LOAM'],
+            season: Season.ZAID,
+            soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
 
         {
@@ -412,14 +413,14 @@ async function main() {
             totalGDD: 1300,
             rootDepthCm: 80,
             mad: 0.45,
-            kc: { ini: 0.5, mid: 1.00, end: 0.80 },
+            kc: { ini: 0.5, mid: 1.0, end: 0.8 },
             initialStageGDD: 195,
             developmentStageGDD: 455,
             midSeasonGDD: 910,
             lateSeasonGDD: 1300,
             validForUP: true,
-            season: 'ZAID',
-            soilTexturePreference: ['SANDY_LOAM', 'LOAM'],
+            season: Season.ZAID,
+            soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
 
         {
@@ -433,50 +434,68 @@ async function main() {
             baseTemperature: 10,
             totalGDD: 1400,
             rootDepthCm: 80,
-            mad: 0.50,
-            kc: { ini: 0.5, mid: 1.05, end: 0.90 },
+            mad: 0.5,
+            kc: { ini: 0.5, mid: 1.05, end: 0.9 },
             initialStageGDD: 210,
             developmentStageGDD: 490,
             midSeasonGDD: 980,
             lateSeasonGDD: 1400,
             validForUP: true,
-            season: 'ZAID',
-            soilTexturePreference: ['SANDY_LOAM', 'LOAM'],
+            season: Season.ZAID,
+            soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
     ];
 
-    console.log('📊 Seeding crops to database...\n');
-
-    for (const crop of crops) {
-        await prisma.cropParameters.upsert({
-            where: { cropName: crop.cropName },
-            create: crop,
-            update: crop,
-        });
-        console.log(`   ✅ ${crop.cropName.padEnd(15)} (${crop.season.padEnd(10)}) - ${crop.totalGDD} GDD`);
+    // Sanity checks (fast fail)
+    const names = crops.map((c) => c.cropName);
+    const uniqueNames = new Set(names);
+    if (uniqueNames.size !== names.length) {
+        throw new Error(`Duplicate cropName(s) in seed.ts: len=${names.length}, unique=${uniqueNames.size}`);
     }
+    console.log(`📊 Seeding crops to database... (${crops.length} crops)\n`);
 
-    const rabiCount = crops.filter((c) => c.season === 'RABI').length;
-    const kharifCount = crops.filter((c) => c.season === 'KHARIF').length;
-    const zaidCount = crops.filter((c) => c.season === 'ZAID').length;
-    const perennialCount = crops.filter((c) => c.season === 'PERENNIAL').length;
+    // Optional cleanup: remove any CropParameters rows not present in this seed list
+    // (prevents stale DB crops from lingering)
+    await prisma.cropParameters.deleteMany({
+        where: { cropName: { notIn: names } },
+    });
+
+    // Atomic seed: all-or-nothing [web:155]
+    await prisma.$transaction(async (tx) => {
+        for (const crop of crops) {
+            const { cropName, ...updateData } = crop;
+
+            await tx.cropParameters.upsert({
+                where: { cropName },
+                create: crop,
+                update: updateData,
+            });
+
+            console.log(`   ✅ ${cropName.padEnd(15)} (${String(crop.season).padEnd(10)}) - ${crop.totalGDD} GDD`);
+        }
+    });
+
+    const rabiCount = crops.filter((c) => c.season === Season.RABI).length;
+    const kharifCount = crops.filter((c) => c.season === Season.KHARIF).length;
+    const zaidCount = crops.filter((c) => c.season === Season.ZAID).length;
+    const perennialCount = crops.filter((c) => c.season === Season.PERENNIAL).length;
 
     console.log('\n📊 Seeding Summary:');
-    console.log(`   ══════════════════════════════════════`);
+    console.log('   ══════════════════════════════════════');
     console.log(`   Total UP-valid crops:     ${crops.length}`);
-    console.log(`   ──────────────────────────────────────`);
+    console.log('   ──────────────────────────────────────');
     console.log(`   RABI (Nov-Mar):           ${rabiCount}`);
     console.log(`   KHARIF (Jun-Oct):         ${kharifCount}`);
     console.log(`   ZAID (Mar-Jun):           ${zaidCount}`);
     console.log(`   PERENNIAL (Year-round):   ${perennialCount}`);
-    console.log(`   ══════════════════════════════════════`);
+    console.log('   ══════════════════════════════════════');
     console.log('\n✅ Database seed completed successfully!\n');
 }
 
 main()
     .catch((e) => {
         console.error('\n❌ Seed failed:', e);
-        throw e;
+        throw e
     })
     .finally(async () => {
         await prisma.$disconnect();

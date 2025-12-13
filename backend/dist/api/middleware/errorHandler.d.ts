@@ -7,24 +7,12 @@
 import type { Request, Response, NextFunction } from 'express';
 /**
  * Global error handler
- *
- * Must have 4 parameters for Express to recognize it as error middleware
+ * Must have 4 parameters for Express to recognize it as error middleware. [web:261]
  */
-export declare function errorHandler(error: Error, req: Request, res: Response, next: NextFunction): void;
+export declare function errorHandler(error: Error, req: Request, res: Response, _next: NextFunction): void;
 /**
  * 404 handler for unmatched routes
- *
- * Should be registered AFTER all routes but BEFORE error handler
+ * Should be registered AFTER all routes but BEFORE error handler.
  */
 export declare function notFoundHandler(req: Request, res: Response): void;
-/**
- * Async handler wrapper for Express routes
- *
- * Catches promise rejections and passes them to error middleware
- * Eliminates need for try-catch in every controller
- *
- * Usage:
- * router.get('/path', asyncHandler(myAsyncController));
- */
-export declare function asyncHandler(fn: Function): (req: Request, res: Response, next: NextFunction) => void;
 //# sourceMappingURL=errorHandler.d.ts.map

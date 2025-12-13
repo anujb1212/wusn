@@ -2,35 +2,66 @@
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import * as fieldRepo from '../repositories/field.repository.js';
-import type { CropName } from '../utils/constants.js';
-import { VALID_CROPS, CROP_DATABASE } from '../utils/constants.js';
+import type { SoilTexture as PrismaSoilTexture } from '@prisma/client';
+import { NotFoundError } from '../utils/errors.js';
+
+/**
+ * Helpers
+ */
+function normalizeSoilTexture(v: unknown): unknown {
+    if (typeof v !== 'string') return v;
+    return v.trim().toUpperCase();
+}
+
+/**
+ * Normalize crop input to canonical IDs stored in DB:
+ * - trim
+ * - lower-case
+ * - convert spaces/hyphens to underscore
+ *
+ * Final validation is done by checking existence in CropParameters table.
+ */
+function normalizeCropType(v: unknown): unknown {
+    if (typeof v !== 'string') return v;
+    return v
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, '_');
+}
+
+/**
+ * Zod schemas
+ */
+const nodeIdSchema = z.object({
+    nodeId: z.coerce.number().int().positive(),
+});
+
+const soilTextureSchema = z.preprocess(
+    normalizeSoilTexture,
+    z.enum(['SANDY', 'SANDY_LOAM', 'LOAM', 'CLAY_LOAM', 'CLAY'])
+);
 
 const createFieldSchema = z.object({
-    nodeId: z.number().int().positive(),
+    nodeId: z.coerce.number().int().positive(),
     gatewayId: z.string().min(1),
     fieldName: z.string().min(1),
-    latitude: z.number().min(-90).max(90),
-    longitude: z.number().min(-180).max(180),
-    soilTexture: z.enum(['SANDY', 'SANDY_LOAM', 'LOAM', 'CLAY_LOAM', 'CLAY']),
+    latitude: z.coerce.number().min(-90).max(90),
+    longitude: z.coerce.number().min(-180).max(180),
+    soilTexture: soilTextureSchema,
     location: z.string().optional(),
 });
 
 const updateFieldSchema = z.object({
     fieldName: z.string().min(1).optional(),
-    latitude: z.number().min(-90).max(90).optional(),
-    longitude: z.number().min(-180).max(180).optional(),
-    soilTexture: z.enum(['SANDY', 'SANDY_LOAM', 'LOAM', 'CLAY_LOAM', 'CLAY']).optional(),
+    latitude: z.coerce.number().min(-90).max(90).optional(),
+    longitude: z.coerce.number().min(-180).max(180).optional(),
+    soilTexture: soilTextureSchema.optional(),
     location: z.string().optional(),
 });
 
-//  Uses VALID_CROPS from constants (9 crops only)
 const setCropSchema = z.object({
-    cropType: z.enum(VALID_CROPS as any),
-    sowingDate: z.string().datetime(),
-});
-
-const nodeIdSchema = z.object({
-    nodeId: z.coerce.number().int().positive(),
+    cropType: z.preprocess(normalizeCropType, z.string().min(1).max(64)),
+    sowingDate: z.coerce.date(),
 });
 
 /**
@@ -39,7 +70,10 @@ const nodeIdSchema = z.object({
 export async function createFieldController(req: Request, res: Response): Promise<void> {
     const data = createFieldSchema.parse(req.body);
 
-    const field = await fieldRepo.createField(data);
+    const field = await fieldRepo.createField({
+        ...data,
+        soilTexture: data.soilTexture as PrismaSoilTexture,
+    });
 
     res.status(201).json({
         status: 'ok',
@@ -55,6 +89,9 @@ export async function getFieldController(req: Request, res: Response): Promise<v
     const { nodeId } = nodeIdSchema.parse(req.params);
 
     const field = await fieldRepo.getFieldByNodeId(nodeId);
+    if (!field) {
+        throw new NotFoundError('Field', `nodeId=${nodeId}`);
+    }
 
     res.json({
         status: 'ok',
@@ -83,11 +120,26 @@ export async function updateFieldController(req: Request, res: Response): Promis
     const { nodeId } = nodeIdSchema.parse(req.params);
     const updates = updateFieldSchema.parse(req.body);
 
+    // Reject empty patch (prevents accidental no-op + confusing client behavior)
+    if (
+        updates.fieldName === undefined &&
+        updates.latitude === undefined &&
+        updates.longitude === undefined &&
+        updates.soilTexture === undefined &&
+        updates.location === undefined
+    ) {
+        res.status(400).json({
+            status: 'error',
+            message: 'No valid fields provided to update.',
+            timestamp: new Date().toISOString(),
+        });
+        return;
+    }
+
+    // Keep your existing pattern (direct Prisma usage) but avoid narrowing issues.
     const { prisma } = await import('../config/database.js');
 
-    // Only include fields that were actually provided (not undefined)
-    const updateData: Record<string, string | number> = {};
-
+    const updateData: Record<string, unknown> = {};
     if (updates.fieldName !== undefined) updateData.fieldName = updates.fieldName;
     if (updates.latitude !== undefined) updateData.latitude = updates.latitude;
     if (updates.longitude !== undefined) updateData.longitude = updates.longitude;
@@ -96,7 +148,7 @@ export async function updateFieldController(req: Request, res: Response): Promis
 
     const field = await prisma.field.update({
         where: { nodeId },
-        data: updateData as any,
+        data: updateData,
     });
 
     res.json({
@@ -108,31 +160,32 @@ export async function updateFieldController(req: Request, res: Response): Promis
 
 /**
  * POST /api/fields/:nodeId/crop
- * ✅ FIXED: Only accepts 9 crops from UP_VALID_CROPS
+ * DB-driven validation: cropType must exist in CropParameters.cropName (validForUP=true).
  */
 export async function setCropController(req: Request, res: Response): Promise<void> {
     const { nodeId } = nodeIdSchema.parse(req.params);
     const { cropType, sowingDate } = setCropSchema.parse(req.body);
 
-    // Type assertion for cropType - guaranteed valid by Zod
-    const validCropType = cropType as CropName;
+    const { prisma } = await import('../config/database.js');
 
-    // ✅ Validate crop exists in CROP_DATABASE
-    const cropParams = CROP_DATABASE[validCropType];
-    if (!cropParams) {
+    const crop = await prisma.cropParameters.findUnique({
+        where: { cropName: cropType },
+    });
+
+    if (!crop || crop.validForUP !== true) {
         res.status(400).json({
             status: 'error',
-            message: `Crop ${cropType} not found in database`,
+            message: `Invalid cropType "${cropType}". Use GET /api/crops to fetch valid crop values.`,
             timestamp: new Date().toISOString(),
         });
         return;
     }
 
     const field = await fieldRepo.updateFieldCrop(nodeId, {
-        cropType: validCropType,
-        sowingDate: new Date(sowingDate),
-        baseTemperature: cropParams.baseTemp,
-        expectedGDDTotal: cropParams.lateSeasonGDD,
+        cropType: crop.cropName,
+        sowingDate,
+        baseTemperature: crop.baseTemperature,
+        expectedGDDTotal: crop.lateSeasonGDD,
     });
 
     res.json({
@@ -149,7 +202,6 @@ export async function deleteFieldController(req: Request, res: Response): Promis
     const { nodeId } = nodeIdSchema.parse(req.params);
 
     const { prisma } = await import('../config/database.js');
-
     await prisma.field.delete({
         where: { nodeId },
     });

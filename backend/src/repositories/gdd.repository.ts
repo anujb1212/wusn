@@ -1,7 +1,7 @@
 /**
  * GDD (Growing Degree Days) Repository
  */
-
+import { Prisma, GrowthStage } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { DatabaseError } from '../utils/errors.js';
 
@@ -17,6 +17,26 @@ export interface CreateGDDRecordInput {
     cropType?: string | undefined;
     baseTemperature: number;
     growthStage?: string | undefined;
+}
+
+function toGrowthStage(value: unknown): GrowthStage | null {
+    if (value === null || value === undefined) return null;
+
+    // Already a valid enum value
+    if (Object.values(GrowthStage).includes(value as GrowthStage)) {
+        return value as GrowthStage;
+    }
+
+    // Try normalize string inputs like "initial", "INITIAL", etc.
+    if (typeof value === 'string') {
+        const normalized = value.trim().toUpperCase();
+        if (Object.values(GrowthStage).includes(normalized as GrowthStage)) {
+            return normalized as GrowthStage;
+        }
+    }
+
+    // Invalid -> null (or throw if you want strict behavior)
+    return null;
 }
 
 /**
@@ -36,7 +56,7 @@ export async function createGDDRecord(input: CreateGDDRecordInput) {
                 cumulativeGDD: input.cumulativeGDD,
                 cropType: input.cropType ?? null,
                 baseTemperature: input.baseTemperature,
-                growthStage: input.growthStage ?? null,
+                growthStage: toGrowthStage(input.growthStage)
             },
         });
     } catch (error) {

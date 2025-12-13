@@ -17,7 +17,7 @@ export declare function getAllFieldsController(_req: Request, res: Response): Pr
 export declare function updateFieldController(req: Request, res: Response): Promise<void>;
 /**
  * POST /api/fields/:nodeId/crop
- * ✅ FIXED: Only accepts 9 crops from UP_VALID_CROPS
+ * DB-driven validation: cropType must exist in CropParameters.cropName (validForUP=true).
  */
 export declare function setCropController(req: Request, res: Response): Promise<void>;
 /**

@@ -151,6 +151,10 @@ export interface CropRecommendation {
 /**
  * Irrigation decision
  * Based on soil water balance, crop stage, and weather forecast
+ *
+ * Notes:
+ * - suggestedDepthMm/duration should be 0 when decision == "do_not_irrigate".
+ * - "applicationRateMmPerHour" is an explicit assumption used to convert depth -> time.
  */
 export interface IrrigationDecision {
     nodeId: number;
@@ -162,8 +166,13 @@ export interface IrrigationDecision {
     currentVWC: number;
     targetVWC: number;
     deficit: number;
+    deficitPctOfTarget?: number;
     suggestedDepthMm: number;
     suggestedDurationMin: number | null;
+    applicationRateMmPerHour?: number | null;
+    applicationRateSource?: 'field_config' | 'default' | 'unknown';
+    scoreBasis?: string | null;
+    recommendedMethod?: IrrigationMethod | null;
     cropType: CropName | null;
     growthStage: GrowthStage | null;
     weatherAdjustment: string | null;

@@ -3,38 +3,43 @@
  */
 
 export class AppError extends Error {
+    public readonly cause?: unknown;
+
     constructor(
         message: string,
         public readonly statusCode: number = 500,
         public readonly isOperational: boolean = true,
-        public readonly context?: Record<string, unknown>
+        public readonly context?: Record<string, unknown>,
+        options?: { cause?: unknown }
     ) {
         super(message);
         this.name = this.constructor.name;
+        this.cause = options?.cause;
         Error.captureStackTrace(this, this.constructor);
     }
 }
 
 export class ValidationError extends AppError {
-    constructor(message: string, context?: Record<string, unknown>) {
-        super(message, 400, true, context);
+    constructor(message: string, context?: Record<string, unknown>, cause?: unknown) {
+        super(message, 400, true, context, { cause });
     }
 }
 
 export class NotFoundError extends AppError {
-    constructor(resource: string, identifier: string | number) {
+    constructor(resource: string, identifier: string | number, cause?: unknown) {
         super(
             `${resource} with identifier '${identifier}' not found`,
             404,
             true,
-            { resource, identifier }
+            { resource, identifier },
+            { cause }
         );
     }
 }
 
 export class SensorDataError extends AppError {
-    constructor(message: string, context?: Record<string, unknown>) {
-        super(message, 422, true, context);
+    constructor(message: string, context?: Record<string, unknown>, cause?: unknown) {
+        super(message, 422, true, context, { cause });
     }
 }
 
@@ -44,24 +49,21 @@ export class ExternalServiceError extends AppError {
             `External service '${service}' failed`,
             502,
             true,
-            {
-                service,
-                originalMessage: originalError?.message
-            }
+            { service, originalMessage: originalError?.message },
+            { cause: originalError }
         );
     }
 }
 
 export class DatabaseError extends AppError {
     constructor(operation: string, originalError?: Error) {
+        // Database failures are typically operational (timeouts, outages, constraint failures).
         super(
             `Database operation '${operation}' failed`,
             500,
-            false,
-            {
-                operation,
-                originalMessage: originalError?.message
-            }
+            true,
+            { operation, originalMessage: originalError?.message },
+            { cause: originalError }
         );
     }
 }

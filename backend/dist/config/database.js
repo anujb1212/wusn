@@ -1,30 +1,53 @@
 /**
  * Database Configuration
  */
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { createLogger } from './logger.js';
-import { env, isDevelopment } from './environment.js';
+import { isDevelopment } from './environment.js';
 const logger = createLogger({ service: 'database' });
 /**
- * Prisma client instance
+ * IMPORTANT:
+ * We include event-based log levels in the PrismaClient options so TypeScript
+ * correctly types prisma.$on('query' | 'error' | 'warn' | 'info', ...). [web:218][web:197]
+ *
+ * Logging is still effectively controlled by whether we register listeners.
  */
-export const prisma = new PrismaClient({
-    log: isDevelopment
-        ? [
-            { level: 'query', emit: 'event' },
-            { level: 'error', emit: 'stdout' },
-            { level: 'warn', emit: 'stdout' },
-        ]
-        : [{ level: 'error', emit: 'stdout' }],
-});
+const clientOptions = {
+    log: [
+        { emit: 'event', level: 'query' },
+        { emit: 'event', level: 'error' },
+        { emit: 'event', level: 'warn' },
+        // Keep info optional; enable if you use it
+        // { emit: 'event' as const, level: 'info' as const },
+    ],
+};
+function createPrismaClient() {
+    return new PrismaClient(clientOptions);
+}
 /**
- * Log Prisma queries in development
+ * Prisma client singleton
+ * - Dev: reuse global instance to avoid multiple connections in hot reload scenarios. [web:197]
+ * - Prod: module singleton is sufficient.
  */
-if (isDevelopment) {
+export const prisma = isDevelopment
+    ? (globalThis.__prisma ?? (globalThis.__prisma = createPrismaClient()))
+    : createPrismaClient();
+/**
+ * Toggle query logging explicitly (dev-only).
+ * Avoid logging params by default.
+ */
+const enableQueryLogging = isDevelopment && String(process.env.PRISMA_LOG_QUERIES ?? '').toLowerCase() === 'true';
+if (enableQueryLogging) {
     prisma.$on('query', (e) => {
-        logger.debug({ query: e.query, params: e.params, duration: e.duration }, 'Prisma query');
+        logger.debug({ query: e.query, durationMs: e.duration }, 'Prisma query');
     });
 }
+prisma.$on('error', (e) => {
+    logger.error({ message: e.message, target: e.target }, 'Prisma error');
+});
+prisma.$on('warn', (e) => {
+    logger.warn({ message: e.message, target: e.target }, 'Prisma warning');
+});
 /**
  * Connect to database
  */
@@ -32,7 +55,6 @@ export async function connectDatabase() {
     try {
         await prisma.$connect();
         logger.info('Database connected successfully');
-        // Test connection
         await prisma.$queryRaw `SELECT 1`;
         logger.info('Database connection verified');
     }

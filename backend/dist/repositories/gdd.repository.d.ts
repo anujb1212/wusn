@@ -1,6 +1,3 @@
-/**
- * GDD (Growing Degree Days) Repository
- */
 export interface CreateGDDRecordInput {
     fieldId: number;
     date: Date;
@@ -19,15 +16,15 @@ export interface CreateGDDRecordInput {
  */
 export declare function createGDDRecord(input: CreateGDDRecordInput): Promise<{
     id: number;
-    cropType: string | null;
     baseTemperature: number;
     createdAt: Date;
+    cropType: string | null;
     date: Date;
     readingsCount: number;
     avgAirTemp: number;
     minAirTemp: number | null;
     maxAirTemp: number | null;
-    growthStage: string | null;
+    growthStage: import(".prisma/client").$Enums.GrowthStage | null;
     dailyGDD: number;
     cumulativeGDD: number;
     fieldId: number;
@@ -37,15 +34,15 @@ export declare function createGDDRecord(input: CreateGDDRecordInput): Promise<{
  */
 export declare function getGDDRecordForDate(fieldId: number, date: Date): Promise<{
     id: number;
-    cropType: string | null;
     baseTemperature: number;
     createdAt: Date;
+    cropType: string | null;
     date: Date;
     readingsCount: number;
     avgAirTemp: number;
     minAirTemp: number | null;
     maxAirTemp: number | null;
-    growthStage: string | null;
+    growthStage: import(".prisma/client").$Enums.GrowthStage | null;
     dailyGDD: number;
     cumulativeGDD: number;
     fieldId: number;
@@ -55,15 +52,15 @@ export declare function getGDDRecordForDate(fieldId: number, date: Date): Promis
  */
 export declare function getGDDRecordsSinceSowing(fieldId: number, sowingDate: Date): Promise<{
     id: number;
-    cropType: string | null;
     baseTemperature: number;
     createdAt: Date;
+    cropType: string | null;
     date: Date;
     readingsCount: number;
     avgAirTemp: number;
     minAirTemp: number | null;
     maxAirTemp: number | null;
-    growthStage: string | null;
+    growthStage: import(".prisma/client").$Enums.GrowthStage | null;
     dailyGDD: number;
     cumulativeGDD: number;
     fieldId: number;
@@ -73,15 +70,15 @@ export declare function getGDDRecordsSinceSowing(fieldId: number, sowingDate: Da
  */
 export declare function getLatestGDDRecord(fieldId: number): Promise<{
     id: number;
-    cropType: string | null;
     baseTemperature: number;
     createdAt: Date;
+    cropType: string | null;
     date: Date;
     readingsCount: number;
     avgAirTemp: number;
     minAirTemp: number | null;
     maxAirTemp: number | null;
-    growthStage: string | null;
+    growthStage: import(".prisma/client").$Enums.GrowthStage | null;
     dailyGDD: number;
     cumulativeGDD: number;
     fieldId: number;

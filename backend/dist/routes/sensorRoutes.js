@@ -1,4 +1,3 @@
-// src/routes/sensorRoutes.ts
 /**
  * Sensor Routes
  */

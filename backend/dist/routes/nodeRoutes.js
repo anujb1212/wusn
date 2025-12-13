@@ -1,4 +1,3 @@
-// src/routes/nodeRoutes.ts
 import { Router } from 'express';
 import { asyncHandler } from '../api/middleware/asyncHandler.js';
 import { createNodeController, getNodesController, getNodeController, } from '../controllers/nodeController.js';

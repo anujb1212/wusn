@@ -1,5 +1,3 @@
-// lib/models/gdd_status.dart
-
 class GDDStatus {
   final int nodeId;
   final FieldConfig? fieldConfig;
@@ -14,22 +12,25 @@ class GDDStatus {
   });
 
   factory GDDStatus.fromJson(Map<String, dynamic> json) {
+    final nodeId = _Json.asInt(json['nodeId'] ?? json['node_id'], fallback: 0);
+
+    final fieldCfgMap =
+        _Json.asNullableMap(json['fieldConfig'] ?? json['field_config']);
+    final gddMap = _Json.asNullableMap(json['gddData'] ?? json['gdd_data']);
+    final growthMap =
+        _Json.asNullableMap(json['growthInfo'] ?? json['growth_info']);
+
     return GDDStatus(
-      nodeId: json['nodeId'] as int,
-      fieldConfig: json['fieldConfig'] != null
-          ? FieldConfig.fromJson(json['fieldConfig'])
-          : null,
-      gddData: json['gddData'] != null
-          ? GDDData.fromJson(json['gddData'])
-          : null,
-      growthInfo: json['growthInfo'] != null
-          ? GrowthInfo.fromJson(json['growthInfo'])
-          : null,
+      nodeId: nodeId,
+      fieldConfig:
+          fieldCfgMap == null ? null : FieldConfig.fromJson(fieldCfgMap),
+      gddData: gddMap == null ? null : GDDData.fromJson(gddMap),
+      growthInfo: growthMap == null ? null : GrowthInfo.fromJson(growthMap),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    return <String, dynamic>{
       'nodeId': nodeId,
       'fieldConfig': fieldConfig?.toJson(),
       'gddData': gddData?.toJson(),
@@ -49,6 +50,9 @@ class FieldConfig {
   final double? latitude;
   final double? longitude;
 
+  /// "INITIAL|DEVELOPMENT|MID_SEASON|LATE_SEASON|HARVEST_READY"
+  final String? currentGrowthStage;
+
   FieldConfig({
     required this.nodeId,
     required this.fieldName,
@@ -59,34 +63,32 @@ class FieldConfig {
     this.expectedGDDTotal,
     this.latitude,
     this.longitude,
+    this.currentGrowthStage,
   });
 
   factory FieldConfig.fromJson(Map<String, dynamic> json) {
     return FieldConfig(
-      nodeId: json['nodeId'] as int,
-      fieldName: json['fieldName'] as String,
-      cropType: json['cropType'] as String?,
-      sowingDate: json['sowingDate'] != null
-          ? DateTime.parse(json['sowingDate'])
-          : null,
-      soilTexture: json['soilTexture'] as String? ?? 'SANDY_LOAM',
-      baseTemperature: json['baseTemperature'] != null
-          ? (json['baseTemperature'] as num).toDouble()
-          : null,
-      expectedGDDTotal: json['expectedGDDTotal'] != null
-          ? (json['expectedGDDTotal'] as num).toDouble()
-          : null,
-      latitude: json['latitude'] != null
-          ? (json['latitude'] as num).toDouble()
-          : null,
-      longitude: json['longitude'] != null
-          ? (json['longitude'] as num).toDouble()
-          : null,
+      nodeId: _Json.asInt(json['nodeId'] ?? json['node_id'], fallback: 0),
+      fieldName: _Json.asString(json['fieldName'] ?? json['field_name'],
+          fallback: 'Field'),
+      cropType: _Json.asNullableString(json['cropType'] ?? json['crop_type']),
+      sowingDate:
+          _Json.asNullableDateTime(json['sowingDate'] ?? json['sowing_date']),
+      soilTexture: _Json.asString(json['soilTexture'] ?? json['soil_texture'],
+          fallback: 'SANDY_LOAM'),
+      baseTemperature: _Json.asNullableDouble(
+          json['baseTemperature'] ?? json['base_temperature']),
+      expectedGDDTotal: _Json.asNullableDouble(
+          json['expectedGDDTotal'] ?? json['expected_gdd_total']),
+      latitude: _Json.asNullableDouble(json['latitude']),
+      longitude: _Json.asNullableDouble(json['longitude']),
+      currentGrowthStage: _Json.asNullableString(
+          json['currentGrowthStage'] ?? json['current_growth_stage']),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    return <String, dynamic>{
       'nodeId': nodeId,
       'fieldName': fieldName,
       'cropType': cropType,
@@ -96,6 +98,7 @@ class FieldConfig {
       'expectedGDDTotal': expectedGDDTotal,
       'latitude': latitude,
       'longitude': longitude,
+      'currentGrowthStage': currentGrowthStage,
     };
   }
 }
@@ -104,11 +107,18 @@ class GDDData {
   final DateTime date;
   final double dailyGDD;
   final double cumulativeGDD;
+
+  /// Kept for UI continuity (even if backend doesn’t always provide it).
   final double avgSoilTemp;
+
   final String? growthStage;
   final double? totalGDDRequired;
-  final double progressPercentage;
+
+  /// 0-100 format
+  final double progressPercent;
+
   final int daysElapsed;
+  final double? estimatedDaysToHarvest;
 
   GDDData({
     required this.date,
@@ -117,57 +127,74 @@ class GDDData {
     required this.avgSoilTemp,
     this.growthStage,
     this.totalGDDRequired,
-    required this.progressPercentage,
+    required this.progressPercent,
     required this.daysElapsed,
+    this.estimatedDaysToHarvest,
   });
 
   factory GDDData.fromJson(Map<String, dynamic> json) {
+    // date can be ISO string; if missing/invalid, use "today" to avoid crashes.
+    final parsedDate = _Json.asNullableDateTime(json['date'] ?? json['day']);
+    final date = (parsedDate ?? DateTime.now().toUtc());
+
+    final progressRaw = json['progressPercent'] ??
+        json['progressPercentage'] ??
+        json['progress_percent'];
+
     return GDDData(
-      date: DateTime.parse(json['date']),
-      dailyGDD: (json['dailyGDD'] as num).toDouble(),
-      cumulativeGDD: (json['cumulativeGDD'] as num).toDouble(),
-      avgSoilTemp: (json['avgSoilTemp'] as num).toDouble(),
-      growthStage: json['growthStage'] as String?,
-      totalGDDRequired: json['totalGDDRequired'] != null
-          ? (json['totalGDDRequired'] as num).toDouble()
-          : null,
-      progressPercentage: (json['progressPercentage'] as num).toDouble(),
-      daysElapsed: json['daysElapsed'] as int,
+      date: date,
+      dailyGDD:
+          _Json.asDouble(json['dailyGDD'] ?? json['daily_gdd'], fallback: 0.0),
+      cumulativeGDD: _Json.asDouble(
+          json['cumulativeGDD'] ?? json['cumulative_gdd'],
+          fallback: 0.0),
+      avgSoilTemp: _Json.asDouble(json['avgSoilTemp'] ?? json['avg_soil_temp'],
+          fallback: 0.0),
+      growthStage:
+          _Json.asNullableString(json['growthStage'] ?? json['growth_stage']),
+      totalGDDRequired: _Json.asNullableDouble(
+          json['totalGDDRequired'] ?? json['total_gdd_required']),
+      progressPercent: _Json.asDouble(progressRaw, fallback: 0.0),
+      daysElapsed:
+          _Json.asInt(json['daysElapsed'] ?? json['days_elapsed'], fallback: 0),
+      estimatedDaysToHarvest: _Json.asNullableDouble(
+        json['estimatedDaysToHarvest'] ?? json['estimated_days_to_harvest'],
+      ),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    return <String, dynamic>{
       'date': date.toIso8601String(),
       'dailyGDD': dailyGDD,
       'cumulativeGDD': cumulativeGDD,
       'avgSoilTemp': avgSoilTemp,
       'growthStage': growthStage,
       'totalGDDRequired': totalGDDRequired,
-      'progressPercentage': progressPercentage,
+      'progressPercent': progressPercent,
       'daysElapsed': daysElapsed,
+      'estimatedDaysToHarvest': estimatedDaysToHarvest,
     };
   }
 
-  /// Get growth stage color for UI
   String getStageColor() {
     switch (growthStage?.toUpperCase()) {
       case 'INITIAL':
-        return '#2196F3'; // Blue
+        return '#2196F3';
       case 'DEVELOPMENT':
-        return '#4CAF50'; // Green
+        return '#4CAF50';
       case 'MID_SEASON':
-        return '#FF9800'; // Orange
+        return '#FF9800';
       case 'LATE_SEASON':
-        return '#FFC107'; // Amber
+        return '#FFC107';
       case 'HARVEST_READY':
-        return '#8BC34A'; // Light Green
+        return '#8BC34A';
       default:
-        return '#9E9E9E'; // Grey
+        return '#9E9E9E';
     }
   }
 
-  /// Get growth stage icon
+  // Kept as-is to avoid UI behavior change.
   String getStageIcon() {
     switch (growthStage?.toUpperCase()) {
       case 'INITIAL':
@@ -179,7 +206,7 @@ class GDDData {
       case 'LATE_SEASON':
         return '🌾';
       case 'HARVEST_READY':
-        return '🌾';
+        return '✨';
       default:
         return '📊';
     }
@@ -193,7 +220,10 @@ class GrowthInfo {
   final double gddAccumulated;
   final double gddRequired;
   final double gddRemaining;
-  final int estimatedDaysToMaturity;
+
+  /// Backend may send null; keep nullable-safe parsing but keep field non-null with default.
+  final double estimatedDaysToHarvest;
+
   final String descriptionEn;
   final String descriptionHi;
 
@@ -204,36 +234,113 @@ class GrowthInfo {
     required this.gddAccumulated,
     required this.gddRequired,
     required this.gddRemaining,
-    required this.estimatedDaysToMaturity,
+    required this.estimatedDaysToHarvest,
     required this.descriptionEn,
     required this.descriptionHi,
   });
 
   factory GrowthInfo.fromJson(Map<String, dynamic> json) {
+    final est = json['estimatedDaysToHarvest'] ??
+        json['estimatedDaysToMaturity'] ??
+        json['estimated_days'];
+
     return GrowthInfo(
-      stage: json['stage'] as String,
-      progress: (json['progress'] as num).toDouble(),
-      daysElapsed: json['daysElapsed'] as int,
-      gddAccumulated: (json['gddAccumulated'] as num).toDouble(),
-      gddRequired: (json['gddRequired'] as num).toDouble(),
-      gddRemaining: (json['gddRemaining'] as num).toDouble(),
-      estimatedDaysToMaturity: json['estimatedDaysToMaturity'] as int,
-      descriptionEn: json['description_en'] as String,
-      descriptionHi: json['description_hi'] as String,
+      stage: _Json.asString(json['stage'], fallback: 'INITIAL'),
+      progress: _Json.asDouble(json['progress'], fallback: 0.0),
+      daysElapsed:
+          _Json.asInt(json['daysElapsed'] ?? json['days_elapsed'], fallback: 0),
+      gddAccumulated: _Json.asDouble(
+          json['gddAccumulated'] ?? json['gdd_accumulated'],
+          fallback: 0.0),
+      gddRequired: _Json.asDouble(json['gddRequired'] ?? json['gdd_required'],
+          fallback: 0.0),
+      gddRemaining: _Json.asDouble(
+          json['gddRemaining'] ?? json['gdd_remaining'],
+          fallback: 0.0),
+      estimatedDaysToHarvest: _Json.asDouble(est, fallback: 0.0),
+      descriptionEn: _Json.asString(
+          json['description_en'] ?? json['descriptionEn'],
+          fallback: ''),
+      descriptionHi: _Json.asString(
+          json['description_hi'] ?? json['descriptionHi'],
+          fallback: ''),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    return <String, dynamic>{
       'stage': stage,
       'progress': progress,
       'daysElapsed': daysElapsed,
       'gddAccumulated': gddAccumulated,
       'gddRequired': gddRequired,
       'gddRemaining': gddRemaining,
-      'estimatedDaysToMaturity': estimatedDaysToMaturity,
+      'estimatedDaysToHarvest': estimatedDaysToHarvest,
       'description_en': descriptionEn,
       'description_hi': descriptionHi,
     };
+  }
+}
+
+/// Local JSON coercion helpers (private to this file).
+class _Json {
+  static String asString(dynamic v, {required String fallback}) {
+    if (v == null) return fallback;
+    if (v is String) return v;
+    return v.toString();
+  }
+
+  static String? asNullableString(dynamic v) {
+    if (v == null) return null;
+    final s = v is String ? v : v.toString();
+    final t = s.trim();
+    return t.isEmpty ? null : t;
+  }
+
+  static int asInt(dynamic v, {required int fallback}) {
+    if (v == null) return fallback;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v.trim()) ?? fallback;
+    return fallback;
+  }
+
+  static double asDouble(dynamic v, {required double fallback}) {
+    if (v == null) return fallback;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v.trim()) ?? fallback;
+    return fallback;
+  }
+
+  static double? asNullableDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v.trim());
+    return null;
+  }
+
+  static DateTime? asNullableDateTime(dynamic v) {
+    if (v == null) return null;
+    if (v is DateTime) return v.toUtc();
+    if (v is String) {
+      final parsed = DateTime.tryParse(v);
+      return parsed?.toUtc();
+    }
+    if (v is int) {
+      // epoch milliseconds
+      return DateTime.fromMillisecondsSinceEpoch(v, isUtc: true);
+    }
+    return null;
+  }
+
+  static Map<String, dynamic>? asNullableMap(dynamic v) {
+    if (v == null) return null;
+    if (v is Map<String, dynamic>) return v;
+    if (v is Map) return Map<String, dynamic>.from(v);
+    return null;
   }
 }

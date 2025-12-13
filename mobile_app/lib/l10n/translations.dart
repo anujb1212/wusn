@@ -3,57 +3,57 @@ class AppTranslations {
     'en': {
       'appTitle': 'Soil Monitor',
       'dashboard': 'Dashboard',
-      
+
       'node': 'Sensor',
       'crop': 'Crop',
-      
+
       'moisture': 'Soil Moisture',
       'temperature': 'Temperature',
       'battery': 'Battery',
       'signal': 'Signal',
       'depth': 'Depth',
       'distance': 'Distance',
-      
+
       'goodCondition': 'All Good',
       'needsWater': 'Needs Water',
       'tooWet': 'Too Wet',
       'unknown': 'Unknown',
-      
+
       'recommendations': 'What To Do',
       'irrigationAdvice': 'Irrigation Advice',
       'bestCrop': 'Best Crop',
       'cropSuitability': 'Crop Suitability',
-      
+
       'fuzzyAnalysis': 'Soil Analysis',
       'confidence': 'Confidence',
       'dry': 'Dry',
       'optimal': 'Optimal',
       'wet': 'Wet',
-      
+
       'lastUpdated': 'Last Checked',
       'updated': 'Updated',
       'timeAgo': 'ago',
-      
+
       'loading': 'Loading data...',
       'error': 'Error loading data',
       'retry': 'Tap to retry',
       'pullToRefresh': 'Pull to refresh',
-      
+
       'realtime': 'Live Updates',
       'offline': 'Offline',
       'connected': 'Connected',
       'connecting': 'Connecting...',
-      
+
       'noData': 'No sensor data available',
       'noAlerts': 'No alerts',
-      
+
       'smu': 'SMU',
       'celsius': '°C',
       'dbm': 'dBm',
       'percent': '%',
       'cm': 'cm',
       'meters': 'm',
-      
+
       'aggregatedData': 'Multi-Node Data',
       'selectedNode': 'Selected Node',
       'selectionReason': 'Selection Reason',
@@ -69,7 +69,7 @@ class AppTranslations {
       'blocked': 'Blocked',
       'lowBattery': 'Low Battery',
       'weakSignal': 'Weak Signal',
-      
+
       // NEW: Phase 2 - Crop Confirmation
       'confirmCrop': 'Confirm Crop',
       'cropConfirmation': 'Crop Confirmation',
@@ -83,7 +83,7 @@ class AppTranslations {
       'cropConfirmedMessage': 'You can now check irrigation advice',
       'selectCropFirst': 'Please select a crop',
       'cropFirst': 'Confirm crop first, then check irrigation advice',
-      
+
       // Crop names
       'wheat': 'Wheat',
       'rice': 'Rice',
@@ -91,12 +91,12 @@ class AppTranslations {
       'mustard': 'Mustard',
       'chickpea': 'Chickpea',
       'cotton': 'Cotton',
-      
+
       // Soil types
       'sandy': 'Sandy',
       'loam': 'Loam',
       'clayLoam': 'Clay Loam',
-      
+
       // NEW: Phase 3 - Irrigation Decision
       'irrigation': 'Irrigation',
       'irrigate': 'IRRIGATE',
@@ -110,7 +110,7 @@ class AppTranslations {
       'hours': 'hours',
       'days': 'days',
       'minutes': 'minutes',
-      
+
       // Growth stages
       'growthStage': 'Growth Stage',
       'growthProgress': 'Growth Progress',
@@ -122,20 +122,20 @@ class AppTranslations {
       'daysElapsed': 'Days Since Sowing',
       'accumulatedGDD': 'Accumulated GDD',
       'waterDemand': 'Water Demand (Kc)',
-      
+
       // Field info
       'fieldInformation': 'Field Information',
       'fieldDetails': 'Field Details',
       'sensorData': 'Sensor Data',
       'lastUpdate': 'Last Update',
-      
+
       // Weather
       'weatherForecast': 'Weather Forecast',
       'rainForecast': 'Rain Forecast (3 days)',
       'avgTemperature': 'Avg Temperature (7 days)',
       'rain3Days': 'Rain (3 days)',
       'avgTemp7Days': 'Avg temp (7 days)',
-      
+
       // Irrigation pattern
       'irrigationMethod': 'Irrigation Method',
       'duration': 'Duration',
@@ -143,7 +143,7 @@ class AppTranslations {
       'sprinkler': 'SPRINKLER',
       'flood': 'FLOOD',
       'skipMethod': 'SKIP',
-      
+
       // Common actions
       'ok': 'OK',
       'cancel': 'Cancel',
@@ -156,57 +156,57 @@ class AppTranslations {
       // Existing translations
       'appTitle': 'खेत की नमी',
       'dashboard': 'मुख्य पेज',
-      
+
       'node': 'सेंसर',
       'crop': 'फसल',
-      
+
       'moisture': 'मिट्टी में पानी',
       'temperature': 'तापमान',
       'battery': 'बैटरी',
       'signal': 'सिग्नल',
       'depth': 'गहराई',
       'distance': 'दूरी',
-      
+
       'goodCondition': 'सब ठीक है',
       'needsWater': 'पानी चाहिए',
       'tooWet': 'ज्यादा गीला',
       'unknown': 'अज्ञात',
-      
+
       'recommendations': 'क्या करें',
       'irrigationAdvice': 'सिंचाई सलाह',
       'bestCrop': 'सबसे अच्छी फसल',
       'cropSuitability': 'फसल उपयुक्तता',
-      
+
       'fuzzyAnalysis': 'मिट्टी विश्लेषण',
       'confidence': 'विश्वास',
       'dry': 'सूखा',
       'optimal': 'उत्तम',
       'wet': 'गीला',
-      
+
       'lastUpdated': 'आखरी बार देखा',
       'updated': 'अपडेट हुआ',
       'timeAgo': 'पहले',
-      
+
       'loading': 'डेटा लोड हो रहा है...',
       'error': 'डेटा लोड करने में त्रुटि',
       'retry': 'दोबारा कोशिश करें',
       'pullToRefresh': 'रिफ्रेश करने के लिए खींचें',
-      
+
       'realtime': 'लाइव अपडेट',
       'offline': 'ऑफलाइन',
       'connected': 'जुड़ा हुआ',
       'connecting': 'जुड़ रहा है...',
-      
+
       'noData': 'कोई डेटा नहीं',
       'noAlerts': 'कोई चेतावनी नहीं',
-      
+
       'smu': 'SMU',
       'celsius': '°C',
       'dbm': 'dBm',
       'percent': '%',
       'cm': 'सेमी',
       'meters': 'मी',
-      
+
       'aggregatedData': 'सभी नोड्स का डेटा',
       'selectedNode': 'चयनित नोड',
       'selectionReason': 'चयन का कारण',
@@ -222,7 +222,7 @@ class AppTranslations {
       'blocked': 'बंद',
       'lowBattery': 'कम बैटरी',
       'weakSignal': 'कमजोर सिग्नल',
-      
+
       // NEW: Phase 2 - Crop Confirmation
       'confirmCrop': 'फसल पुष्टि',
       'cropConfirmation': 'फसल की पुष्टि करें',
@@ -236,7 +236,7 @@ class AppTranslations {
       'cropConfirmedMessage': 'अब आप सिंचाई सलाह देख सकते हैं',
       'selectCropFirst': 'कृपया फसल चुनें',
       'cropFirst': 'पहले फसल की पुष्टि करें, फिर सिंचाई सलाह देखें',
-      
+
       // Crop names
       'wheat': 'गेहूं',
       'rice': 'चावल',
@@ -244,12 +244,12 @@ class AppTranslations {
       'mustard': 'सरसों',
       'chickpea': 'चना',
       'cotton': 'कपास',
-      
+
       // Soil types
       'sandy': 'रेतीली',
       'loam': 'दोमट',
       'clayLoam': 'चिकनी दोमट',
-      
+
       // NEW: Phase 3 - Irrigation Decision
       'irrigation': 'सिंचाई सलाह',
       'irrigate': 'सिंचाई करें',
@@ -263,7 +263,7 @@ class AppTranslations {
       'hours': 'घंटे',
       'days': 'दिन',
       'minutes': 'मिनट',
-      
+
       // Growth stages
       'growthStage': 'वृद्धि चरण',
       'growthProgress': 'वृद्धि की प्रगति',
@@ -275,20 +275,20 @@ class AppTranslations {
       'daysElapsed': 'बुवाई के बाद दिन',
       'accumulatedGDD': 'संचित GDD',
       'waterDemand': 'पानी की मांग (Kc)',
-      
+
       // Field info
       'fieldInformation': 'खेत की जानकारी',
       'fieldDetails': 'खेत विवरण',
       'sensorData': 'सेंसर डेटा',
       'lastUpdate': 'अंतिम अपडेट',
-      
+
       // Weather
       'weatherForecast': 'मौसम पूर्वानुमान',
       'rainForecast': 'बारिश का अनुमान (3 दिन)',
       'avgTemperature': 'औसत तापमान (7 दिन)',
       'rain3Days': '3 दिन में बारिश',
       'avgTemp7Days': 'औसत तापमान (7 दिन)',
-      
+
       // Irrigation pattern
       'irrigationMethod': 'सिंचाई विधि',
       'duration': 'अवधि',
@@ -296,7 +296,7 @@ class AppTranslations {
       'sprinkler': 'फव्वारा',
       'flood': 'बाढ़',
       'skipMethod': 'प्रतीक्षा करें',
-      
+
       // Common actions
       'ok': 'ठीक है',
       'cancel': 'रद्द करें',
@@ -308,8 +308,12 @@ class AppTranslations {
   };
 
   static String translate(String key, String language) {
-    return translations[language]?[key] ?? 
-           translations['en']?[key] ?? 
-           key;
+    final k = key.trim();
+    if (k.isEmpty) return '';
+
+    final langMap = translations[language];
+    final enMap = translations['en'];
+
+    return langMap?[k] ?? enMap?[k] ?? k;
   }
 }

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+
 import 'screens/dashboard_screen.dart';
 import 'providers/sensor_provider.dart';
-import 'services/mqtt_service.dart'; // Added Import
+import 'services/mqtt_service.dart';
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
@@ -20,33 +22,43 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   String _language = 'hi';
 
-  // 1. Instantiate Provider here to link it with MQTT
-  final SensorProvider _sensorProvider = SensorProvider();
-  late MqttService _mqttService;
+  late final SensorProvider _sensorProvider;
+  late final MqttService _mqttService;
+
+  bool _disposed = false;
 
   @override
   void initState() {
     super.initState();
 
-    // 2. Initialize and Connect MQTT Service
-    // We link the Service callbacks directly to the Provider's methods
+    // Keep manual ownership (needed because MqttService needs a stable instance reference).
+    _sensorProvider = SensorProvider();
+
     _mqttService = MqttService(
       onMessageReceived: (nodeId, data) {
+        if (_disposed) return;
         _sensorProvider.onMqttDataReceived(nodeId, data);
       },
       onStatusChange: (isConnected) {
+        if (_disposed) return;
         _sensorProvider.updateWebSocketStatus(isConnected);
       },
     );
 
-    // Start connection
+    // Fire-and-forget connect; provider will update connection state via callbacks.
     _mqttService.connect();
   }
 
   @override
   void dispose() {
-    // 3. Clean up connections
+    _disposed = true;
+
     _mqttService.disconnect();
+
+    // This notifier is owned by this State object.
+    _sensorProvider
+        .dispose(); // ChangeNotifier.dispose should be called by the owner. [web:281]
+
     super.dispose();
   }
 
@@ -58,8 +70,9 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      // 4. Use .value since we created the instance in initState
+    // Using `.value` is correct *only* because we're passing an already-created notifier;
+    // Provider will not dispose it, so we dispose manually above. [web:35]
+    return ChangeNotifierProvider<SensorProvider>.value(
       value: _sensorProvider,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

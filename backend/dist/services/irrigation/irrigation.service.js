@@ -22,6 +22,8 @@
  * - Crop parameters from CROP_DATABASE (MAD, Kc, root depth)
  *
  * UPDATED: Dec 11, 2025 - Enhanced to use Kc values from new schema
+ * UPDATED: Dec 13, 2025 - Depth/duration only for irrigate decisions, added
+ *                          application rate + score basis metadata
  */
 import { createLogger } from '../../config/logger.js';
 import { SOIL_WATER_CONSTANTS, CROP_DATABASE, IRRIGATION_URGENCY, IRRIGATION_CONSTANTS, GROWTH_STAGES, } from '../../utils/constants.js';
@@ -335,19 +337,7 @@ export async function makeIrrigationDecision(nodeId) {
         catch (error) {
             logger.warn({ error, nodeId }, 'Weather check failed, proceeding without forecast adjustment');
         }
-        // Calculate irrigation parameters
-        const targetVWC = cropParams.vwcOptimal;
-        const deficit = Math.max(0, targetVWC - currentVWC);
-        const suggestedDepthMm = finalUrgency === IRRIGATION_URGENCY.NONE
-            ? 0
-            : calculateIrrigationDepth(balance, targetVWC, cropParams.rootDepthCm);
-        // Estimate duration based on application rate
-        // Drip irrigation: ~5 mm/hour, Sprinkler: ~10 mm/hour, Flood: ~20 mm/hour
-        const applicationRateMmPerHour = 5; // Assume drip (adjust based on field irrigation method)
-        const suggestedDurationMin = suggestedDepthMm > 0
-            ? Math.ceil((suggestedDepthMm / applicationRateMmPerHour) * 60)
-            : 0;
-        // Determine decision
+        // Determine decision FROM FINAL URGENCY
         let decision;
         if (finalUrgency === IRRIGATION_URGENCY.CRITICAL || finalUrgency === IRRIGATION_URGENCY.HIGH) {
             decision = 'irrigate_now';
@@ -357,6 +347,43 @@ export async function makeIrrigationDecision(nodeId) {
         }
         else {
             decision = 'do_not_irrigate';
+        }
+        // Target and deficit
+        const targetVWC = cropParams.vwcOptimal;
+        const deficit = Math.max(0, targetVWC - currentVWC);
+        const deficitPctOfTarget = targetVWC > 0 ? (deficit / targetVWC) * 100 : 0;
+        // Only compute irrigation parameters when we actually recommend irrigation
+        const shouldIrrigate = decision !== 'do_not_irrigate';
+        const suggestedDepthMm = shouldIrrigate
+            ? calculateIrrigationDepth(balance, targetVWC, cropParams.rootDepthCm)
+            : 0;
+        // Application rate assumption used to convert depth -> time.
+        // (Future: derive from field configuration / method.)
+        const applicationRateMmPerHour = shouldIrrigate ? 5 : null; // mm/hour
+        const applicationRateSource = shouldIrrigate ? 'default' : 'unknown';
+        const suggestedDurationMin = shouldIrrigate && suggestedDepthMm > 0 && applicationRateMmPerHour
+            ? Math.ceil((suggestedDepthMm / applicationRateMmPerHour) * 60)
+            : 0;
+        // Short explanation of how the urgency score was determined
+        let scoreBasis = null;
+        if (finalUrgency === IRRIGATION_URGENCY.NONE) {
+            scoreBasis = 'Soil moisture within ideal or acceptable range for the crop.';
+        }
+        else if (finalUrgency === IRRIGATION_URGENCY.LOW) {
+            scoreBasis =
+                'Soil moisture within crop range but near the edge of the optimal band, low urgency threshold.';
+        }
+        else if (finalUrgency === IRRIGATION_URGENCY.MODERATE) {
+            scoreBasis =
+                'Moisture or depletion near management allowed depletion (MAD) threshold, moderate urgency.';
+        }
+        else if (finalUrgency === IRRIGATION_URGENCY.HIGH) {
+            scoreBasis =
+                'Depletion clearly beyond MAD or VWC below crop minimum, high urgency for irrigation.';
+        }
+        else if (finalUrgency === IRRIGATION_URGENCY.CRITICAL) {
+            scoreBasis =
+                'Severe deficit well below crop minimum moisture or very high depletion, critical urgency.';
         }
         // Generate human-readable reason
         const reason = generateReason(decision, currentVWC, targetVWC, balance, cropParams, weatherAdjustment);
@@ -372,8 +399,12 @@ export async function makeIrrigationDecision(nodeId) {
             currentVWC: Number(currentVWC.toFixed(1)),
             targetVWC: Number(targetVWC.toFixed(1)),
             deficit: Number(deficit.toFixed(1)),
+            deficitPctOfTarget: Number(Math.max(0, deficitPctOfTarget).toFixed(1)),
             suggestedDepthMm,
             suggestedDurationMin,
+            applicationRateMmPerHour,
+            applicationRateSource,
+            scoreBasis,
             cropType: field.cropType,
             growthStage,
             weatherAdjustment,
@@ -387,6 +418,8 @@ export async function makeIrrigationDecision(nodeId) {
             currentVWC: currentVWC.toFixed(1),
             targetVWC: targetVWC.toFixed(1),
             depth: suggestedDepthMm,
+            durationMin: suggestedDurationMin,
+            applicationRateMmPerHour,
             Kc: currentKc.toFixed(2),
         }, 'Irrigation decision made');
         return result;
