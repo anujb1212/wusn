@@ -1,7 +1,7 @@
 class Field {
   /// Backend: 'nodeId' (kept as id in app)
   final int id;
-
+  final int nodeId;
   final String fieldName;
   final double latitude;
   final double longitude;
@@ -21,6 +21,7 @@ class Field {
 
   Field({
     required this.id,
+    required this.nodeId,
     required this.fieldName,
     required this.latitude,
     required this.longitude,
@@ -44,6 +45,7 @@ class Field {
 
     return Field(
       id: id,
+      nodeId: (json['nodeId'] as num).toInt(),
       fieldName: fieldName,
       latitude: _Json.asDouble(json['latitude'] ?? json['lat'], fallback: 0.0),
       longitude: _Json.asDouble(json['longitude'] ?? json['lng'] ?? json['lon'],

@@ -114,7 +114,7 @@ class SensorCard extends StatelessWidget {
         ? sensor.fieldName
         : '${_t('node')} ${sensor.nodeId}';
 
-    final cropLabel = (sensor.bestCrop.trim().isEmpty) ? '-' : sensor.bestCrop;
+    final cropLabel = (sensor.cropType.trim().isEmpty) ? '-' : sensor.cropType;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,

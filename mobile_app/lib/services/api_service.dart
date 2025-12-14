@@ -270,7 +270,7 @@ class ApiService {
     );
 
     // Support multiple backend key variants (robust parsing).
-    final vwc = _asDouble(map['vwc'] ?? map['soilMoistureVWC'], fallback: 0.0);
+    final vwc = _asDouble(map['soilMoistureVWC'] ?? map['vwc'], fallback: 0.0);
     final soilTemp =
         _asDouble(map['soilTemp'] ?? map['soilTemperature'], fallback: 0.0);
 

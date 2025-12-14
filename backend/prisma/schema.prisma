@@ -42,7 +42,7 @@ model Node {
 
   readings SensorReading[]
 
-  // ✅ Field config for this node (one-to-one)
+  // Field config for this node (one-to-one)
   field Field?
 
   @@index([nodeId])

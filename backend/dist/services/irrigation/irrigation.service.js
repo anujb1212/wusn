@@ -23,15 +23,41 @@
  *
  * UPDATED: Dec 11, 2025 - Enhanced to use Kc values from new schema
  * UPDATED: Dec 13, 2025 - Depth/duration only for irrigate decisions, added
- *                          application rate + score basis metadata
+ *                            application rate + score basis metadata
  */
 import { createLogger } from '../../config/logger.js';
+import { prisma } from '../../config/database.js';
 import { SOIL_WATER_CONSTANTS, CROP_DATABASE, IRRIGATION_URGENCY, IRRIGATION_CONSTANTS, GROWTH_STAGES, } from '../../utils/constants.js';
 import { getFieldByNodeId } from '../../repositories/field.repository.js';
 import { getLatestReading } from '../../repositories/sensor.repository.js';
 import { isRainExpected, estimateDailyET } from '../weather/weather.sevice.js';
 import { NotFoundError, ValidationError } from '../../utils/errors.js';
 const logger = createLogger({ service: 'irrigation' });
+function mapDbCropToIrrigationParams(crop) {
+    // Parse Kc JSON: expected shape { ini: number, mid: number, end: number }
+    let kcValues = { ini: 0.5, mid: 1.0, end: 0.5 }; // safe defaults
+    if (crop.kc && typeof crop.kc === 'object' && !Array.isArray(crop.kc)) {
+        const parsed = crop.kc;
+        kcValues = {
+            ini: typeof parsed.ini === 'number' ? parsed.ini : 0.5,
+            mid: typeof parsed.mid === 'number' ? parsed.mid : 1.0,
+            end: typeof parsed.end === 'number' ? parsed.end : 0.5,
+        };
+    }
+    return {
+        name: crop.cropName,
+        vwcMin: crop.vwcMin,
+        vwcOptimal: crop.vwcOptimal,
+        vwcMax: crop.vwcMax,
+        rootDepthCm: crop.rootDepthCm,
+        mad: crop.mad,
+        kc: kcValues,
+        initialStageGDD: crop.initialStageGDD,
+        developmentStageGDD: crop.developmentStageGDD,
+        midSeasonGDD: crop.midSeasonGDD,
+        lateSeasonGDD: crop.lateSeasonGDD,
+    };
+}
 /**
  * Get appropriate Kc value based on growth stage
  *
@@ -271,10 +297,21 @@ export async function makeIrrigationDecision(nodeId) {
         if (!field.cropType || !field.cropConfirmed) {
             throw new ValidationError('Field must have confirmed crop for irrigation decisions');
         }
-        // Validate crop exists in 20-crop database
-        const cropParams = CROP_DATABASE[field.cropType];
-        if (!cropParams) {
-            throw new ValidationError(`Unknown crop type: ${field.cropType}`);
+        // DB-first crop params (keeps irrigation consistent with crop recommendation service).
+        // Fallback to constants (legacy) if DB is missing the crop row.
+        let cropParams = null;
+        const dbCrop = await prisma.cropParameters.findUnique({
+            where: { cropName: field.cropType },
+        });
+        if (dbCrop) {
+            cropParams = mapDbCropToIrrigationParams(dbCrop);
+        }
+        else {
+            const fallback = CROP_DATABASE[field.cropType];
+            if (!fallback) {
+                throw new ValidationError(`Unknown crop type: ${field.cropType}`);
+            }
+            cropParams = fallback;
         }
         // Get latest sensor reading
         const reading = await getLatestReading(nodeId);
@@ -378,8 +415,7 @@ export async function makeIrrigationDecision(nodeId) {
                 'Moisture or depletion near management allowed depletion (MAD) threshold, moderate urgency.';
         }
         else if (finalUrgency === IRRIGATION_URGENCY.HIGH) {
-            scoreBasis =
-                'Depletion clearly beyond MAD or VWC below crop minimum, high urgency for irrigation.';
+            scoreBasis = 'Depletion clearly beyond MAD or VWC below crop minimum, high urgency for irrigation.';
         }
         else if (finalUrgency === IRRIGATION_URGENCY.CRITICAL) {
             scoreBasis =

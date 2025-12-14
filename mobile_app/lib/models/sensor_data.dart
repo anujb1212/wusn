@@ -2,6 +2,10 @@ class SensorData {
   final int nodeId;
   final String fieldName;
 
+  /// Confirmed crop (from Field table). Example: "wheat"
+  /// This is NOT the recommendation.
+  final String cropType;
+
   /// Backend VWC%
   final double vwc;
 
@@ -37,6 +41,7 @@ class SensorData {
   SensorData({
     required this.nodeId,
     this.fieldName = 'Field',
+    this.cropType = '',
     this.vwc = 0.0,
     this.soilTemp = 0.0,
     this.airTemp,
@@ -61,6 +66,7 @@ class SensorData {
     return SensorData(
       nodeId: id,
       fieldName: name,
+      cropType: '',
       timestamp: DateTime.now().toUtc(),
       vwc: 0.0,
       soilTemp: 0.0,
@@ -78,6 +84,8 @@ class SensorData {
       nodeId: _Json.asInt(json['nodeId'] ?? json['node_id'], fallback: 0),
       fieldName: _Json.asString(json['fieldName'] ?? json['field_name'],
           fallback: 'Field'),
+      cropType:
+          _Json.asString(json['cropType'] ?? json['crop_type'], fallback: ''),
       vwc:
           _Json.asDouble(json['vwc'] ?? json['soilMoistureVWC'], fallback: 0.0),
       soilTemp: _Json.asDouble(json['soilTemp'] ?? json['soilTemperature'],
@@ -119,6 +127,7 @@ class SensorData {
     return <String, dynamic>{
       'nodeId': nodeId,
       'fieldName': fieldName,
+      'cropType': cropType,
       'vwc': vwc,
       'soilTemp': soilTemp,
       'airTemp': airTemp,
@@ -145,6 +154,7 @@ class SensorData {
 
   SensorData copyWith({
     String? fieldName,
+    String? cropType,
     double? vwc,
     double? soilTemp,
     Object? airTemp = _unset,
@@ -167,6 +177,7 @@ class SensorData {
     return SensorData(
       nodeId: nodeId,
       fieldName: fieldName ?? this.fieldName,
+      cropType: cropType ?? this.cropType,
       vwc: vwc ?? this.vwc,
       soilTemp: soilTemp ?? this.soilTemp,
       airTemp: identical(airTemp, _unset) ? this.airTemp : airTemp as double?,

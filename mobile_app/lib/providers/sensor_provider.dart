@@ -126,7 +126,7 @@ class SensorProvider with ChangeNotifier {
   // -------------------- Build one card worth of data --------------------
 
   Future<SensorData> _buildDataForField(Field field) async {
-    final nodeId = field.id;
+    final nodeId = field.nodeId;
 
     // Always return a safe object (UI should never break).
     SensorData data = SensorData.initial(nodeId, field.fieldName);
@@ -155,11 +155,13 @@ class SensorProvider with ChangeNotifier {
               : 'Waiting for sensor data...',
           confidence: 0.0,
           fuzzyScores: const FuzzyScores(dry: 0.0, optimal: 0.0, wet: 0.0),
+          cropType: field.cropType ?? '',
         );
       }
 
       // Base = latest sensor data, but preserve fieldName from Field list for consistent UI labels.
       data = latest.copyWith(fieldName: field.fieldName);
+      data = data.copyWith(cropType: field.cropType ?? '');
 
       // ---- Irrigation overlay ----
       if (irrigation == null) {

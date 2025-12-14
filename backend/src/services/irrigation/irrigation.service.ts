@@ -23,10 +23,11 @@
  *
  * UPDATED: Dec 11, 2025 - Enhanced to use Kc values from new schema
  * UPDATED: Dec 13, 2025 - Depth/duration only for irrigate decisions, added
- *                          application rate + score basis metadata
+ *                            application rate + score basis metadata
  */
 
 import { createLogger } from '../../config/logger.js';
+import { prisma } from '../../config/database.js';
 import {
     SOIL_WATER_CONSTANTS,
     CROP_DATABASE,
@@ -40,8 +41,51 @@ import { getLatestReading } from '../../repositories/sensor.repository.js';
 import { isRainExpected, estimateDailyET } from '../weather/weather.sevice.js';
 import type { IrrigationDecision, SoilWaterBalance } from '../../models/common.types.js';
 import { NotFoundError, ValidationError } from '../../utils/errors.js';
+import type { CropParameters as DbCropParameters } from '@prisma/client';
 
 const logger = createLogger({ service: 'irrigation' });
+
+type IrrigationCropParams = {
+    name: string;
+    vwcMin: number;
+    vwcOptimal: number;
+    vwcMax: number;
+    rootDepthCm: number;
+    mad: number;
+    kc: { ini: number; mid: number; end: number };
+    initialStageGDD: number;
+    developmentStageGDD: number;
+    midSeasonGDD: number;
+    lateSeasonGDD: number;
+};
+
+function mapDbCropToIrrigationParams(crop: DbCropParameters): IrrigationCropParams {
+    // Parse Kc JSON: expected shape { ini: number, mid: number, end: number }
+    let kcValues = { ini: 0.5, mid: 1.0, end: 0.5 }; // safe defaults
+
+    if (crop.kc && typeof crop.kc === 'object' && !Array.isArray(crop.kc)) {
+        const parsed = crop.kc as Record<string, unknown>;
+        kcValues = {
+            ini: typeof parsed.ini === 'number' ? parsed.ini : 0.5,
+            mid: typeof parsed.mid === 'number' ? parsed.mid : 1.0,
+            end: typeof parsed.end === 'number' ? parsed.end : 0.5,
+        };
+    }
+
+    return {
+        name: crop.cropName,
+        vwcMin: crop.vwcMin,
+        vwcOptimal: crop.vwcOptimal,
+        vwcMax: crop.vwcMax,
+        rootDepthCm: crop.rootDepthCm,
+        mad: crop.mad,
+        kc: kcValues,
+        initialStageGDD: crop.initialStageGDD,
+        developmentStageGDD: crop.developmentStageGDD,
+        midSeasonGDD: crop.midSeasonGDD,
+        lateSeasonGDD: crop.lateSeasonGDD,
+    };
+}
 
 /**
  * Get appropriate Kc value based on growth stage
@@ -59,7 +103,7 @@ const logger = createLogger({ service: 'irrigation' });
  * @returns Appropriate Kc value for current stage
  */
 function getCurrentKc(
-    cropParams: typeof CROP_DATABASE[CropName],
+    cropParams: IrrigationCropParams,
     growthStage: GrowthStage | null,
     accumulatedGDD: number
 ): number {
@@ -241,7 +285,7 @@ function calculateIrrigationDepth(
 function determineUrgency(
     currentVWC: number,
     balance: SoilWaterBalance,
-    cropParams: typeof CROP_DATABASE[CropName]
+    cropParams: IrrigationCropParams
 ): { urgency: IrrigationUrgency; score: number } {
     // Check for waterlogging first (above saturation)
     if (currentVWC >= balance.saturation) {
@@ -327,10 +371,22 @@ export async function makeIrrigationDecision(nodeId: number): Promise<Irrigation
             throw new ValidationError('Field must have confirmed crop for irrigation decisions');
         }
 
-        // Validate crop exists in 20-crop database
-        const cropParams = CROP_DATABASE[field.cropType as CropName];
-        if (!cropParams) {
-            throw new ValidationError(`Unknown crop type: ${field.cropType}`);
+        // DB-first crop params (keeps irrigation consistent with crop recommendation service).
+        // Fallback to constants (legacy) if DB is missing the crop row.
+        let cropParams: IrrigationCropParams | null = null;
+
+        const dbCrop = await prisma.cropParameters.findUnique({
+            where: { cropName: field.cropType },
+        });
+
+        if (dbCrop) {
+            cropParams = mapDbCropToIrrigationParams(dbCrop);
+        } else {
+            const fallback = CROP_DATABASE[field.cropType as CropName];
+            if (!fallback) {
+                throw new ValidationError(`Unknown crop type: ${field.cropType}`);
+            }
+            cropParams = fallback as unknown as IrrigationCropParams;
         }
 
         // Get latest sensor reading
@@ -383,11 +439,7 @@ export async function makeIrrigationDecision(nodeId: number): Promise<Irrigation
         );
 
         // Determine base urgency
-        const { urgency: baseUrgency, score: baseScore } = determineUrgency(
-            currentVWC,
-            balance,
-            cropParams
-        );
+        const { urgency: baseUrgency, score: baseScore } = determineUrgency(currentVWC, balance, cropParams);
 
         // Check weather forecast for rain
         let weatherAdjustment: string | null = null;
@@ -470,8 +522,7 @@ export async function makeIrrigationDecision(nodeId: number): Promise<Irrigation
             scoreBasis =
                 'Moisture or depletion near management allowed depletion (MAD) threshold, moderate urgency.';
         } else if (finalUrgency === IRRIGATION_URGENCY.HIGH) {
-            scoreBasis =
-                'Depletion clearly beyond MAD or VWC below crop minimum, high urgency for irrigation.';
+            scoreBasis = 'Depletion clearly beyond MAD or VWC below crop minimum, high urgency for irrigation.';
         } else if (finalUrgency === IRRIGATION_URGENCY.CRITICAL) {
             scoreBasis =
                 'Severe deficit well below crop minimum moisture or very high depletion, critical urgency.';
@@ -488,8 +539,7 @@ export async function makeIrrigationDecision(nodeId: number): Promise<Irrigation
         );
 
         // Next check timing
-        const nextCheckHours =
-            decision === 'irrigate_now' ? 6 : decision === 'irrigate_soon' ? 12 : 24;
+        const nextCheckHours = decision === 'irrigate_now' ? 6 : decision === 'irrigate_soon' ? 12 : 24;
 
         const result: IrrigationDecision = {
             nodeId,
@@ -552,7 +602,7 @@ function generateReason(
     currentVWC: number,
     targetVWC: number,
     balance: SoilWaterBalance,
-    cropParams: typeof CROP_DATABASE[CropName],
+    cropParams: IrrigationCropParams,
     weatherAdjustment: string | null
 ): string {
     const reasons: string[] = [];
@@ -560,17 +610,13 @@ function generateReason(
     if (decision === 'irrigate_now') {
         if (currentVWC < cropParams.vwcMin) {
             const deficit = cropParams.vwcMin - currentVWC;
-            reasons.push(
-                `Critical moisture deficit detected: ${deficit.toFixed(1)}% below crop minimum`
-            );
-            reasons.push(
-                `Current VWC ${currentVWC.toFixed(1)}% vs minimum ${cropParams.vwcMin}%`
-            );
+            reasons.push(`Critical moisture deficit detected: ${deficit.toFixed(1)}% below crop minimum`);
+            reasons.push(`Current VWC ${currentVWC.toFixed(1)}% vs minimum ${cropParams.vwcMin}%`);
         } else if (balance.depletionPercent > balance.mad * 100 * 1.2) {
             reasons.push(
-                `Soil depletion ${balance.depletionPercent.toFixed(
-                    0
-                )}% exceeded MAD threshold (${(balance.mad * 100).toFixed(0)}%)`
+                `Soil depletion ${balance.depletionPercent.toFixed(0)}% exceeded MAD threshold (${(
+                    balance.mad * 100
+                ).toFixed(0)}%)`
             );
             reasons.push(`Water stress risk for ${cropParams.name}`);
         } else {
@@ -578,21 +624,15 @@ function generateReason(
         }
     } else if (decision === 'irrigate_soon') {
         reasons.push(`Soil moisture approaching stress level`);
-        reasons.push(
-            `Current ${currentVWC.toFixed(1)}% vs optimal ${targetVWC.toFixed(1)}%`
-        );
+        reasons.push(`Current ${currentVWC.toFixed(1)}% vs optimal ${targetVWC.toFixed(1)}%`);
         reasons.push(`Depletion at ${balance.depletionPercent.toFixed(0)}% of TAW`);
     } else {
         if (currentVWC >= cropParams.vwcMin && currentVWC <= cropParams.vwcMax) {
             reasons.push(`Soil moisture optimal for ${cropParams.name}`);
-            reasons.push(
-                `Current ${currentVWC.toFixed(1)}% within range ${cropParams.vwcMin}-${cropParams.vwcMax}%`
-            );
+            reasons.push(`Current ${currentVWC.toFixed(1)}% within range ${cropParams.vwcMin}-${cropParams.vwcMax}%`);
         } else if (currentVWC > cropParams.vwcMax) {
             reasons.push(`Soil moisture exceeds optimal range - risk of waterlogging`);
-            reasons.push(
-                `Avoid irrigation until moisture depletes to ${cropParams.vwcMax}%`
-            );
+            reasons.push(`Avoid irrigation until moisture depletes to ${cropParams.vwcMax}%`);
         } else if (currentVWC >= balance.saturation) {
             reasons.push(`Soil saturated - no irrigation needed`);
         } else {
@@ -615,9 +655,7 @@ function generateReason(
  * @param nodeIds - Array of sensor node IDs
  * @returns Array of irrigation decisions sorted by urgency (highest first)
  */
-export async function getIrrigationRecommendations(
-    nodeIds: number[]
-): Promise<IrrigationDecision[]> {
+export async function getIrrigationRecommendations(nodeIds: number[]): Promise<IrrigationDecision[]> {
     const decisions: IrrigationDecision[] = [];
 
     for (const nodeId of nodeIds) {

@@ -3,7 +3,7 @@ async function seedSensorData() {
     const reading = await prisma.sensorReading.create({
         data: {
             nodeId: 1,
-            moisture: 650,
+            moisture: 285,
             temperature: 225, // 22.5°C * 10
             soilMoistureVWC: 28.5,
             soilTemperature: 22.5,

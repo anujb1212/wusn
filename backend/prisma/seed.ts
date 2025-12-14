@@ -1,4 +1,4 @@
-// prisma/seed.ts
+
 import { PrismaClient, Season, SoilTexture, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -461,19 +461,18 @@ async function main() {
     });
 
     // Atomic seed: all-or-nothing [web:155]
-    await prisma.$transaction(async (tx) => {
-        for (const crop of crops) {
-            const { cropName, ...updateData } = crop;
+    for (const crop of crops) {
+        const { cropName, ...updateData } = crop;
 
-            await tx.cropParameters.upsert({
-                where: { cropName },
-                create: crop,
-                update: updateData,
-            });
+        await prisma.cropParameters.upsert({
+            where: { cropName },
+            create: crop,
+            update: updateData,
+        });
 
-            console.log(`   ✅ ${cropName.padEnd(15)} (${String(crop.season).padEnd(10)}) - ${crop.totalGDD} GDD`);
-        }
-    });
+        console.log(`   ✅ ${cropName.padEnd(15)} (${String(crop.season).padEnd(10)}) - ${crop.totalGDD} GDD`);
+    }
+
 
     const rabiCount = crops.filter((c) => c.season === Season.RABI).length;
     const kharifCount = crops.filter((c) => c.season === Season.KHARIF).length;
