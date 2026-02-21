@@ -52,11 +52,11 @@ export declare function getDailyAirTempByNode(nodeId: number, date: Date): Promi
  */
 export declare function getAirTempReadingsForDateRange(nodeId: number, startDate: Date, endDate: Date): Promise<{
     timestamp: Date;
+    id: number;
+    nodeId: number;
     airTemperature: number;
     airHumidity: number;
     airPressure: number | null;
-    id: number;
-    nodeId: number;
 }[]>;
 /**
  * Cache weather forecast from external API
@@ -110,8 +110,8 @@ export declare function cleanExpiredForecasts(): Promise<number>;
  */
 export declare function getLatestWeatherReading(gatewayId: string): Promise<{
     timestamp: Date;
-    airTemperature: number;
     id: number;
+    airTemperature: number;
     gatewayId: string;
     humidity: number;
     pressure: number | null;
@@ -123,8 +123,8 @@ export declare function getLatestWeatherReading(gatewayId: string): Promise<{
  */
 export declare function getWeatherReadingsForDateRange(gatewayId: string, startDate: Date, endDate: Date): Promise<{
     timestamp: Date;
-    airTemperature: number;
     id: number;
+    airTemperature: number;
     gatewayId: string;
     humidity: number;
     pressure: number | null;

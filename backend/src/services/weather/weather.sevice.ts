@@ -1,4 +1,3 @@
-// src/services/weather/weather.service.ts
 /**
  * Weather Service - OpenWeatherMap Integration
  * Fetches 5-day forecast with caching

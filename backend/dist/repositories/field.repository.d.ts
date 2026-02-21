@@ -38,6 +38,7 @@ export declare function createField(input: CreateFieldInput): Promise<{
     latitude: number;
     longitude: number;
     soilTexture: import(".prisma/client").$Enums.SoilTexture;
+    cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
@@ -50,7 +51,6 @@ export declare function createField(input: CreateFieldInput): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    cropType: string | null;
 }>;
 /**
  * Get field by node ID
@@ -64,6 +64,7 @@ export declare function getFieldByNodeId(nodeId: number): Promise<{
     latitude: number;
     longitude: number;
     soilTexture: import(".prisma/client").$Enums.SoilTexture;
+    cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
@@ -76,7 +77,6 @@ export declare function getFieldByNodeId(nodeId: number): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    cropType: string | null;
 }>;
 /**
  * Get field by ID
@@ -90,6 +90,7 @@ export declare function getFieldById(id: number): Promise<{
     latitude: number;
     longitude: number;
     soilTexture: import(".prisma/client").$Enums.SoilTexture;
+    cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
@@ -102,7 +103,6 @@ export declare function getFieldById(id: number): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    cropType: string | null;
 }>;
 /**
  * Get all fields
@@ -116,6 +116,7 @@ export declare function getAllFields(): Promise<{
     latitude: number;
     longitude: number;
     soilTexture: import(".prisma/client").$Enums.SoilTexture;
+    cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
@@ -128,7 +129,6 @@ export declare function getAllFields(): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    cropType: string | null;
 }[]>;
 /**
  * Update field crop configuration
@@ -142,6 +142,7 @@ export declare function updateFieldCrop(nodeId: number, input: UpdateFieldCropIn
     latitude: number;
     longitude: number;
     soilTexture: import(".prisma/client").$Enums.SoilTexture;
+    cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
@@ -154,7 +155,6 @@ export declare function updateFieldCrop(nodeId: number, input: UpdateFieldCropIn
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    cropType: string | null;
 }>;
 /**
  * Update field GDD status
@@ -168,6 +168,7 @@ export declare function updateFieldGDD(nodeId: number, accumulatedGDD: number, g
     latitude: number;
     longitude: number;
     soilTexture: import(".prisma/client").$Enums.SoilTexture;
+    cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
@@ -180,7 +181,6 @@ export declare function updateFieldGDD(nodeId: number, accumulatedGDD: number, g
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    cropType: string | null;
 }>;
 /**
  * Update last irrigation check
@@ -194,6 +194,7 @@ export declare function updateLastIrrigationCheck(nodeId: number): Promise<{
     latitude: number;
     longitude: number;
     soilTexture: import(".prisma/client").$Enums.SoilTexture;
+    cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
@@ -206,7 +207,6 @@ export declare function updateLastIrrigationCheck(nodeId: number): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    cropType: string | null;
 }>;
 /**
  * Record irrigation action
@@ -220,6 +220,7 @@ export declare function recordIrrigationAction(nodeId: number): Promise<{
     latitude: number;
     longitude: number;
     soilTexture: import(".prisma/client").$Enums.SoilTexture;
+    cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
@@ -232,7 +233,6 @@ export declare function recordIrrigationAction(nodeId: number): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    cropType: string | null;
 }>;
 /**
  * Get fields needing GDD update
@@ -246,6 +246,7 @@ export declare function getFieldsNeedingGDDUpdate(): Promise<{
     latitude: number;
     longitude: number;
     soilTexture: import(".prisma/client").$Enums.SoilTexture;
+    cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
@@ -258,7 +259,6 @@ export declare function getFieldsNeedingGDDUpdate(): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    cropType: string | null;
 }[]>;
 /**
  * Update field (generic update)
@@ -272,6 +272,7 @@ export declare function updateField(nodeId: number, updates: UpdateFieldInput): 
     latitude: number;
     longitude: number;
     soilTexture: import(".prisma/client").$Enums.SoilTexture;
+    cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
@@ -284,7 +285,6 @@ export declare function updateField(nodeId: number, updates: UpdateFieldInput): 
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    cropType: string | null;
 }>;
 /**
  * Delete field
@@ -298,6 +298,7 @@ export declare function deleteField(nodeId: number): Promise<{
     latitude: number;
     longitude: number;
     soilTexture: import(".prisma/client").$Enums.SoilTexture;
+    cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
@@ -310,6 +311,5 @@ export declare function deleteField(nodeId: number): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    cropType: string | null;
 }>;
 //# sourceMappingURL=field.repository.d.ts.map

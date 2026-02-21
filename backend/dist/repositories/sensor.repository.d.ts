@@ -20,6 +20,8 @@ export interface SensorReadingFilters {
 }
 export declare function createSensorReading(input: SensorReadingInput): Promise<{
     timestamp: Date;
+    id: number;
+    nodeId: number;
     moisture: number;
     temperature: number;
     soilMoistureVWC: number;
@@ -27,11 +29,11 @@ export declare function createSensorReading(input: SensorReadingInput): Promise<
     airTemperature: number;
     airHumidity: number;
     airPressure: number | null;
-    id: number;
-    nodeId: number;
 }>;
 export declare function getLatestReading(nodeId: number): Promise<{
     timestamp: Date;
+    id: number;
+    nodeId: number;
     moisture: number;
     temperature: number;
     soilMoistureVWC: number;
@@ -39,11 +41,11 @@ export declare function getLatestReading(nodeId: number): Promise<{
     airTemperature: number;
     airHumidity: number;
     airPressure: number | null;
-    id: number;
-    nodeId: number;
 } | null>;
 export declare function getReadings(filters: SensorReadingFilters): Promise<{
     timestamp: Date;
+    id: number;
+    nodeId: number;
     moisture: number;
     temperature: number;
     soilMoistureVWC: number;
@@ -51,8 +53,6 @@ export declare function getReadings(filters: SensorReadingFilters): Promise<{
     airTemperature: number;
     airHumidity: number;
     airPressure: number | null;
-    id: number;
-    nodeId: number;
 }[]>;
 export declare function getAverageSoilReadings(nodeId: number, hours?: number): Promise<{
     avgSoilMoistureVWC: number;
