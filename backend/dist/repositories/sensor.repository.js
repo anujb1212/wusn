@@ -1,14 +1,9 @@
-// src/repositories/sensor.repository.ts
 /**
  * Sensor Reading Repository
  */
 import { Prisma } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { DatabaseError } from '../utils/errors.js';
-import { getStartOfDay, getEndOfDay } from '../utils/dateHelpers.js';
-/**
- * Create sensor reading
- */
 export async function createSensorReading(input) {
     try {
         return await prisma.sensorReading.create({
@@ -18,9 +13,10 @@ export async function createSensorReading(input) {
                 temperature: input.temperature,
                 soilMoistureVWC: input.soilMoistureVWC,
                 soilTemperature: input.soilTemperature,
-                rssi: null,
-                batteryLevel: null,
-                timestamp: input.timestamp,
+                airTemperature: input.airTemperature,
+                airHumidity: input.airHumidity,
+                airPressure: input.airPressure ?? null,
+                timestamp: input.timestamp ?? new Date(),
             },
         });
     }
@@ -28,9 +24,6 @@ export async function createSensorReading(input) {
         throw new DatabaseError('createSensorReading', error);
     }
 }
-/**
- * Get latest reading
- */
 export async function getLatestReading(nodeId) {
     try {
         return await prisma.sensorReading.findFirst({
@@ -42,103 +35,96 @@ export async function getLatestReading(nodeId) {
         throw new DatabaseError('getLatestReading', error);
     }
 }
-/**
- * Get readings with filters
- */
 export async function getReadings(filters) {
     try {
         const where = {};
-        if (filters.nodeId !== undefined) {
+        if (typeof filters.nodeId === 'number') {
             where.nodeId = filters.nodeId;
         }
         if (filters.startDate || filters.endDate) {
             where.timestamp = {};
-            if (filters.startDate) {
-                where.timestamp.gte = getStartOfDay(filters.startDate);
-            }
-            if (filters.endDate) {
-                where.timestamp.lte = getEndOfDay(filters.endDate);
-            }
+            if (filters.startDate)
+                where.timestamp.gte = filters.startDate;
+            if (filters.endDate)
+                where.timestamp.lte = filters.endDate;
         }
         return await prisma.sensorReading.findMany({
             where,
             orderBy: { timestamp: 'desc' },
-            take: filters.limit || 100,
+            take: filters.limit ?? 100,
         });
     }
     catch (error) {
         throw new DatabaseError('getReadings', error);
     }
 }
-/**
- * Get readings for date
- */
-export async function getReadingsForDate(nodeId, date) {
+export async function getAverageSoilReadings(nodeId, hours = 24) {
     try {
-        return await prisma.sensorReading.findMany({
-            where: {
-                nodeId,
-                timestamp: {
-                    gte: getStartOfDay(date),
-                    lte: getEndOfDay(date),
-                },
-                soilTemperature: { not: null },
-            },
-            orderBy: { timestamp: 'asc' },
-        });
-    }
-    catch (error) {
-        throw new DatabaseError('getReadingsForDate', error);
-    }
-}
-/**
- * Get average readings
- */
-export async function getAverageReadings(nodeId, hours = 24) {
-    try {
-        const since = new Date();
-        since.setHours(since.getHours() - hours);
+        const startTime = new Date();
+        startTime.setHours(startTime.getHours() - hours);
         const readings = await prisma.sensorReading.findMany({
-            where: {
-                nodeId,
-                timestamp: { gte: since },
-                soilMoistureVWC: { not: null },
-                soilTemperature: { not: null },
-            },
-            select: {
-                soilMoistureVWC: true,
-                soilTemperature: true,
-            },
+            where: { nodeId, timestamp: { gte: startTime } },
+            select: { soilMoistureVWC: true, soilTemperature: true },
         });
-        if (readings.length === 0) {
+        const valid = readings.filter((r) => typeof r.soilMoistureVWC === 'number' && typeof r.soilTemperature === 'number');
+        if (valid.length === 0)
             return null;
-        }
-        const sum = readings.reduce((acc, r) => {
-            acc.vwc += r.soilMoistureVWC ?? 0;
-            acc.temp += r.soilTemperature ?? 0;
-            return acc;
-        }, { vwc: 0, temp: 0 });
+        const avgMoisture = valid.reduce((sum, r) => sum + r.soilMoistureVWC, 0) / valid.length;
+        const avgTemp = valid.reduce((sum, r) => sum + r.soilTemperature, 0) / valid.length;
         return {
-            avgSoilMoistureVWC: Number((sum.vwc / readings.length).toFixed(2)),
-            avgSoilTemperature: Number((sum.temp / readings.length).toFixed(2)),
-            readingsCount: readings.length,
+            avgSoilMoistureVWC: Number(avgMoisture.toFixed(2)),
+            avgSoilTemperature: Number(avgTemp.toFixed(2)),
+            readingsCount: valid.length,
+            periodHours: hours,
         };
     }
     catch (error) {
-        throw new DatabaseError('getAverageReadings', error);
+        throw new DatabaseError('getAverageSoilReadings', error);
     }
 }
-/**
- * Delete old readings
- */
-export async function deleteOldReadings(daysToKeep = 90) {
+export async function getAverageAirReadings(nodeId, hours = 24) {
+    try {
+        const startTime = new Date();
+        startTime.setHours(startTime.getHours() - hours);
+        const readings = await prisma.sensorReading.findMany({
+            where: { nodeId, timestamp: { gte: startTime } },
+            select: { airTemperature: true, airHumidity: true, airPressure: true },
+        });
+        const valid = readings.filter((r) => typeof r.airTemperature === 'number' && typeof r.airHumidity === 'number');
+        if (valid.length === 0)
+            return null;
+        const avgTemp = valid.reduce((sum, r) => sum + r.airTemperature, 0) / valid.length;
+        const avgHumidity = valid.reduce((sum, r) => sum + r.airHumidity, 0) / valid.length;
+        const pressures = readings
+            .map((r) => r.airPressure)
+            .filter((p) => typeof p === 'number');
+        const avgPressure = pressures.length > 0 ? pressures.reduce((sum, p) => sum + p, 0) / pressures.length : null;
+        return {
+            avgAirTemperature: Number(avgTemp.toFixed(2)),
+            avgAirHumidity: Number(avgHumidity.toFixed(2)),
+            avgAirPressure: avgPressure !== null ? Number(avgPressure.toFixed(2)) : null,
+            readingsCount: valid.length,
+            periodHours: hours,
+        };
+    }
+    catch (error) {
+        throw new DatabaseError('getAverageAirReadings', error);
+    }
+}
+export async function getReadingsCount(nodeId) {
+    try {
+        return await prisma.sensorReading.count({ where: { nodeId } });
+    }
+    catch (error) {
+        throw new DatabaseError('getReadingsCount', error);
+    }
+}
+export async function deleteOldReadings(olderThanDays) {
     try {
         const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+        cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
         const result = await prisma.sensorReading.deleteMany({
-            where: {
-                timestamp: { lt: cutoffDate },
-            },
+            where: { timestamp: { lt: cutoffDate } },
         });
         return result.count;
     }

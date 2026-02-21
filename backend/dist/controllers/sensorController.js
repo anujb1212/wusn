@@ -43,7 +43,7 @@ export async function getAverageSensorData(req, res) {
     if (isNaN(hours) || hours <= 0 || hours > 168) {
         throw new ValidationError('Hours must be between 1 and 168');
     }
-    const data = await sensorService.getAverageSensorData(nodeId, hours);
+    const data = await sensorService.getAverageSoilData(nodeId, hours);
     res.json({
         status: 'ok',
         data,

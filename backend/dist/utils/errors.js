@@ -5,44 +5,41 @@ export class AppError extends Error {
     statusCode;
     isOperational;
     context;
-    constructor(message, statusCode = 500, isOperational = true, context) {
+    cause;
+    constructor(message, statusCode = 500, isOperational = true, context, options) {
         super(message);
         this.statusCode = statusCode;
         this.isOperational = isOperational;
         this.context = context;
         this.name = this.constructor.name;
+        this.cause = options?.cause;
         Error.captureStackTrace(this, this.constructor);
     }
 }
 export class ValidationError extends AppError {
-    constructor(message, context) {
-        super(message, 400, true, context);
+    constructor(message, context, cause) {
+        super(message, 400, true, context, { cause });
     }
 }
 export class NotFoundError extends AppError {
-    constructor(resource, identifier) {
-        super(`${resource} with identifier '${identifier}' not found`, 404, true, { resource, identifier });
+    constructor(resource, identifier, cause) {
+        super(`${resource} with identifier '${identifier}' not found`, 404, true, { resource, identifier }, { cause });
     }
 }
 export class SensorDataError extends AppError {
-    constructor(message, context) {
-        super(message, 422, true, context);
+    constructor(message, context, cause) {
+        super(message, 422, true, context, { cause });
     }
 }
 export class ExternalServiceError extends AppError {
     constructor(service, originalError) {
-        super(`External service '${service}' failed`, 502, true, {
-            service,
-            originalMessage: originalError?.message
-        });
+        super(`External service '${service}' failed`, 502, true, { service, originalMessage: originalError?.message }, { cause: originalError });
     }
 }
 export class DatabaseError extends AppError {
     constructor(operation, originalError) {
-        super(`Database operation '${operation}' failed`, 500, false, {
-            operation,
-            originalMessage: originalError?.message
-        });
+        // Database failures are typically operational (timeouts, outages, constraint failures).
+        super(`Database operation '${operation}' failed`, 500, true, { operation, originalMessage: originalError?.message }, { cause: originalError });
     }
 }
 export function isOperationalError(error) {

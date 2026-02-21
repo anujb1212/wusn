@@ -1,16 +1,28 @@
+import 'dart:async';
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
+
 import '../config/app_config.dart';
 
 class MqttService {
-  late MqttServerClient client;
-  
-  // callback now accepts (nodeId, payload)
-  final Function(int, Map<String, dynamic>) onMessageReceived;
-  final Function(bool) onStatusChange; // New: notify provider of connection status
+  late final MqttServerClient client;
+
+  /// callback accepts (nodeId, payload)
+  /// payload is normalized to { vwc, soilTemp, airTemp?, nodeId, timestamp? }
+  final void Function(int, Map<String, dynamic>) onMessageReceived;
+
+  /// notify provider of connection status
+  final void Function(bool) onStatusChange;
 
   bool _isConnected = false;
+  bool _connectInFlight = false;
+
+  StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? _updatesSub;
+
+  static const String _topic = 'wusn/sensor/+/data';
 
   MqttService({
     required this.onMessageReceived,
@@ -19,11 +31,24 @@ class MqttService {
 
   bool get isConnected => _isConnected;
 
+  void _log(String msg) {
+    // Avoid noisy logs in release.
+    if (kDebugMode) debugPrint(msg);
+  }
+
   Future<bool> connect() async {
+    // Idempotent connect: if already connected or connecting, do nothing.
+    if (_connectInFlight) return _isConnected;
+    if (_isConnected &&
+        client.connectionStatus?.state == MqttConnectionState.connected) {
+      return true;
+    }
+
+    _connectInFlight = true;
+
     final host = AppConfig.mqttBroker;
     final port = AppConfig.mqttPort;
 
-    // Use a unique client ID to prevent broker conflicts
     client = MqttServerClient(
       host,
       'flutter_app_${DateTime.now().millisecondsSinceEpoch}',
@@ -32,104 +57,240 @@ class MqttService {
     client.port = port;
     client.keepAlivePeriod = 60;
     client.logging(on: false);
+
+    // Let mqtt_client handle reconnects.
     client.autoReconnect = true;
-    client.onDisconnected = _onDisconnected;
+
+    // With autoReconnect=true, mqtt_client uses auto-reconnect callbacks rather than onDisconnected.
     client.onConnected = _onConnected;
+    client.onDisconnected = _onDisconnected;
+    client.onAutoReconnect = _onAutoReconnect;
+    client.onAutoReconnected = _onAutoReconnected;
+
+    // IMPORTANT:
+    // Do NOT set `onFailedConnectionAttempt` here because:
+    // - Its typedef signature may not match a zero-arg function.
+    // - It is never called when autoReconnect=true anyway.
+    // See mqtt_client docs for details.
+    // client.onFailedConnectionAttempt = ...
 
     final connMessage = MqttConnectMessage()
-        .withClientIdentifier('flutter_client_${DateTime.now().millisecondsSinceEpoch}')
-        .startClean() // Clean session ensures we don't get stale messages
+        .withClientIdentifier(
+            'flutter_client_${DateTime.now().millisecondsSinceEpoch}')
+        .startClean()
         .withWillQos(MqttQos.atLeastOnce);
 
     client.connectionMessage = connMessage;
 
     try {
-      print('🔌 Connecting to MQTT: $host:$port');
+      _log('Connecting to MQTT: $host:$port');
       await client.connect();
     } catch (e) {
-      print('❌ MQTT connection error: $e');
-      client.disconnect();
-      _isConnected = false;
-      onStatusChange(false);
+      _log('MQTT connection error: $e');
+      _setConnected(false);
+      _connectInFlight = false;
+      try {
+        client.disconnect();
+      } catch (_) {
+        // ignore
+      }
       return false;
     }
 
-    if (client.connectionStatus?.state == MqttConnectionState.connected) {
-      print('✅ MQTT connected');
-      _isConnected = true;
-      onStatusChange(true);
+    final connected =
+        client.connectionStatus?.state == MqttConnectionState.connected;
+    if (!connected) {
+      _log('MQTT connection failed: ${client.connectionStatus}');
+      _setConnected(false);
+      _connectInFlight = false;
+      return false;
+    }
 
-      // Phase 4: Subscribe to wildcard topic for all sensors
-      // Matches: wusn/sensor/1/data, wusn/sensor/2/data, etc.
-      const topic = 'wusn/sensor/+/data';
-      client.subscribe(topic, MqttQos.atLeastOnce);
-      print('📡 Subscribed to: $topic');
+    _setConnected(true);
 
-      // Listen for messages
-      client.updates?.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
-        final recMess = messages.first.payload as MqttPublishMessage;
-        final topic = messages.first.topic; // e.g., "wusn/sensor/1/data"
-        final payload = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
+    // Subscribe once per live connection.
+    _subscribeIfNeeded();
 
-        try {
-          final data = jsonDecode(payload) as Map<String, dynamic>;
-          
-          // Extract nodeId from topic
-          // Split "wusn/sensor/1/data" -> ["wusn", "sensor", "1", "data"]
-          final parts = topic.split('/');
-          int nodeId = 0;
-          if (parts.length >= 3) {
-             nodeId = int.tryParse(parts[2]) ?? 0;
-          }
+    // Attach updates listener only once (avoid duplicates on reconnect cycles).
+    _attachUpdatesListener();
 
-          // If nodeId wasn't in topic, check payload, else default to 0
-          if (nodeId == 0 && data.containsKey('nodeId')) {
-            nodeId = data['nodeId'];
-          }
+    _connectInFlight = false;
+    return true;
+  }
 
-          if (nodeId != 0) {
-            print('📨 MQTT Update for Node $nodeId');
-            onMessageReceived(nodeId, data);
-          }
-        } catch (e) {
-          print('❌ Error parsing MQTT payload: $e');
+  void _subscribeIfNeeded() {
+    try {
+      client.subscribe(_topic, MqttQos.atLeastOnce);
+      _log('Subscribed to: $_topic');
+    } catch (e) {
+      _log('Subscribe failed: $e');
+    }
+  }
+
+  void _attachUpdatesListener() {
+    // Always cancel old subscription first; avoids duplicates after reconnect cycles.
+    _updatesSub?.cancel();
+    _updatesSub = null;
+
+    final updates = client.updates;
+    if (updates == null) {
+      _log('MQTT updates stream is null (no listener attached).');
+      return;
+    }
+
+    _updatesSub = updates.listen(
+      (List<MqttReceivedMessage<MqttMessage>> messages) {
+        if (messages.isEmpty) return;
+
+        final msg = messages.first;
+        final topic = msg.topic;
+
+        final payloadMsg = msg.payload;
+        if (payloadMsg is! MqttPublishMessage) return;
+
+        final payloadStr = MqttPublishPayload.bytesToStringAsString(
+            payloadMsg.payload.message);
+
+        final raw = _tryDecodeJsonObject(payloadStr);
+        if (raw == null) {
+          _log('MQTT payload ignored (not a JSON object). topic=$topic');
+          return;
         }
-      });
 
-      return true;
-    } else {
-      print('❌ MQTT connection failed: ${client.connectionStatus}');
-      _isConnected = false;
-      onStatusChange(false);
-      return false;
+        final nodeId = _extractNodeId(topic: topic, raw: raw);
+        if (nodeId <= 0) {
+          _log('MQTT message ignored (nodeId missing). topic=$topic');
+          return;
+        }
+
+        final normalized = _normalizePayload(nodeId, raw);
+        onMessageReceived(nodeId, normalized);
+      },
+      onError: (Object e, StackTrace st) {
+        _log('MQTT updates stream error: $e');
+      },
+      cancelOnError: false,
+    );
+  }
+
+  Map<String, dynamic>? _tryDecodeJsonObject(String payloadStr) {
+    try {
+      final decoded = jsonDecode(payloadStr);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      return null;
+    } catch (_) {
+      return null;
     }
+  }
+
+  int _extractNodeId(
+      {required String topic, required Map<String, dynamic> raw}) {
+    // Prefer topic "wusn/sensor/1/data"
+    final parts = topic.split('/');
+    if (parts.length >= 3) {
+      final parsed = int.tryParse(parts[2]);
+      if (parsed != null && parsed > 0) return parsed;
+    }
+
+    // Fallback: payload nodeId
+    final nid = raw['nodeId'] ?? raw['node_id'];
+    if (nid is int && nid > 0) return nid;
+    if (nid is String) return int.tryParse(nid.trim()) ?? 0;
+
+    return 0;
+  }
+
+  Map<String, dynamic> _normalizePayload(int nodeId, Map<String, dynamic> raw) {
+    // Accept a variety of upstream key names and map to our app’s standard keys.
+    final vwc =
+        _toDouble(raw['vwc'] ?? raw['soilMoistureVWC'] ?? raw['moisture']);
+    final soilTemp = _toDouble(
+        raw['soilTemp'] ?? raw['soilTemperature'] ?? raw['temperature']);
+
+    final bool hasAir =
+        raw.containsKey('airTemp') || raw.containsKey('airTemperature');
+    final double? airTemp =
+        hasAir ? _toDouble(raw['airTemp'] ?? raw['airTemperature']) : null;
+
+    // Keep timestamp if provided; else omit (provider sets DateTime.now().toUtc()).
+    final ts = raw['timestamp'] ?? raw['time'] ?? raw['createdAt'];
+
+    final normalized = <String, dynamic>{
+      'nodeId': nodeId,
+      'vwc': vwc ?? 0.0,
+      'soilTemp': soilTemp ?? 0.0,
+    };
+
+    if (airTemp != null) normalized['airTemp'] = airTemp;
+    if (ts != null) normalized['timestamp'] = ts;
+
+    return normalized;
+  }
+
+  double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v.trim());
+    return null;
+  }
+
+  void _setConnected(bool value) {
+    if (_isConnected == value) return;
+    _isConnected = value;
+    onStatusChange(value);
   }
 
   void _onConnected() {
-    print('✅ MQTT Connected callback');
-    _isConnected = true;
-    onStatusChange(true);
+    _log('MQTT Connected callback');
+    _setConnected(true);
+    _subscribeIfNeeded();
+    _attachUpdatesListener();
   }
 
   void _onDisconnected() {
-    print('❌ MQTT Disconnected');
-    _isConnected = false;
-    onStatusChange(false);
+    // Per mqtt_client docs, this is not called when autoReconnect=true;
+    // auto reconnect callbacks are used instead.
+    _log('MQTT Disconnected callback');
+    _setConnected(false);
+  }
+
+  void _onAutoReconnect() {
+    _log('MQTT auto-reconnect starting');
+    _setConnected(false);
+  }
+
+  void _onAutoReconnected() {
+    _log('MQTT auto-reconnect completed');
+    _setConnected(true);
+
+    // Re-subscribe and reattach listener defensively.
+    _subscribeIfNeeded();
+    _attachUpdatesListener();
   }
 
   void disconnect() {
-    if (client.connectionStatus?.state == MqttConnectionState.connected) {
-      client.disconnect();
-      _isConnected = false;
-      onStatusChange(false);
-      print('👋 MQTT Disconnected gracefully');
+    _connectInFlight = false;
+
+    _updatesSub?.cancel();
+    _updatesSub = null;
+
+    try {
+      if (client.connectionStatus?.state == MqttConnectionState.connected) {
+        client.disconnect();
+      }
+    } catch (e) {
+      _log('MQTT disconnect error: $e');
     }
+
+    _setConnected(false);
   }
 
-  /// Reconnect to MQTT broker
   Future<bool> reconnect() async {
     disconnect();
-    await Future.delayed(const Duration(seconds: 2));
-    return await connect();
+    await Future.delayed(AppConfig.mqttReconnectDelay);
+    return connect();
   }
 }

@@ -1,44 +1,86 @@
-// src/api/middleware/errorHandler.ts
 /**
  * Global Error Handler Middleware
+ *
+ * Handles all errors from controllers and services
+ * Provides consistent error responses across the API
  */
-import { logger } from '../../config/logger.js';
+import { z } from 'zod';
+import { createLogger } from '../../config/logger.js';
 import { AppError, isOperationalError } from '../../utils/errors.js';
 import { isDevelopment } from '../../config/environment.js';
+const logger = createLogger({ service: 'error-handler' });
+function formatZodError(error) {
+    return {
+        type: 'ValidationError',
+        message: 'Invalid request data',
+        details: error.errors.map((err) => ({
+            field: err.path.join('.'),
+            message: err.message,
+            code: err.code,
+        })),
+    };
+}
 /**
  * Global error handler
+ * Must have 4 parameters for Express to recognize it as error middleware. [web:261]
  */
-export function errorHandler(error, req, res, next) {
-    // Log error
-    logger.error({
-        err: error,
-        path: req.path,
+export function errorHandler(error, req, res, _next) {
+    const logContext = {
         method: req.method,
-    }, 'Request error');
-    // Handle operational errors
-    if (error instanceof AppError) {
-        res.status(error.statusCode).json({
-            status: 'error',
-            message: error.message,
-            ...(isDevelopment && { context: error.context }),
+        url: req.originalUrl,
+        ip: req.ip,
+    };
+    if (isOperationalError(error)) {
+        logger.warn({ err: error, ...logContext }, 'Operational error');
+    }
+    else {
+        logger.error({ err: error, ...logContext }, 'Unexpected error');
+    }
+    // Zod validation errors
+    if (error instanceof z.ZodError) {
+        const formattedError = formatZodError(error);
+        res.status(400).json({
+            success: false,
+            error: formattedError,
             timestamp: new Date().toISOString(),
         });
         return;
     }
-    // Handle unknown errors
+    // Custom AppError instances
+    if (error instanceof AppError) {
+        res.status(error.statusCode).json({
+            success: false,
+            error: {
+                type: error.name,
+                message: error.message,
+                ...(isDevelopment && error.context ? { context: error.context } : {}),
+            },
+            timestamp: new Date().toISOString(),
+        });
+        return;
+    }
+    // Unknown errors (programming errors)
     res.status(500).json({
-        status: 'error',
-        message: isDevelopment ? error.message : 'Internal server error',
+        success: false,
+        error: {
+            type: 'InternalServerError',
+            message: isDevelopment ? error.message : 'An unexpected error occurred',
+            ...(isDevelopment ? { stack: error.stack } : {}),
+        },
         timestamp: new Date().toISOString(),
     });
 }
 /**
- * 404 handler
+ * 404 handler for unmatched routes
+ * Should be registered AFTER all routes but BEFORE error handler.
  */
 export function notFoundHandler(req, res) {
     res.status(404).json({
-        status: 'error',
-        message: `Route ${req.method} ${req.path} not found`,
+        success: false,
+        error: {
+            type: 'NotFoundError',
+            message: `Route ${req.method} ${req.originalUrl} not found`,
+        },
         timestamp: new Date().toISOString(),
     });
 }

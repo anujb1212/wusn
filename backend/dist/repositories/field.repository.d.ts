@@ -1,7 +1,8 @@
 /**
  * Field Repository
  */
-import type { SoilTexture, UPCropName } from '../utils/constants.js';
+import { GrowthStage } from '@prisma/client';
+import type { SoilTexture } from '@prisma/client';
 export interface CreateFieldInput {
     nodeId: number;
     gatewayId: string;
@@ -12,11 +13,18 @@ export interface CreateFieldInput {
     location?: string | undefined;
 }
 export interface UpdateFieldCropInput {
-    cropType: UPCropName;
+    cropType: string;
     sowingDate: Date;
     baseTemperature: number;
     expectedGDDTotal: number;
     expectedHarvestDate?: Date | undefined;
+}
+export interface UpdateFieldInput {
+    fieldName?: string;
+    latitude?: number;
+    longitude?: number;
+    soilTexture?: SoilTexture;
+    location?: string | null;
 }
 /**
  * Create field
@@ -29,14 +37,14 @@ export declare function createField(input: CreateFieldInput): Promise<{
     location: string | null;
     latitude: number;
     longitude: number;
-    soilTexture: string;
+    soilTexture: import(".prisma/client").$Enums.SoilTexture;
     cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
     accumulatedGDD: number;
     lastGDDUpdate: Date | null;
-    currentGrowthStage: string | null;
+    currentGrowthStage: import(".prisma/client").$Enums.GrowthStage | null;
     baseTemperature: number | null;
     expectedGDDTotal: number | null;
     lastIrrigationCheck: Date | null;
@@ -55,14 +63,14 @@ export declare function getFieldByNodeId(nodeId: number): Promise<{
     location: string | null;
     latitude: number;
     longitude: number;
-    soilTexture: string;
+    soilTexture: import(".prisma/client").$Enums.SoilTexture;
     cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
     accumulatedGDD: number;
     lastGDDUpdate: Date | null;
-    currentGrowthStage: string | null;
+    currentGrowthStage: import(".prisma/client").$Enums.GrowthStage | null;
     baseTemperature: number | null;
     expectedGDDTotal: number | null;
     lastIrrigationCheck: Date | null;
@@ -81,14 +89,14 @@ export declare function getFieldById(id: number): Promise<{
     location: string | null;
     latitude: number;
     longitude: number;
-    soilTexture: string;
+    soilTexture: import(".prisma/client").$Enums.SoilTexture;
     cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
     accumulatedGDD: number;
     lastGDDUpdate: Date | null;
-    currentGrowthStage: string | null;
+    currentGrowthStage: import(".prisma/client").$Enums.GrowthStage | null;
     baseTemperature: number | null;
     expectedGDDTotal: number | null;
     lastIrrigationCheck: Date | null;
@@ -107,14 +115,14 @@ export declare function getAllFields(): Promise<{
     location: string | null;
     latitude: number;
     longitude: number;
-    soilTexture: string;
+    soilTexture: import(".prisma/client").$Enums.SoilTexture;
     cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
     accumulatedGDD: number;
     lastGDDUpdate: Date | null;
-    currentGrowthStage: string | null;
+    currentGrowthStage: import(".prisma/client").$Enums.GrowthStage | null;
     baseTemperature: number | null;
     expectedGDDTotal: number | null;
     lastIrrigationCheck: Date | null;
@@ -133,14 +141,14 @@ export declare function updateFieldCrop(nodeId: number, input: UpdateFieldCropIn
     location: string | null;
     latitude: number;
     longitude: number;
-    soilTexture: string;
+    soilTexture: import(".prisma/client").$Enums.SoilTexture;
     cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
     accumulatedGDD: number;
     lastGDDUpdate: Date | null;
-    currentGrowthStage: string | null;
+    currentGrowthStage: import(".prisma/client").$Enums.GrowthStage | null;
     baseTemperature: number | null;
     expectedGDDTotal: number | null;
     lastIrrigationCheck: Date | null;
@@ -151,7 +159,7 @@ export declare function updateFieldCrop(nodeId: number, input: UpdateFieldCropIn
 /**
  * Update field GDD status
  */
-export declare function updateFieldGDD(nodeId: number, accumulatedGDD: number, growthStage: string): Promise<{
+export declare function updateFieldGDD(nodeId: number, accumulatedGDD: number, growthStage: GrowthStage): Promise<{
     id: number;
     nodeId: number;
     gatewayId: string;
@@ -159,14 +167,14 @@ export declare function updateFieldGDD(nodeId: number, accumulatedGDD: number, g
     location: string | null;
     latitude: number;
     longitude: number;
-    soilTexture: string;
+    soilTexture: import(".prisma/client").$Enums.SoilTexture;
     cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
     accumulatedGDD: number;
     lastGDDUpdate: Date | null;
-    currentGrowthStage: string | null;
+    currentGrowthStage: import(".prisma/client").$Enums.GrowthStage | null;
     baseTemperature: number | null;
     expectedGDDTotal: number | null;
     lastIrrigationCheck: Date | null;
@@ -185,14 +193,14 @@ export declare function updateLastIrrigationCheck(nodeId: number): Promise<{
     location: string | null;
     latitude: number;
     longitude: number;
-    soilTexture: string;
+    soilTexture: import(".prisma/client").$Enums.SoilTexture;
     cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
     accumulatedGDD: number;
     lastGDDUpdate: Date | null;
-    currentGrowthStage: string | null;
+    currentGrowthStage: import(".prisma/client").$Enums.GrowthStage | null;
     baseTemperature: number | null;
     expectedGDDTotal: number | null;
     lastIrrigationCheck: Date | null;
@@ -211,14 +219,14 @@ export declare function recordIrrigationAction(nodeId: number): Promise<{
     location: string | null;
     latitude: number;
     longitude: number;
-    soilTexture: string;
+    soilTexture: import(".prisma/client").$Enums.SoilTexture;
     cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
     accumulatedGDD: number;
     lastGDDUpdate: Date | null;
-    currentGrowthStage: string | null;
+    currentGrowthStage: import(".prisma/client").$Enums.GrowthStage | null;
     baseTemperature: number | null;
     expectedGDDTotal: number | null;
     lastIrrigationCheck: Date | null;
@@ -237,14 +245,14 @@ export declare function getFieldsNeedingGDDUpdate(): Promise<{
     location: string | null;
     latitude: number;
     longitude: number;
-    soilTexture: string;
+    soilTexture: import(".prisma/client").$Enums.SoilTexture;
     cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
     accumulatedGDD: number;
     lastGDDUpdate: Date | null;
-    currentGrowthStage: string | null;
+    currentGrowthStage: import(".prisma/client").$Enums.GrowthStage | null;
     baseTemperature: number | null;
     expectedGDDTotal: number | null;
     lastIrrigationCheck: Date | null;
@@ -255,13 +263,7 @@ export declare function getFieldsNeedingGDDUpdate(): Promise<{
 /**
  * Update field (generic update)
  */
-export declare function updateField(nodeId: number, updates: {
-    fieldName?: string;
-    latitude?: number;
-    longitude?: number;
-    soilTexture?: string;
-    location?: string;
-}): Promise<{
+export declare function updateField(nodeId: number, updates: UpdateFieldInput): Promise<{
     id: number;
     nodeId: number;
     gatewayId: string;
@@ -269,14 +271,14 @@ export declare function updateField(nodeId: number, updates: {
     location: string | null;
     latitude: number;
     longitude: number;
-    soilTexture: string;
+    soilTexture: import(".prisma/client").$Enums.SoilTexture;
     cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
     accumulatedGDD: number;
     lastGDDUpdate: Date | null;
-    currentGrowthStage: string | null;
+    currentGrowthStage: import(".prisma/client").$Enums.GrowthStage | null;
     baseTemperature: number | null;
     expectedGDDTotal: number | null;
     lastIrrigationCheck: Date | null;
@@ -295,14 +297,14 @@ export declare function deleteField(nodeId: number): Promise<{
     location: string | null;
     latitude: number;
     longitude: number;
-    soilTexture: string;
+    soilTexture: import(".prisma/client").$Enums.SoilTexture;
     cropType: string | null;
     sowingDate: Date | null;
     expectedHarvestDate: Date | null;
     cropConfirmed: boolean;
     accumulatedGDD: number;
     lastGDDUpdate: Date | null;
-    currentGrowthStage: string | null;
+    currentGrowthStage: import(".prisma/client").$Enums.GrowthStage | null;
     baseTemperature: number | null;
     expectedGDDTotal: number | null;
     lastIrrigationCheck: Date | null;

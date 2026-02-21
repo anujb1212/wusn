@@ -1,202 +1,311 @@
-// src/services/crop/crop.service.ts
 /**
  * Crop Recommendation Service
- * Multi-criteria scoring for crop suitability
+ *
+ * Alignment changes:
+ * - Crop catalog uses Prisma CropParameters table (seeded)
+ * - Recommendations score DB crops (validForUP=true)
+ * - Type-guard keeps compatibility with existing CropName literal union types
  */
 
 import { createLogger } from '../../config/logger.js';
-import {
-    CROP_DATABASE,
-    getCurrentSeason,
-    UP_VALID_CROPS,
-} from '../../utils/constants.js';
-import type { UPCropName, SoilTexture, Season } from '../../utils/constants.js';
+import { prisma } from '../../config/database.js';
+import { getCurrentSeason, SOIL_WATER_CONSTANTS, VALID_CROPS } from '../../utils/constants.js';
+import type { CropName } from '../../utils/constants.js';
 import { getFieldByNodeId } from '../../repositories/field.repository.js';
 import { getLatestReading } from '../../repositories/sensor.repository.js';
 import type { CropRecommendation, CropScore } from '../../models/common.types.js';
 import { NotFoundError } from '../../utils/errors.js';
+import type {
+    CropParameters as DbCropParameters,
+    SoilTexture as DbSoilTexture,
+    Season as DbSeason,
+} from '@prisma/client';
 
-const logger = createLogger({ service: 'crop' });
+const logger = createLogger({ service: 'crop-recommendation' });
 
-// Scoring weights (must sum to 100)
-const WEIGHTS = {
-    MOISTURE: 25,
-    TEMPERATURE: 25,
-    SEASON: 25,
-    SOIL: 15,
-    GDD_FEASIBILITY: 10,
+export type CropCatalogItem = {
+    value: string; // CropParameters.cropName
+    labelEn: string;
+    season: DbSeason;
 };
 
-/**
- * Score moisture match (0-25 points)
- */
-function scoreMoisture(currentVWC: number, crop: typeof CROP_DATABASE[UPCropName]): number {
+function toTitleCaseLabel(value: string): string {
+    return value
+        .split('_')
+        .map((p) => (p.length ? p[0]!.toUpperCase() + p.slice(1) : p))
+        .join(' ');
+}
+
+function isKnownCropName(name: string): name is CropName {
+    return (VALID_CROPS as readonly string[]).includes(name);
+}
+
+export async function getCropCatalog(): Promise<CropCatalogItem[]> {
+    const rows = await prisma.cropParameters.findMany({
+        where: { validForUP: true },
+        select: { cropName: true, season: true },
+        orderBy: { cropName: 'asc' },
+    });
+
+    if (rows.length === 0) {
+        logger.warn(
+            'Crop catalog is empty (no CropParameters with validForUP=true). Did you run prisma seed on the correct DATABASE_URL?'
+        );
+    }
+
+    return rows.map((r) => ({
+        value: r.cropName,
+        labelEn: toTitleCaseLabel(r.cropName),
+        season: r.season,
+    }));
+}
+
+const WEIGHTS = {
+    MOISTURE: 30,
+    TEMPERATURE: 25,
+    SEASON: 20,
+    SOIL: 15,
+    GDD_FEASIBILITY: 10,
+} as const;
+
+const SUITABILITY_THRESHOLD = 60;
+
+function normalizeVwcToPercent(vwc: number): number {
+    if (!Number.isFinite(vwc)) return vwc;
+    if (vwc >= 0 && vwc <= 1.2) return vwc * 100;
+    return vwc;
+}
+
+function isValidSoilTexture(value: unknown): value is DbSoilTexture {
+    return typeof value === 'string' && Object.prototype.hasOwnProperty.call(SOIL_WATER_CONSTANTS, value);
+}
+
+function safeClampNumber(value: number, min: number, max: number): number {
+    if (!Number.isFinite(value)) return value;
+    return Math.min(max, Math.max(min, value));
+}
+
+function safeDivide(numerator: number, denominator: number): number {
+    if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return 0;
+    return numerator / denominator;
+}
+
+function scoreMoisture(currentVWC: number, crop: DbCropParameters, soilTexture: DbSoilTexture): number {
     const { vwcMin, vwcOptimal, vwcMax } = crop;
 
-    // Perfect match at optimal
-    if (currentVWC === vwcOptimal) {
-        return WEIGHTS.MOISTURE;
+    const soilConstants = SOIL_WATER_CONSTANTS[soilTexture as keyof typeof SOIL_WATER_CONSTANTS];
+    if (!soilConstants) return 0;
+
+    const fieldCapacity = soilConstants.FIELD_CAPACITY;
+    const wiltingPoint = soilConstants.WILTING_POINT;
+
+    if (!Number.isFinite(currentVWC)) return 0;
+
+    if (currentVWC > fieldCapacity) {
+        const excess = currentVWC - fieldCapacity;
+        const excessPenalty = Math.min(excess / 10, 1.0);
+        return WEIGHTS.MOISTURE * (1 - excessPenalty) * 0.2;
     }
 
-    // Within acceptable range
-    if (currentVWC >= vwcMin && currentVWC <= vwcMax) {
-        const distanceFromOptimal = Math.abs(currentVWC - vwcOptimal);
-        const maxDistance = Math.max(vwcOptimal - vwcMin, vwcMax - vwcOptimal);
-        const score = WEIGHTS.MOISTURE * (1 - distanceFromOptimal / maxDistance);
-        return Math.max(score, WEIGHTS.MOISTURE * 0.5); // Minimum 50% if in range
-    }
-
-    // Outside range - score based on distance
-    const distanceOutside = currentVWC < vwcMin
-        ? vwcMin - currentVWC
-        : currentVWC - vwcMax;
-
-    const penalty = Math.min(distanceOutside / 10, 1); // 10% distance = full penalty
-    return WEIGHTS.MOISTURE * (1 - penalty) * 0.3; // Max 30% of points if outside range
-}
-
-/**
- * Score temperature match (0-25 points)
- */
-function scoreTemperature(
-    currentTemp: number,
-    crop: typeof CROP_DATABASE[UPCropName]
-): number {
-    const { optimalTempMin, optimalTempMax } = crop;
-
-    // Within optimal range
-    if (currentTemp >= optimalTempMin && currentTemp <= optimalTempMax) {
-        return WEIGHTS.TEMPERATURE;
-    }
-
-    // Outside range - penalty based on distance
-    const distanceOutside = currentTemp < optimalTempMin
-        ? optimalTempMin - currentTemp
-        : currentTemp - optimalTempMax;
-
-    const penalty = Math.min(distanceOutside / 10, 1); // 10°C = full penalty
-    return WEIGHTS.TEMPERATURE * (1 - penalty) * 0.4; // Max 40% if outside range
-}
-
-/**
- * Score season appropriateness (0-25 points)
- */
-function scoreSeason(currentSeason: Season, crop: typeof CROP_DATABASE[UPCropName]): number {
-    return crop.season === currentSeason ? WEIGHTS.SEASON : 0;
-}
-
-/**
- * Score soil compatibility (0-15 points)
- */
-function scoreSoil(soilTexture: SoilTexture, crop: typeof CROP_DATABASE[UPCropName]): number {
-    return crop.preferredSoils.includes(soilTexture) ? WEIGHTS.SOIL : 0;
-}
-
-/**
- * Score GDD feasibility (0-10 points)
- * Based on whether crop can complete growth cycle with remaining season
- */
-function scoreGDDFeasibility(
-    currentSeason: Season,
-    accumulatedGDD: number,
-    crop: typeof CROP_DATABASE[UPCropName]
-): number {
-    // If crop season doesn't match, GDD not feasible
-    if (crop.season !== currentSeason) {
+    if (currentVWC < wiltingPoint) {
         return 0;
     }
 
-    // If already has significant GDD accumulated for a different crop, penalize
-    if (accumulatedGDD > crop.totalGDD * 0.2) {
-        return WEIGHTS.GDD_FEASIBILITY * 0.3;
+    if (Math.abs(currentVWC - vwcOptimal) < 1.0) {
+        return WEIGHTS.MOISTURE;
     }
 
-    // Full points if starting fresh in correct season
+    if (currentVWC >= vwcMin && currentVWC <= vwcMax) {
+        const distanceFromOptimal = Math.abs(currentVWC - vwcOptimal);
+        const maxDistance = Math.max(vwcOptimal - vwcMin, vwcMax - vwcOptimal);
+
+        const normalizedDistance = safeDivide(distanceFromOptimal, maxDistance);
+        const score = WEIGHTS.MOISTURE * (1 - normalizedDistance * 0.4);
+        return Math.max(score, WEIGHTS.MOISTURE * 0.6);
+    }
+
+    const distanceOutside = currentVWC < vwcMin ? vwcMin - currentVWC : currentVWC - vwcMax;
+    const penalty = Math.min(distanceOutside / 10, 1.0);
+    return WEIGHTS.MOISTURE * (1 - penalty) * 0.3;
+}
+
+function scoreTemperature(currentSoilTemp: number, crop: DbCropParameters): number {
+    const { soilTempMin, soilTempOptimal, soilTempMax } = crop;
+
+    if (!Number.isFinite(currentSoilTemp)) return 0;
+
+    if (currentSoilTemp >= soilTempMin && currentSoilTemp <= soilTempMax) {
+        const distanceFromOptimal = Math.abs(currentSoilTemp - soilTempOptimal);
+        const maxDistance = Math.max(soilTempOptimal - soilTempMin, soilTempMax - soilTempOptimal);
+
+        const normalizedDistance = safeDivide(distanceFromOptimal, maxDistance);
+        return WEIGHTS.TEMPERATURE * (1 - normalizedDistance * 0.15);
+    }
+
+    const distanceOutside =
+        currentSoilTemp < soilTempMin ? soilTempMin - currentSoilTemp : currentSoilTemp - soilTempMax;
+
+    if (distanceOutside > 15) return 0;
+
+    const penalty = Math.min(distanceOutside / 15, 1.0);
+    return WEIGHTS.TEMPERATURE * (1 - penalty) * 0.4;
+}
+
+function scoreSeason(currentSeason: DbSeason, crop: DbCropParameters): number {
+    if (crop.season === 'PERENNIAL') return WEIGHTS.SEASON;
+    return crop.season === currentSeason ? WEIGHTS.SEASON : 0;
+}
+
+function scoreSoil(soilTexture: DbSoilTexture, crop: DbCropParameters): number {
+    const preferred = crop.soilTexturePreference ?? [];
+    if (preferred.includes(soilTexture)) return WEIGHTS.SOIL;
+
+    const adjacentSoils: Record<DbSoilTexture, DbSoilTexture[]> = {
+        SANDY: ['SANDY_LOAM'],
+        SANDY_LOAM: ['SANDY', 'LOAM'],
+        LOAM: ['SANDY_LOAM', 'CLAY_LOAM'],
+        CLAY_LOAM: ['LOAM', 'CLAY'],
+        CLAY: ['CLAY_LOAM'],
+    };
+
+    const isAdjacent = adjacentSoils[soilTexture]?.some((adj) => preferred.includes(adj));
+    return isAdjacent ? WEIGHTS.SOIL * 0.5 : 0;
+}
+
+function scoreGDDFeasibility(
+    currentSeason: DbSeason,
+    currentDate: Date,
+    accumulatedGDD: number,
+    crop: DbCropParameters
+): number {
+    if (crop.season !== currentSeason && crop.season !== 'PERENNIAL') return 0;
+
+    const totalGDDRequired = crop.lateSeasonGDD;
+    if (!Number.isFinite(totalGDDRequired) || totalGDDRequired <= 0) return 0;
+
+    if (Number.isFinite(accumulatedGDD) && accumulatedGDD > totalGDDRequired * 0.25) {
+        return WEIGHTS.GDD_FEASIBILITY * 0.2;
+    }
+
+    const month = currentDate.getMonth() + 1;
+    let daysRemainingInSeason = 0;
+
+    switch (currentSeason) {
+        case 'RABI':
+            daysRemainingInSeason = month >= 11 ? 120 - (month - 11) * 30 : 90 - (month - 1) * 30;
+            break;
+        case 'KHARIF':
+            daysRemainingInSeason = 150 - (month - 6) * 30;
+            break;
+        case 'ZAID':
+            daysRemainingInSeason = 90 - (month - 3) * 30;
+            break;
+        case 'PERENNIAL':
+            daysRemainingInSeason = 365;
+            break;
+    }
+
+    daysRemainingInSeason = Math.max(0, daysRemainingInSeason);
+
+    const estimatedCropDurationDays = totalGDDRequired / 15;
+
+    if (daysRemainingInSeason < estimatedCropDurationDays * 0.8) return 0;
+    if (daysRemainingInSeason < estimatedCropDurationDays * 1.1) return WEIGHTS.GDD_FEASIBILITY * 0.6;
     return WEIGHTS.GDD_FEASIBILITY;
 }
 
-/**
- * Generate explanation for crop score
- */
 function generateExplanation(
-    crop: typeof CROP_DATABASE[UPCropName],
+    crop: DbCropParameters,
     scores: CropScore['scores'],
     currentVWC: number,
-    currentTemp: number,
-    currentSeason: Season,
-    soilTexture: SoilTexture
+    currentSoilTemp: number,
+    currentSeason: DbSeason,
+    soilTexture: DbSoilTexture
 ): string {
     const reasons: string[] = [];
+    const soilConstants = SOIL_WATER_CONSTANTS[soilTexture as keyof typeof SOIL_WATER_CONSTANTS];
 
-    // Moisture
-    if (scores.moisture >= WEIGHTS.MOISTURE * 0.8) {
-        reasons.push('Excellent moisture match');
+    if (!soilConstants) {
+        reasons.push('soil texture data unavailable for moisture assessment');
+    } else if (currentVWC < soilConstants.WILTING_POINT) {
+        reasons.push(`critical soil moisture deficit (below wilting point: ${soilConstants.WILTING_POINT}%)`);
+    } else if (currentVWC > soilConstants.FIELD_CAPACITY) {
+        reasons.push(`waterlogging risk (above field capacity: ${soilConstants.FIELD_CAPACITY}%)`);
+    } else if (scores.moisture >= WEIGHTS.MOISTURE * 0.8) {
+        reasons.push('excellent soil moisture match');
     } else if (scores.moisture >= WEIGHTS.MOISTURE * 0.5) {
-        reasons.push('Acceptable moisture');
+        reasons.push('acceptable soil moisture');
+    } else if (scores.moisture > 0) {
+        const status = currentVWC < crop.vwcMin ? 'too dry' : 'too wet';
+        reasons.push(
+            `soil moisture ${status} (current: ${currentVWC.toFixed(1)}%, optimal: ${crop.vwcMin}-${crop.vwcMax}%)`
+        );
     } else {
-        reasons.push(`Moisture suboptimal (current: ${currentVWC.toFixed(1)}%, needs: ${crop.vwcMin}-${crop.vwcMax}%)`);
+        reasons.push('soil moisture unsuitable');
     }
 
-    // Temperature
     if (scores.temperature >= WEIGHTS.TEMPERATURE * 0.8) {
-        reasons.push('Optimal temperature');
+        reasons.push('optimal soil temperature');
     } else if (scores.temperature >= WEIGHTS.TEMPERATURE * 0.5) {
-        reasons.push('Acceptable temperature');
+        reasons.push('acceptable soil temperature');
+    } else if (scores.temperature > 0) {
+        const status = currentSoilTemp < crop.soilTempMin ? 'too cool' : 'too hot';
+        reasons.push(
+            `soil temperature ${status} (current: ${currentSoilTemp.toFixed(1)}°C, optimal: ${crop.soilTempMin}-${crop.soilTempMax}°C)`
+        );
     } else {
-        reasons.push(`Temperature outside range (current: ${currentTemp.toFixed(1)}°C, needs: ${crop.optimalTempMin}-${crop.optimalTempMax}°C)`);
+        reasons.push('soil temperature unsuitable');
     }
 
-    // Season
     if (scores.season > 0) {
-        reasons.push(`${crop.season} season match`);
+        reasons.push(`${String(crop.season).toLowerCase()} season crop`);
     } else {
-        reasons.push(`Wrong season (${crop.season} crop, currently ${currentSeason})`);
+        reasons.push(
+            `wrong season (${String(crop.season).toLowerCase()} crop in ${String(currentSeason).toLowerCase()} season)`
+        );
     }
 
-    // Soil
-    if (scores.soil > 0) {
-        reasons.push('Suitable soil type');
+    const preferred = crop.soilTexturePreference ?? [];
+    if (scores.soil === WEIGHTS.SOIL) {
+        reasons.push('ideal soil texture');
+    } else if (scores.soil > 0) {
+        reasons.push('acceptable soil texture');
     } else {
-        reasons.push(`Soil not ideal (prefers: ${crop.preferredSoils.join(', ')})`);
+        reasons.push(`soil not optimal (prefers ${preferred.join('/') || 'N/A'})`);
+    }
+
+    if (scores.gddFeasibility === 0 && crop.season !== 'PERENNIAL') {
+        reasons.push('insufficient time to complete growth cycle');
     }
 
     return reasons.join('; ');
 }
 
-/**
- * Calculate crop suitability score
- */
 function calculateCropScore(
-    crop: typeof CROP_DATABASE[UPCropName],
+    cropName: CropName,
+    crop: DbCropParameters,
     currentVWC: number,
-    currentTemp: number,
-    currentSeason: Season,
-    soilTexture: SoilTexture,
+    currentSoilTemp: number,
+    currentSeason: DbSeason,
+    currentDate: Date,
+    soilTexture: DbSoilTexture,
     accumulatedGDD: number
 ): CropScore {
     const scores = {
-        moisture: scoreMoisture(currentVWC, crop),
-        temperature: scoreTemperature(currentTemp, crop),
+        moisture: scoreMoisture(currentVWC, crop, soilTexture),
+        temperature: scoreTemperature(currentSoilTemp, crop),
         season: scoreSeason(currentSeason, crop),
         soil: scoreSoil(soilTexture, crop),
-        gddFeasibility: scoreGDDFeasibility(currentSeason, accumulatedGDD, crop),
+        gddFeasibility: scoreGDDFeasibility(currentSeason, currentDate, accumulatedGDD, crop),
     };
 
     const totalScore = Object.values(scores).reduce((sum, score) => sum + score, 0);
-
-    const explanation = generateExplanation(
-        crop,
-        scores,
-        currentVWC,
-        currentTemp,
-        currentSeason,
-        soilTexture
-    );
+    const explanation = generateExplanation(crop, scores, currentVWC, currentSoilTemp, currentSeason, soilTexture);
 
     return {
-        cropName: crop.name,
+        cropName,
         totalScore: Number(totalScore.toFixed(1)),
-        rank: 0, // Will be set after sorting
+        rank: 0,
         scores: {
             moisture: Number(scores.moisture.toFixed(1)),
             temperature: Number(scores.temperature.toFixed(1)),
@@ -205,79 +314,107 @@ function calculateCropScore(
             gddFeasibility: Number(scores.gddFeasibility.toFixed(1)),
         },
         explanation,
-        suitable: totalScore >= 60, // 60/100 threshold for "suitable"
+        suitable: totalScore >= SUITABILITY_THRESHOLD,
     };
 }
 
-/**
- * Get crop recommendations for field
- */
 export async function getCropRecommendations(nodeId: number): Promise<CropRecommendation> {
     try {
-        logger.info({ nodeId }, 'Generating crop recommendations');
+        logger.info({ nodeId }, 'Generating crop recommendations using MCDA (DB-driven crop universe)');
 
-        // Get field configuration
         const field = await getFieldByNodeId(nodeId);
 
-        // Get latest sensor data
         const reading = await getLatestReading(nodeId);
-        if (!reading || reading.soilMoistureVWC === null || reading.soilTemperature === null) {
-            throw new NotFoundError('SensorReading', `No valid readings for nodeId=${nodeId}`);
+        if (!reading) throw new NotFoundError('SensorReading', `nodeId=${nodeId}`);
+
+        if (reading.soilMoistureVWC === null || reading.soilMoistureVWC === undefined) {
+            throw new NotFoundError('SensorReading', `No valid soil moisture for nodeId=${nodeId}`);
+        }
+        if (reading.soilTemperature === null || reading.soilTemperature === undefined) {
+            throw new NotFoundError('SensorReading', `No valid soil temperature for nodeId=${nodeId}`);
         }
 
-        const currentVWC = reading.soilMoistureVWC;
-        const currentTemp = reading.soilTemperature;
-        const currentSeason = getCurrentSeason();
-        const soilTexture = field.soilTexture as SoilTexture;
-        const accumulatedGDD = field.accumulatedGDD;
+        if (!isValidSoilTexture(field.soilTexture)) {
+            throw new NotFoundError('Field', `Invalid soilTexture=${String(field.soilTexture)} for nodeId=${nodeId}`);
+        }
+        const soilTexture: DbSoilTexture = field.soilTexture as DbSoilTexture;
 
-        // Score all crops
-        const allScores: CropScore[] = UP_VALID_CROPS.map(cropName => {
-            const cropParams = CROP_DATABASE[cropName];
-            return calculateCropScore(
-                cropParams,
-                currentVWC,
-                currentTemp,
-                currentSeason,
-                soilTexture,
-                accumulatedGDD
-            );
+        const currentVWC = normalizeVwcToPercent(Number(reading.soilMoistureVWC));
+        const currentSoilTemp = Number(reading.soilTemperature);
+
+        if (!Number.isFinite(currentVWC)) {
+            throw new NotFoundError('SensorReading', `Invalid soil moisture value for nodeId=${nodeId}`);
+        }
+        if (!Number.isFinite(currentSoilTemp)) {
+            throw new NotFoundError('SensorReading', `Invalid soil temperature value for nodeId=${nodeId}`);
+        }
+
+        const safeVWC = safeClampNumber(currentVWC, 0, 100);
+        const safeSoilTemp = safeClampNumber(currentSoilTemp, -10, 70);
+
+        const currentAirTemp = reading.airTemperature ?? 0;
+        const accumulatedGDD = field.accumulatedGDD ?? 0;
+        const currentSeason = getCurrentSeason() as DbSeason;
+        const currentDate = new Date();
+
+        const crops = await prisma.cropParameters.findMany({
+            where: { validForUP: true },
+            orderBy: { cropName: 'asc' },
         });
 
-        // Sort by score descending
-        allScores.sort((a, b) => b.totalScore - a.totalScore);
+        if (crops.length === 0) {
+            throw new NotFoundError('CropParameters', 'No crops found (validForUP=true). Run prisma seed.');
+        }
 
-        // Assign ranks
+        const usable = crops.filter((c) => {
+            if (isKnownCropName(c.cropName)) return true;
+            logger.warn({ cropName: c.cropName }, 'Skipping DB crop not present in VALID_CROPS typing universe');
+            return false;
+        });
+
+        if (usable.length === 0) {
+            throw new NotFoundError(
+                'CropParameters',
+                'No DB crops match VALID_CROPS typing universe. Update constants.ts or widen CropScore types.'
+            );
+        }
+
+        const allScores: CropScore[] = usable.map((crop) =>
+            calculateCropScore(
+                crop.cropName as CropName,
+                crop,
+                safeVWC,
+                safeSoilTemp,
+                currentSeason,
+                currentDate,
+                soilTexture,
+                accumulatedGDD
+            )
+        );
+
+        allScores.sort((a, b) => b.totalScore - a.totalScore);
         allScores.forEach((score, index) => {
             score.rank = index + 1;
         });
 
         const topCrop = allScores[0];
-
-        if (!topCrop) {
-            throw new Error('No crops could be scored');
-        }
-
-        logger.info(
-            { nodeId, recommendedCrop: topCrop.cropName, score: topCrop.totalScore },
-            'Crop recommendation generated'
-        );
+        if (!topCrop) throw new Error('No crops could be scored (internal error)');
 
         return {
             nodeId,
             fieldName: field.fieldName,
             currentSeason,
             recommendedCrop: topCrop.cropName,
-            topCrops: allScores.slice(0, 5), // Top 5 recommendations
+            topCrops: allScores,
             conditions: {
-                currentVWC,
-                currentSoilTemp: currentTemp,
+                currentVWC: safeVWC,
+                currentAirTemp,
+                currentSoilTemp: safeSoilTemp,
                 soilTexture,
                 accumulatedGDD,
             },
             timestamp: new Date(),
         };
-
     } catch (error) {
         logger.error({ error, nodeId }, 'Failed to generate crop recommendations');
         throw error;

@@ -1,4 +1,3 @@
-// src/api/middleware/asyncHandler.ts
 /**
  * Async Handler Wrapper
  */

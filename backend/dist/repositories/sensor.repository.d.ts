@@ -1,13 +1,16 @@
 /**
  * Sensor Reading Repository
  */
-export interface CreateSensorReadingInput {
+export interface SensorReadingInput {
     nodeId: number;
     moisture: number;
     temperature: number;
     soilMoistureVWC: number;
     soilTemperature: number;
-    timestamp: Date;
+    airTemperature: number;
+    airHumidity: number;
+    airPressure?: number;
+    timestamp?: Date;
 }
 export interface SensorReadingFilters {
     nodeId?: number;
@@ -15,72 +18,55 @@ export interface SensorReadingFilters {
     endDate?: Date;
     limit?: number;
 }
-/**
- * Create sensor reading
- */
-export declare function createSensorReading(input: CreateSensorReadingInput): Promise<{
+export declare function createSensorReading(input: SensorReadingInput): Promise<{
     timestamp: Date;
-    moisture: number;
-    temperature: number;
-    soilMoistureVWC: number | null;
-    soilTemperature: number | null;
-    rssi: number | null;
-    batteryLevel: number | null;
     id: number;
     nodeId: number;
+    moisture: number;
+    temperature: number;
+    soilMoistureVWC: number;
+    soilTemperature: number;
+    airTemperature: number;
+    airHumidity: number;
+    airPressure: number | null;
 }>;
-/**
- * Get latest reading
- */
 export declare function getLatestReading(nodeId: number): Promise<{
     timestamp: Date;
-    moisture: number;
-    temperature: number;
-    soilMoistureVWC: number | null;
-    soilTemperature: number | null;
-    rssi: number | null;
-    batteryLevel: number | null;
     id: number;
     nodeId: number;
+    moisture: number;
+    temperature: number;
+    soilMoistureVWC: number;
+    soilTemperature: number;
+    airTemperature: number;
+    airHumidity: number;
+    airPressure: number | null;
 } | null>;
-/**
- * Get readings with filters
- */
 export declare function getReadings(filters: SensorReadingFilters): Promise<{
     timestamp: Date;
-    moisture: number;
-    temperature: number;
-    soilMoistureVWC: number | null;
-    soilTemperature: number | null;
-    rssi: number | null;
-    batteryLevel: number | null;
     id: number;
     nodeId: number;
-}[]>;
-/**
- * Get readings for date
- */
-export declare function getReadingsForDate(nodeId: number, date: Date): Promise<{
-    timestamp: Date;
     moisture: number;
     temperature: number;
-    soilMoistureVWC: number | null;
-    soilTemperature: number | null;
-    rssi: number | null;
-    batteryLevel: number | null;
-    id: number;
-    nodeId: number;
+    soilMoistureVWC: number;
+    soilTemperature: number;
+    airTemperature: number;
+    airHumidity: number;
+    airPressure: number | null;
 }[]>;
-/**
- * Get average readings
- */
-export declare function getAverageReadings(nodeId: number, hours?: number): Promise<{
+export declare function getAverageSoilReadings(nodeId: number, hours?: number): Promise<{
     avgSoilMoistureVWC: number;
     avgSoilTemperature: number;
     readingsCount: number;
+    periodHours: number;
 } | null>;
-/**
- * Delete old readings
- */
-export declare function deleteOldReadings(daysToKeep?: number): Promise<number>;
+export declare function getAverageAirReadings(nodeId: number, hours?: number): Promise<{
+    avgAirTemperature: number;
+    avgAirHumidity: number;
+    avgAirPressure: number | null;
+    readingsCount: number;
+    periodHours: number;
+} | null>;
+export declare function getReadingsCount(nodeId: number): Promise<number>;
+export declare function deleteOldReadings(olderThanDays: number): Promise<number>;
 //# sourceMappingURL=sensor.repository.d.ts.map

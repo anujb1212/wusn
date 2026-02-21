@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/sensor_provider.dart';
 import '../widgets/sensor_card.dart';
 import '../widgets/dashboard_header.dart';
 import '../widgets/status_indicator.dart';
 import '../l10n/translations.dart';
-import 'crop_confirmation_screen.dart'; // ✅ Critical Import
+
+import '../models/sensor_data.dart';
+
+import 'crop_confirmation_screen.dart';
 import 'irrigation_advice_screen.dart';
 import 'api_test_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String language;
-  final Function(String) onLanguageChange;
+  final ValueChanged<String> onLanguageChange;
 
   const DashboardScreen({
     super.key,
@@ -29,8 +33,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Auto-fetch on screen load
+
+    // Auto-fetch on screen load (safe even if provider constructor also fetches).
+    // Use mounted guard for safety in rare fast-dispose cases.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       Provider.of<SensorProvider>(context, listen: false).fetchData();
     });
   }
@@ -42,13 +49,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Scaffold(
           backgroundColor: const Color(0xFFF5F5F5),
           appBar: AppBar(
-            title: Text(_t('appTitle'),
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              _t('appTitle'),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             backgroundColor: const Color(0xFF4CAF50),
             foregroundColor: Colors.white,
             elevation: 2,
             actions: [
-              // Test API Debug Button
               IconButton(
                 icon: const Icon(Icons.bug_report),
                 tooltip: 'Test API',
@@ -60,7 +68,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   );
                 },
               ),
-
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: Center(
@@ -75,9 +82,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               PopupMenuButton<String>(
                 icon: const Icon(Icons.language, size: 28),
                 onSelected: widget.onLanguageChange,
-                itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'en', child: Text('English')),
-                  const PopupMenuItem(value: 'hi', child: Text('हिंदी')),
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'en', child: Text('English')),
+                  PopupMenuItem(value: 'hi', child: Text('हिंदी')),
                 ],
               ),
             ],
@@ -125,16 +132,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 '${_t('lastUpdated')}: ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
                           ),
                           const SizedBox(height: 12),
-
-                          // Manual Refresh Button
                           ElevatedButton.icon(
                             onPressed: () async {
                               await provider.fetchData();
+                              if (!context.mounted) return;
+
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(widget.language == 'hi'
-                                      ? 'डेटा अपडेट किया गया!'
-                                      : 'Data refreshed!'),
+                                  content: Text(
+                                    widget.language == 'hi'
+                                        ? 'डेटा अपडेट किया गया!'
+                                        : 'Data refreshed!',
+                                  ),
                                   duration: const Duration(seconds: 2),
                                 ),
                               );
@@ -156,9 +165,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                           ),
-
                           const SizedBox(height: 20),
-
                           if (provider.sensors.isEmpty)
                             Center(
                               child: Column(
@@ -184,7 +191,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             )
                           else
-                            ...provider.sensors.map((sensor) {
+                            ...provider.sensors.map((SensorData sensor) {
                               return Column(
                                 children: [
                                   SensorCard(
@@ -204,7 +211,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildActionButtons(dynamic sensor) {
+  Widget _buildActionButtons(SensorData sensor) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -227,8 +234,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       );
 
-                      // Refresh data if crop confirmed
-                      if (result == true) {
+                      if (result == true && context.mounted) {
                         Provider.of<SensorProvider>(context, listen: false)
                             .fetchData();
                       }
@@ -256,7 +262,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => IrrigationAdviceScreen(
-                            fieldId: sensor.nodeId,
+                            fieldId: sensor.nodeId, // nodeId
                             language: widget.language,
                           ),
                         ),
@@ -280,8 +286,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
             const SizedBox(height: 8),
-
-            // Quick info text
             Text(
               widget.language == 'hi'
                   ? 'पहले फसल की पुष्टि करें, फिर सिंचाई सलाह देखें'

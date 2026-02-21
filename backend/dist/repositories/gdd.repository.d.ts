@@ -1,6 +1,3 @@
-/**
- * GDD (Growing Degree Days) Repository
- */
 export interface CreateGDDRecordInput {
     fieldId: number;
     date: Date;
@@ -23,14 +20,14 @@ export declare function createGDDRecord(input: CreateGDDRecordInput): Promise<{
     baseTemperature: number;
     createdAt: Date;
     date: Date;
+    readingsCount: number;
     avgAirTemp: number;
     minAirTemp: number | null;
     maxAirTemp: number | null;
-    readingsCount: number;
+    growthStage: import(".prisma/client").$Enums.GrowthStage | null;
+    fieldId: number;
     dailyGDD: number;
     cumulativeGDD: number;
-    growthStage: string | null;
-    fieldId: number;
 }>;
 /**
  * Get GDD record for specific date
@@ -41,14 +38,14 @@ export declare function getGDDRecordForDate(fieldId: number, date: Date): Promis
     baseTemperature: number;
     createdAt: Date;
     date: Date;
+    readingsCount: number;
     avgAirTemp: number;
     minAirTemp: number | null;
     maxAirTemp: number | null;
-    readingsCount: number;
+    growthStage: import(".prisma/client").$Enums.GrowthStage | null;
+    fieldId: number;
     dailyGDD: number;
     cumulativeGDD: number;
-    growthStage: string | null;
-    fieldId: number;
 } | null>;
 /**
  * Get all GDD records for field since sowing
@@ -59,14 +56,14 @@ export declare function getGDDRecordsSinceSowing(fieldId: number, sowingDate: Da
     baseTemperature: number;
     createdAt: Date;
     date: Date;
+    readingsCount: number;
     avgAirTemp: number;
     minAirTemp: number | null;
     maxAirTemp: number | null;
-    readingsCount: number;
+    growthStage: import(".prisma/client").$Enums.GrowthStage | null;
+    fieldId: number;
     dailyGDD: number;
     cumulativeGDD: number;
-    growthStage: string | null;
-    fieldId: number;
 }[]>;
 /**
  * Get latest GDD record
@@ -77,14 +74,14 @@ export declare function getLatestGDDRecord(fieldId: number): Promise<{
     baseTemperature: number;
     createdAt: Date;
     date: Date;
+    readingsCount: number;
     avgAirTemp: number;
     minAirTemp: number | null;
     maxAirTemp: number | null;
-    readingsCount: number;
+    growthStage: import(".prisma/client").$Enums.GrowthStage | null;
+    fieldId: number;
     dailyGDD: number;
     cumulativeGDD: number;
-    growthStage: string | null;
-    fieldId: number;
 } | null>;
 /**
  * Delete GDD records for date range

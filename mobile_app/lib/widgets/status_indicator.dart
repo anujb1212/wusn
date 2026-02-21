@@ -12,34 +12,45 @@ class StatusIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: isConnected
-            ? Colors.greenAccent.withOpacity(0.2)
-            : Colors.grey.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: isConnected ? Colors.greenAccent : Colors.grey,
-              shape: BoxShape.circle,
+    final Color dotColor = isConnected ? Colors.green : Colors.grey;
+    final Color bgColor =
+        (isConnected ? Colors.green : Colors.grey).withOpacity(0.15);
+
+    // Use readable text on a light background.
+    final Color textColor = Theme.of(context).colorScheme.onSurface;
+
+    return Semantics(
+      // Helps accessibility tools announce the connection state. [web:351]
+      label: 'Connection status: $label',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: dotColor.withOpacity(0.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: dotColor,
+                shape: BoxShape.circle,
+              ),
             ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isConnected ? Colors.white : Colors.white70,
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: textColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

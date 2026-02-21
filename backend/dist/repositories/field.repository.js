@@ -2,8 +2,12 @@
 /**
  * Field Repository
  */
+import { Prisma, GrowthStage } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { DatabaseError, NotFoundError } from '../utils/errors.js';
+function isPrismaNotFound(error) {
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025';
+}
 /**
  * Create field
  */
@@ -90,13 +94,17 @@ export async function updateFieldCrop(nodeId, input) {
                 expectedGDDTotal: input.expectedGDDTotal,
                 expectedHarvestDate: input.expectedHarvestDate ?? null,
                 cropConfirmed: true,
-                accumulatedGDD: 0, // Reset GDD on crop change
-                currentGrowthStage: 'INITIAL',
+                // Reset runtime state on crop change
+                accumulatedGDD: 0,
+                currentGrowthStage: GrowthStage.INITIAL,
                 lastGDDUpdate: null,
             },
         });
     }
     catch (error) {
+        if (isPrismaNotFound(error)) {
+            throw new NotFoundError('Field', `nodeId=${nodeId}`);
+        }
         throw new DatabaseError('updateFieldCrop', error);
     }
 }
@@ -115,6 +123,9 @@ export async function updateFieldGDD(nodeId, accumulatedGDD, growthStage) {
         });
     }
     catch (error) {
+        if (isPrismaNotFound(error)) {
+            throw new NotFoundError('Field', `nodeId=${nodeId}`);
+        }
         throw new DatabaseError('updateFieldGDD', error);
     }
 }
@@ -131,6 +142,9 @@ export async function updateLastIrrigationCheck(nodeId) {
         });
     }
     catch (error) {
+        if (isPrismaNotFound(error)) {
+            throw new NotFoundError('Field', `nodeId=${nodeId}`);
+        }
         throw new DatabaseError('updateLastIrrigationCheck', error);
     }
 }
@@ -147,6 +161,9 @@ export async function recordIrrigationAction(nodeId) {
         });
     }
     catch (error) {
+        if (isPrismaNotFound(error)) {
+            throw new NotFoundError('Field', `nodeId=${nodeId}`);
+        }
         throw new DatabaseError('recordIrrigationAction', error);
     }
 }
@@ -161,10 +178,7 @@ export async function getFieldsNeedingGDDUpdate() {
             where: {
                 cropConfirmed: true,
                 sowingDate: { not: null },
-                OR: [
-                    { lastGDDUpdate: null },
-                    { lastGDDUpdate: { lt: oneDayAgo } },
-                ],
+                OR: [{ lastGDDUpdate: null }, { lastGDDUpdate: { lt: oneDayAgo } }],
             },
         });
     }
@@ -172,30 +186,31 @@ export async function getFieldsNeedingGDDUpdate() {
         throw new DatabaseError('getFieldsNeedingGDDUpdate', error);
     }
 }
-// In src/repositories/field.repository.ts - ADD this function
 /**
  * Update field (generic update)
  */
 export async function updateField(nodeId, updates) {
     try {
-        // Only include fields that are actually defined
-        const updateData = {};
+        const data = {};
         if (updates.fieldName !== undefined)
-            updateData.fieldName = updates.fieldName;
+            data.fieldName = updates.fieldName;
         if (updates.latitude !== undefined)
-            updateData.latitude = updates.latitude;
+            data.latitude = updates.latitude;
         if (updates.longitude !== undefined)
-            updateData.longitude = updates.longitude;
+            data.longitude = updates.longitude;
         if (updates.soilTexture !== undefined)
-            updateData.soilTexture = updates.soilTexture;
+            data.soilTexture = updates.soilTexture;
         if (updates.location !== undefined)
-            updateData.location = updates.location;
+            data.location = updates.location;
         return await prisma.field.update({
             where: { nodeId },
-            data: updateData,
+            data,
         });
     }
     catch (error) {
+        if (isPrismaNotFound(error)) {
+            throw new NotFoundError('Field', `nodeId=${nodeId}`);
+        }
         throw new DatabaseError('updateField', error);
     }
 }
@@ -209,6 +224,9 @@ export async function deleteField(nodeId) {
         });
     }
     catch (error) {
+        if (isPrismaNotFound(error)) {
+            throw new NotFoundError('Field', `nodeId=${nodeId}`);
+        }
         throw new DatabaseError('deleteField', error);
     }
 }
