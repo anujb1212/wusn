@@ -44,7 +44,7 @@ async function main() {
         },
     });
 
-    console.log('✅ Dev fixtures inserted (nodeId=1)');
+    console.log('Dev fixtures inserted (nodeId=1)');
 }
 
 main()

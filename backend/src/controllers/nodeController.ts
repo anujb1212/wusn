@@ -1,4 +1,3 @@
-// src/controllers/nodeController.ts
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../config/database.js';
@@ -13,7 +12,6 @@ const createNodeSchema = z.object({
 export async function createNodeController(req: Request, res: Response): Promise<void> {
     const data = createNodeSchema.parse(req.body);
 
-    // Build create data conditionally to avoid undefined
     const createData: any = {
         nodeId: data.nodeId,
         isActive: true,
@@ -22,7 +20,6 @@ export async function createNodeController(req: Request, res: Response): Promise
     if (data.burialDepth !== undefined) createData.burialDepth = data.burialDepth;
     if (data.distanceToGW !== undefined) createData.distanceToGW = data.distanceToGW;
 
-    // Build update data conditionally
     const updateData: any = {
         lastSeen: new Date(),
     };

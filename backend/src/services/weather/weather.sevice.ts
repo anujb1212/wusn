@@ -36,9 +36,7 @@ interface OpenWeatherResponse {
     }>;
 }
 
-/**
- * Fetch weather forecast from OpenWeatherMap API
- */
+// Fetch weather forecast from OpenWeatherMap API
 async function fetchFromAPI(latitude: number, longitude: number): Promise<WeatherForecast> {
     try {
         logger.info({ latitude, longitude }, 'Fetching weather from OpenWeatherMap');
@@ -131,9 +129,7 @@ async function fetchFromAPI(latitude: number, longitude: number): Promise<Weathe
     }
 }
 
-/**
- * Validate and parse cached forecast data
- */
+// Validate and parse cached forecast data
 function parseCachedForecast(forecastData: unknown): WeatherForecastDay[] {
     if (!Array.isArray(forecastData)) {
         throw new Error('Invalid cached forecast data format');
@@ -142,9 +138,7 @@ function parseCachedForecast(forecastData: unknown): WeatherForecastDay[] {
     return forecastData as WeatherForecastDay[];
 }
 
-/**
- * Get weather forecast with caching
- */
+// Get weather forecast with caching
 export async function getWeatherForecast(latitude: number, longitude: number): Promise<WeatherForecast> {
     try {
         // Check cache first
@@ -172,9 +166,7 @@ export async function getWeatherForecast(latitude: number, longitude: number): P
     }
 }
 
-/**
- * Check if significant rain is expected in forecast window
- */
+// Check if significant rain is expected in forecast window
 export async function isRainExpected(
     latitude: number,
     longitude: number,

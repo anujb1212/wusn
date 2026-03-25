@@ -1,6 +1,4 @@
-/**
- * Weather Routes
- */
+// Weather Routes
 
 import { Router } from 'express';
 import { asyncHandler } from '../api/middleware/asyncHandler.js';

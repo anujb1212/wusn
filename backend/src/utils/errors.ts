@@ -1,6 +1,4 @@
-/**
- * Custom Error Classes
- */
+// Custom Error Classes
 
 export class AppError extends Error {
     public readonly cause?: unknown;

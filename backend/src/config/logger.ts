@@ -1,14 +1,9 @@
-// src/config/logger.ts
-/**
- * Structured Logger using Pino
- */
-
+// Structured Logger using Pino
 import pino from 'pino';
 import { env } from './environment.js';
 
-/**
- * Base logger options (without transport)
- */
+
+// Base logger options (without transport)
 const baseOptions: pino.LoggerOptions = {
     level: env.LOG_LEVEL,
 
@@ -25,9 +20,7 @@ const baseOptions: pino.LoggerOptions = {
     timestamp: pino.stdTimeFunctions.isoTime,
 };
 
-/**
- * Create logger with or without pretty printing
- */
+// Create logger with or without pretty printing
 const baseLogger = env.LOG_PRETTY
     ? pino({
         ...baseOptions,
@@ -42,21 +35,15 @@ const baseLogger = env.LOG_PRETTY
     })
     : pino(baseOptions);
 
-/**
- * Main application logger
- */
+// Main application logger
 export const logger = baseLogger;
 
-/**
- * Create child logger with context
- */
+// Create child logger with context
 export function createLogger(context: Record<string, unknown>): pino.Logger {
     return logger.child(context);
 }
 
-/**
- * Flush logs before exit
- */
+// Flush logs before exit
 export function flushLogs(): Promise<void> {
     return new Promise((resolve) => {
         logger.flush();

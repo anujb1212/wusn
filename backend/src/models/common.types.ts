@@ -1,4 +1,4 @@
-/**
+/*
  * Common Types for WUSN Backend
  *
  * All types aligned with 20-crop universe and gateway data contract
@@ -14,7 +14,7 @@ import type {
     Season,
 } from '../utils/constants.js';
 
-/**
+/*
  * Raw sensor payload from gateway via MQTT
  *
  * Contract: Each gateway reading includes both soil and air measurements
@@ -34,7 +34,7 @@ export interface SensorPayload {
     timestamp?: string; // ISO 8601 string, defaults to server time if missing
 }
 
-/**
+/*
  * Processed and validated sensor data
  * Post-calibration, ready for agronomic calculations
  */
@@ -48,7 +48,7 @@ export interface ProcessedSensorData {
     timestamp: Date;
 }
 
-/**
+/*
  * Field configuration
  * Core entity linking physical field to crop, location, and agronomic state
  */
@@ -70,7 +70,7 @@ export interface FieldConfig {
     lastGDDUpdate: Date | null;
 }
 
-/**
+/*
  * Daily GDD calculation result
  * Formula: GDD = max(0, (Tmax + Tmin)/2 - Tbase)
  * Uses airTemperature from gateway readings aggregated daily
@@ -86,7 +86,7 @@ export interface GDDResult {
     readingsCount: number; // Number of gateway readings used
 }
 
-/**
+/*
  * GDD status summary for a field
  */
 export interface GDDStatus {
@@ -103,7 +103,7 @@ export interface GDDStatus {
     lastUpdate: Date | null;
 }
 
-/**
+/*
  * Weather forecast daily entry (from external API like OpenWeather)
  */
 export interface WeatherForecastDay {
@@ -117,7 +117,7 @@ export interface WeatherForecastDay {
     description: string;
 }
 
-/**
+/*
  * Complete weather forecast
  */
 export interface WeatherForecast {
@@ -128,7 +128,7 @@ export interface WeatherForecast {
     forecast: WeatherForecastDay[];
 }
 
-/**
+/*
  * Crop scoring breakdown
  * Used by recommendation engine to rank crops
  */
@@ -147,7 +147,7 @@ export interface CropScore {
     suitable: boolean; // totalScore >= 60 threshold
 }
 
-/**
+/*
  * Crop recommendation result
  */
 export interface CropRecommendation {
@@ -166,25 +166,18 @@ export interface CropRecommendation {
     timestamp: Date;
 }
 
-/**
+/*
  * Irrigation decision
  * Based on soil water balance, crop stage, and weather forecast
- *
- * Notes:
- * - suggestedDepthMm/duration should be 0 when decision == "do_not_irrigate".
- * - "applicationRateMmPerHour" is an explicit assumption used to convert depth -> time.
  */
 export interface IrrigationDecision {
     nodeId: number;
     fieldName: string;
 
-    // Machine key (UI should map to labels)
     decision: 'irrigate_now' | 'irrigate_soon' | 'do_not_irrigate';
 
     urgency: IrrigationUrgency;
-    urgencyScore: number; // 0-100 (0=none, 100=critical)
-
-    // Human-readable explanation (English/Hindi can be added later as separate fields)
+    urgencyScore: number;
     reason: string;
 
     // Moisture state
@@ -217,7 +210,7 @@ export interface IrrigationDecision {
     timestamp: Date;
 }
 
-/**
+/*
  * Soil water balance
  * FAO-56 style water accounting for irrigation decisions
  *
@@ -242,7 +235,7 @@ export interface SoilWaterBalance {
     stressLevel: 'none' | 'mild' | 'moderate' | 'severe'; // Based on depletion vs MAD
 }
 
-/**
+/*
  * Reference ET calculation result
  * Simplified Hargreaves method: ET0 = 0.0023 * (Tavg + 17.8) * (Tmax - Tmin)^0.5
  * Uses airTemperature data from gateway
@@ -250,14 +243,14 @@ export interface SoilWaterBalance {
 export interface ETCalculation {
     date: Date;
     et0: number; // Reference evapotranspiration (mm/day)
-    tavg: number; // Average air temperature (°C)
-    tmax: number; // Max air temperature (°C)
-    tmin: number; // Min air temperature (°C)
+    tavg: number; // Average air temperature (C)
+    tmax: number; // Max air temperature (C)
+    tmin: number; // Min air temperature (C)
     cropKc: number; // Crop coefficient (growth stage dependent)
     etc: number; // Crop evapotranspiration = ET0 * Kc (mm/day)
 }
 
-/**
+/*
  * Irrigation event record
  * Logged when irrigation is applied (manual or automated)
  */
@@ -275,7 +268,7 @@ export interface IrrigationEvent {
     notes: string | null;
 }
 
-/**
+/*
  * Calibration parameters for soil moisture sensor
  * Linear calibration: VWC = slope * rawValue + intercept
  */
@@ -289,9 +282,7 @@ export interface SensorCalibration {
     notes: string | null;
 }
 
-/**
- * Error response structure
- */
+// Error response structure
 export interface ErrorResponse {
     error: string;
     message: string;
@@ -301,9 +292,7 @@ export interface ErrorResponse {
     details?: unknown;
 }
 
-/**
- * Success response wrapper
- */
+// Success response wrapper
 export interface SuccessResponse<T = unknown> {
     success: true;
     data: T;

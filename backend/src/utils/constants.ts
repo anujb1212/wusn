@@ -11,20 +11,8 @@
  * - Paredes et al. (2025) - Growing Degree Days research
  * - UP Agricultural Extension data
  * - Field observations from Lucknow region (sandy loam soil)
- * 
- * UPDATED: Dec 11, 2025 - Aligned with new Prisma CropParameters schema
- * Changes: moistureMin/Optimal/Max → vwcMin/Optimal/Max
- *          optimalTempMin/Max → soilTempMin/Optimal/Max
- *          stages.initial/development/midSeason/lateSeason → initialStageGDD/developmentStageGDD/midSeasonGDD/lateSeasonGDD
  */
 
-
-
-/**
- * FIXED 20-CROP UNIVERSE
- * Field crops/staples (9): wheat, rice, maize, chickpea, lentil, pea, mustard, sugarcane, potato
- * Vegetables/leafy/cucurbits (11): radish, carrot, tomato, spinach, mint, cucumber, watermelon, musk melon, bottle gourd, bitter gourd
- */
 export const VALID_CROPS = [
     // Field crops / staples
     'wheat',
@@ -240,10 +228,9 @@ export interface CropParameters {
  * UPDATED: Dec 11, 2025 - All field names aligned with Prisma schema
  */
 export const CROP_DATABASE: Record<CropName, CropParameters> = {
-    // ========================
+    // 
     // FIELD CROPS / STAPLES
-    // ========================
-
+    // 
     wheat: {
         name: 'wheat',
         scientificName: 'Triticum aestivum',
@@ -433,9 +420,9 @@ export const CROP_DATABASE: Record<CropName, CropParameters> = {
         preferredSoils: ['SANDY_LOAM', 'LOAM'],
     },
 
-    // ========================================
+    // 
     // VEGETABLES / LEAFY / CUCURBITS
-    // ========================================
+    // 
 
     radish: {
         name: 'radish',
@@ -664,11 +651,7 @@ export function getCurrentSeason(date: Date = new Date()): Season {
     return 'RABI'; // Nov-Feb
 }
 
-
-
-/**
- * Time Constants
- */
+// Time Constants
 export const TIME_CONSTANTS = {
     MS_PER_SECOND: 1000,
     SECONDS_PER_MINUTE: 60,
@@ -677,22 +660,14 @@ export const TIME_CONSTANTS = {
     MS_PER_DAY: 86400000,
 } as const;
 
-
-
-/**
- * Weather API Constants
- */
+// Weather API Constants
 export const WEATHER_CONSTANTS = {
     CACHE_TTL_HOURS: 1,
     FORECAST_DAYS: 5,
     API_TIMEOUT_MS: 5000,
 } as const;
 
-
-
-/**
- * Irrigation Decision Constants
- */
+// Irrigation Decision Constants
 export const IRRIGATION_CONSTANTS = {
     RAIN_THRESHOLD_MM: 5,           // Minimum effective rainfall
     RAIN_FORECAST_HOURS: 48,        // Look-ahead window for rain forecast

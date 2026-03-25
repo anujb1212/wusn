@@ -1,4 +1,4 @@
-
+import "dotenv"
 import { PrismaClient, Season, SoilTexture, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -7,8 +7,8 @@ const prisma = new PrismaClient();
  * Seed Database with UP-Valid Crops (current universe: 19 crops)
  *
  * Notes:
- * - Uses Prisma enums (Season, SoilTexture) to match hardened schema types. [web:46][web:355]
- * - Runs all upserts in a single transaction to avoid partial seeds. [web:155]
+ * - Uses Prisma enums (Season, SoilTexture) to match hardened schema types. 
+ * - Runs all upserts in a single transaction to avoid partial seeds. 
  * - Optionally removes stale CropParameters rows not in this seed list.
  */
 async function main() {
@@ -454,13 +454,12 @@ async function main() {
     }
     console.log(`📊 Seeding crops to database... (${crops.length} crops)\n`);
 
-    // Optional cleanup: remove any CropParameters rows not present in this seed list
-    // (prevents stale DB crops from lingering)
+    // prevents stale DB crops from lingering
     await prisma.cropParameters.deleteMany({
         where: { cropName: { notIn: names } },
     });
 
-    // Atomic seed: all-or-nothing [web:155]
+    // Atomic seed
     for (const crop of crops) {
         const { cropName, ...updateData } = crop;
 
@@ -470,7 +469,7 @@ async function main() {
             update: updateData,
         });
 
-        console.log(`   ✅ ${cropName.padEnd(15)} (${String(crop.season).padEnd(10)}) - ${crop.totalGDD} GDD`);
+        console.log(`   ${cropName.padEnd(15)} (${String(crop.season).padEnd(10)}) - ${crop.totalGDD} GDD`);
     }
 
 
@@ -479,7 +478,7 @@ async function main() {
     const zaidCount = crops.filter((c) => c.season === Season.ZAID).length;
     const perennialCount = crops.filter((c) => c.season === Season.PERENNIAL).length;
 
-    console.log('\n📊 Seeding Summary:');
+    console.log('\n Seeding Summary:');
     console.log('   ══════════════════════════════════════');
     console.log(`   Total UP-valid crops:     ${crops.length}`);
     console.log('   ──────────────────────────────────────');
@@ -488,12 +487,12 @@ async function main() {
     console.log(`   ZAID (Mar-Jun):           ${zaidCount}`);
     console.log(`   PERENNIAL (Year-round):   ${perennialCount}`);
     console.log('   ══════════════════════════════════════');
-    console.log('\n✅ Database seed completed successfully!\n');
+    console.log('\n Database seed completed successfully!\n');
 }
 
 main()
     .catch((e) => {
-        console.error('\n❌ Seed failed:', e);
+        console.error('\n Seed failed:', e);
         throw e
     })
     .finally(async () => {

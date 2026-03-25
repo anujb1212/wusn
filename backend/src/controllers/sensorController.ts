@@ -1,14 +1,11 @@
-// src/controllers/sensorController.ts
-/**
- * Sensor Controller
- */
+// Sensor Controller
 
 import type { Request, Response } from 'express';
 import * as sensorService from '../services/sensor/sensor.service.js';
 import * as sensorRepo from '../repositories/sensor.repository.js';
 import { ValidationError } from '../utils/errors.js';
 
-/**
+/*
  * Get latest sensor data for a node
  * GET /api/sensors/:nodeId/latest
  */
@@ -34,7 +31,7 @@ export async function getLatestSensorData(req: Request, res: Response): Promise<
     });
 }
 
-/**
+/*
  * Get average sensor data for last N hours
  * GET /api/sensors/:nodeId/average?hours=24
  */
@@ -66,7 +63,7 @@ export async function getAverageSensorData(req: Request, res: Response): Promise
     });
 }
 
-/**
+/*
  * Get sensor readings with filters
  * GET /api/sensors/:nodeId/readings?startDate=2025-01-01&endDate=2025-01-07&limit=100
  */

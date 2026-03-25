@@ -1,26 +1,14 @@
-// src/controllers/fieldController.ts
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import * as fieldRepo from '../repositories/field.repository.js';
 import type { SoilTexture as PrismaSoilTexture } from '@prisma/client';
 import { NotFoundError } from '../utils/errors.js';
 
-/**
- * Helpers
- */
 function normalizeSoilTexture(v: unknown): unknown {
     if (typeof v !== 'string') return v;
     return v.trim().toUpperCase();
 }
 
-/**
- * Normalize crop input to canonical IDs stored in DB:
- * - trim
- * - lower-case
- * - convert spaces/hyphens to underscore
- *
- * Final validation is done by checking existence in CropParameters table.
- */
 function normalizeCropType(v: unknown): unknown {
     if (typeof v !== 'string') return v;
     return v
@@ -64,9 +52,7 @@ const setCropSchema = z.object({
     sowingDate: z.coerce.date(),
 });
 
-/**
- * POST /api/fields
- */
+// POST /api/fields
 export async function createFieldController(req: Request, res: Response): Promise<void> {
     const data = createFieldSchema.parse(req.body);
 
@@ -82,9 +68,7 @@ export async function createFieldController(req: Request, res: Response): Promis
     });
 }
 
-/**
- * GET /api/fields/:nodeId
- */
+// GET /api/fields/:nodeId
 export async function getFieldController(req: Request, res: Response): Promise<void> {
     const { nodeId } = nodeIdSchema.parse(req.params);
 
@@ -100,9 +84,7 @@ export async function getFieldController(req: Request, res: Response): Promise<v
     });
 }
 
-/**
- * GET /api/fields
- */
+// GET /api/fields
 export async function getAllFieldsController(_req: Request, res: Response): Promise<void> {
     const fields = await fieldRepo.getAllFields();
 
@@ -113,14 +95,11 @@ export async function getAllFieldsController(_req: Request, res: Response): Prom
     });
 }
 
-/**
- * PATCH /api/fields/:nodeId
- */
+// PATCH /api/fields/:nodeId
 export async function updateFieldController(req: Request, res: Response): Promise<void> {
     const { nodeId } = nodeIdSchema.parse(req.params);
     const updates = updateFieldSchema.parse(req.body);
 
-    // Reject empty patch (prevents accidental no-op + confusing client behavior)
     if (
         updates.fieldName === undefined &&
         updates.latitude === undefined &&
@@ -136,7 +115,6 @@ export async function updateFieldController(req: Request, res: Response): Promis
         return;
     }
 
-    // Keep your existing pattern (direct Prisma usage) but avoid narrowing issues.
     const { prisma } = await import('../config/database.js');
 
     const updateData: Record<string, unknown> = {};
@@ -195,9 +173,7 @@ export async function setCropController(req: Request, res: Response): Promise<vo
     });
 }
 
-/**
- * DELETE /api/fields/:nodeId
- */
+// DELETE /api/fields/:nodeId
 export async function deleteFieldController(req: Request, res: Response): Promise<void> {
     const { nodeId } = nodeIdSchema.parse(req.params);
 

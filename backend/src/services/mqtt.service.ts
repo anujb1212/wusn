@@ -35,9 +35,7 @@ const sensorPayloadSchema = z.object({
     airPressure: z.number().min(800).max(1100).optional(), // Barometric pressure (hPa)
 });
 
-/**
- * Initialize MQTT connection and subscribe to sensor data topic
- */
+// Initialize MQTT connection and subscribe to sensor data topic
 export function initializeMQTT(): void {
     if (client) {
         logger.warn('MQTT already initialized');
@@ -133,16 +131,12 @@ export function publishMessage(topic: string, payload: object): void {
     });
 }
 
-/**
- * Check if MQTT client is connected
- */
+// Check if MQTT client is connected
 export function isConnected(): boolean {
     return client?.connected ?? false;
 }
 
-/**
- * Disconnect MQTT client gracefully
- */
+// Disconnect MQTT client gracefully
 export async function disconnectMQTT(): Promise<void> {
     return new Promise((resolve) => {
         if (client) {

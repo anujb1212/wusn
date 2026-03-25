@@ -1,6 +1,4 @@
-/**
- * Sensor Reading Repository
- */
+// Sensor Reading Repository
 
 import { Prisma } from '@prisma/client';
 import { prisma } from '../config/database.js';

@@ -1,4 +1,4 @@
-/**
+/*
  * GDD (Growing Degree Days) Repository
  */
 import { Prisma, GrowthStage } from '@prisma/client';
@@ -39,9 +39,7 @@ function toGrowthStage(value: unknown): GrowthStage | null {
     return null;
 }
 
-/**
- * Create GDD record
- */
+// Create GDD record
 export async function createGDDRecord(input: CreateGDDRecordInput) {
     try {
         return await prisma.gDDRecord.create({
@@ -64,9 +62,7 @@ export async function createGDDRecord(input: CreateGDDRecordInput) {
     }
 }
 
-/**
- * Get GDD record for specific date
- */
+// Get GDD record for specific date
 export async function getGDDRecordForDate(fieldId: number, date: Date) {
     try {
         const dateOnly = new Date(date);
@@ -85,9 +81,7 @@ export async function getGDDRecordForDate(fieldId: number, date: Date) {
     }
 }
 
-/**
- * Get all GDD records for field since sowing
- */
+// Get all GDD records for field since sowing
 export async function getGDDRecordsSinceSowing(fieldId: number, sowingDate: Date) {
     try {
         return await prisma.gDDRecord.findMany({
@@ -102,9 +96,7 @@ export async function getGDDRecordsSinceSowing(fieldId: number, sowingDate: Date
     }
 }
 
-/**
- * Get latest GDD record
- */
+// Get latest GDD record
 export async function getLatestGDDRecord(fieldId: number) {
     try {
         return await prisma.gDDRecord.findFirst({
@@ -116,9 +108,7 @@ export async function getLatestGDDRecord(fieldId: number) {
     }
 }
 
-/**
- * Delete GDD records for date range
- */
+// Delete GDD records for date range
 export async function deleteGDDRecordsInRange(
     fieldId: number,
     startDate: Date,
@@ -141,9 +131,7 @@ export async function deleteGDDRecordsInRange(
     }
 }
 
-/**
- * Get cumulative GDD for field
- */
+// Get cumulative GDD for field
 export async function getCumulativeGDD(fieldId: number): Promise<number> {
     try {
         const latest = await getLatestGDDRecord(fieldId);

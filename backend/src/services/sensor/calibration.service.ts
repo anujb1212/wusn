@@ -17,7 +17,7 @@ import type { SoilTexture } from '../../utils/constants.js';
  * @returns VWC as percentage (0-100)
  */
 export function convertToVWC(moisture: number, soilTexture: SoilTexture): number {
-    // ✅ Direct conversion: MQTT sends pre-calibrated values
+    // Direct conversion: MQTT sends pre-calibrated values
     // Format: 0-1000 representing 0.0% to 100.0% VWC
     // Examples:
     //   380 → 38.0% (rice optimal)
@@ -44,7 +44,7 @@ export function convertSMUtoVWC(smu: number, soilTexture: SoilTexture): number {
  * @returns Temperature in Celsius
  */
 export function convertToTemperature(tempRaw: number): number {
-    // ✅ MQTT format: temperature * 10
+    // MQTT format: temperature * 10
     // Examples:
     //   285 → 28.5°C
     //   220 → 22.0°C

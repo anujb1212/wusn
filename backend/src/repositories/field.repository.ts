@@ -1,7 +1,4 @@
-// src/repositories/field.repository.ts
-/**
- * Field Repository
- */
+//Field Repository
 
 import { Prisma, GrowthStage } from '@prisma/client';
 import type { SoilTexture } from '@prisma/client';
@@ -38,9 +35,7 @@ function isPrismaNotFound(error: unknown): boolean {
     return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025';
 }
 
-/**
- * Create field
- */
+// Create field
 export async function createField(input: CreateFieldInput) {
     try {
         return await prisma.field.create({
@@ -59,9 +54,7 @@ export async function createField(input: CreateFieldInput) {
     }
 }
 
-/**
- * Get field by node ID
- */
+// Get field by node ID
 export async function getFieldByNodeId(nodeId: number) {
     try {
         const field = await prisma.field.findUnique({
@@ -79,9 +72,7 @@ export async function getFieldByNodeId(nodeId: number) {
     }
 }
 
-/**
- * Get field by ID
- */
+// Get field by ID
 export async function getFieldById(id: number) {
     try {
         const field = await prisma.field.findUnique({
@@ -99,9 +90,7 @@ export async function getFieldById(id: number) {
     }
 }
 
-/**
- * Get all fields
- */
+// Get all fields
 export async function getAllFields() {
     try {
         return await prisma.field.findMany({
@@ -112,9 +101,7 @@ export async function getAllFields() {
     }
 }
 
-/**
- * Update field crop configuration
- */
+// Update field crop configuration
 export async function updateFieldCrop(nodeId: number, input: UpdateFieldCropInput) {
     try {
         return await prisma.field.update({
@@ -141,9 +128,7 @@ export async function updateFieldCrop(nodeId: number, input: UpdateFieldCropInpu
     }
 }
 
-/**
- * Update field GDD status
- */
+// Update field GDD status
 export async function updateFieldGDD(nodeId: number, accumulatedGDD: number, growthStage: GrowthStage) {
     try {
         return await prisma.field.update({
@@ -162,9 +147,7 @@ export async function updateFieldGDD(nodeId: number, accumulatedGDD: number, gro
     }
 }
 
-/**
- * Update last irrigation check
- */
+// Update last irrigation check
 export async function updateLastIrrigationCheck(nodeId: number) {
     try {
         return await prisma.field.update({
@@ -181,9 +164,7 @@ export async function updateLastIrrigationCheck(nodeId: number) {
     }
 }
 
-/**
- * Record irrigation action
- */
+// Record irrigation action
 export async function recordIrrigationAction(nodeId: number) {
     try {
         return await prisma.field.update({
@@ -200,9 +181,7 @@ export async function recordIrrigationAction(nodeId: number) {
     }
 }
 
-/**
- * Get fields needing GDD update
- */
+// Get fields needing GDD update
 export async function getFieldsNeedingGDDUpdate() {
     try {
         const oneDayAgo = new Date();
@@ -220,9 +199,7 @@ export async function getFieldsNeedingGDDUpdate() {
     }
 }
 
-/**
- * Update field (generic update)
- */
+// Update field (generic update)
 export async function updateField(nodeId: number, updates: UpdateFieldInput) {
     try {
         const data: Prisma.FieldUpdateInput = {};
@@ -245,9 +222,7 @@ export async function updateField(nodeId: number, updates: UpdateFieldInput) {
     }
 }
 
-/**
- * Delete field
- */
+// Delete field
 export async function deleteField(nodeId: number) {
     try {
         return await prisma.field.delete({

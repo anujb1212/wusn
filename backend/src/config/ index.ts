@@ -1,6 +1,4 @@
-/**
- * Config barrel export
- */
+// Config barrel export
 
 export { env, isDevelopment, isProduction, isTest } from './environment.js';
 export { createLogger } from './logger.js';

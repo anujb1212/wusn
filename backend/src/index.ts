@@ -1,6 +1,4 @@
-/**
- * Application Entry Point
- */
+// Application Entry Point
 
 import { createApp } from './app.js';
 import { env } from './config/environment.js';

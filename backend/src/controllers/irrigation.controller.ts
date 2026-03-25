@@ -1,10 +1,8 @@
-/**
+/*
  * Irrigation Controller
  * 
  * Handles irrigation decision and recommendation API endpoints
  * Uses FAO-56 soil water balance methodology
- * 
- * UPDATED: Dec 11, 2025 - Enhanced with urgency filtering and statistics
  */
 
 import type { Request, Response } from 'express';
@@ -20,22 +18,18 @@ import type { IrrigationUrgency } from '../utils/constants.js';
 
 const logger = createLogger({ service: 'irrigation-controller' });
 
-/**
- * Validation schema for nodeId parameter
- */
+// Validation schema for nodeId parameter
 const nodeIdSchema = z.object({
     nodeId: z.coerce.number().int().positive(),
 });
 
-/**
- * Validation schema for query parameters
- */
+// Validation schema for query parameters
 const querySchema = z.object({
     minUrgency: z.enum(['NONE', 'LOW', 'MODERATE', 'HIGH', 'CRITICAL']).optional(),
     includeNone: z.coerce.boolean().optional().default(true),
 });
 
-/**
+/*
  * GET /api/irrigation/decision/:nodeId
  * 
  * Get irrigation decision for a specific field
@@ -107,7 +101,6 @@ export async function getIrrigationRecommendationsController(req: Request, res: 
 
         const fields = await getAllFields();
 
-        // Only get recommendations for fields with confirmed crops
         const nodeIds = fields
             .filter(f => f.cropConfirmed)
             .map(f => f.nodeId);
@@ -135,7 +128,6 @@ export async function getIrrigationRecommendationsController(req: Request, res: 
 
         let recommendations = await getIrrigationRecommendations(nodeIds);
 
-        // Apply urgency filters
         if (!includeNone) {
             recommendations = recommendations.filter(r => r.urgency !== IRRIGATION_URGENCY.NONE);
         }

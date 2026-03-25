@@ -1,10 +1,8 @@
-/**
+/*
  * Crop Controller
  *
  * Handles crop recommendation API endpoints
  * Uses MCDA (Multi-Criteria Decision Analysis)
- *
- * UPDATED: Dec 13, 2025 - Added crop catalog endpoint + hardened query parsing
  */
 
 import type { Request, Response } from 'express';
@@ -18,19 +16,11 @@ const nodeIdSchema = z.object({
     nodeId: z.coerce.number().int().positive(),
 });
 
-/**
- * Normalize Express query values (string | string[] | undefined) to a single value.
- */
 function firstQueryValue(v: unknown): unknown {
     if (Array.isArray(v)) return v[0];
     return v;
 }
 
-/**
- * Safe boolean parsing for querystrings:
- * - Accepts true/false/1/0 (case-insensitive)
- * - Rejects other values instead of coercing truthy strings like "false"
- */
 const booleanQuery = z.preprocess((v) => {
     const value = firstQueryValue(v);
 
@@ -47,10 +37,6 @@ const booleanQuery = z.preprocess((v) => {
     return value;
 }, z.boolean());
 
-/**
- * Number helpers: we push .int() / .min() / .max() into the inner schema,
- * not on the ZodEffects wrapper (which would cause TS errors).
- */
 const limitQuery = z.preprocess((v) => firstQueryValue(v), z.coerce.number().int().min(1).max(20));
 
 const scoreQuery = z.preprocess((v) => firstQueryValue(v), z.coerce.number().min(0).max(100));
@@ -63,9 +49,9 @@ const querySchema = z.object({
 
 type QueryParams = z.infer<typeof querySchema>;
 
-/**
+/*
  * GET /api/crops
- * Crop catalog for clients (dropdowns, validations).
+ * Crop catalog for clients
  * Canonical crop IDs must match recommendation IDs.
  */
 export async function getCropCatalogController(_req: Request, res: Response): Promise<void> {
@@ -78,14 +64,11 @@ export async function getCropCatalogController(_req: Request, res: Response): Pr
     });
 }
 
-/**
- * GET /api/crops/recommend/:nodeId
- */
+// GET /api/crops/recommend/:nodeId
 export async function getCropRecommendationsController(req: Request, res: Response): Promise<void> {
     try {
         const { nodeId } = nodeIdSchema.parse(req.params);
 
-        // Ensure strong typing instead of `unknown`
         const parsed: QueryParams = querySchema.parse(req.query);
         const { limit, suitableOnly, minScore } = parsed;
 
@@ -93,7 +76,6 @@ export async function getCropRecommendationsController(req: Request, res: Respon
 
         const recommendation = await getCropRecommendations(nodeId);
 
-        // Clone to avoid mutating underlying recommendation/topCrops objects.
         let filteredCrops = recommendation.topCrops.map((c) => ({ ...c, scores: { ...c.scores } }));
 
         if (suitableOnly) {
@@ -106,7 +88,6 @@ export async function getCropRecommendationsController(req: Request, res: Respon
 
         filteredCrops = filteredCrops.slice(0, limit);
 
-        // Re-rank after filtering (safe; these are clones)
         filteredCrops = filteredCrops.map((crop, index) => ({
             ...crop,
             rank: index + 1,
@@ -137,6 +118,6 @@ export async function getCropRecommendationsController(req: Request, res: Respon
         });
     } catch (error) {
         logger.error({ error, params: req.params, query: req.query }, 'Failed to get crop recommendations');
-        throw error; // let central error middleware format the response
+        throw error;
     }
 }

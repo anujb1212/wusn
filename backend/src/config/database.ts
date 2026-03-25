@@ -1,6 +1,4 @@
-/**
- * Database Configuration
- */
+// Database Configuration
 
 import { Prisma, PrismaClient } from '@prisma/client';
 import { createLogger } from './logger.js';
@@ -9,14 +7,12 @@ import { isDevelopment } from './environment.js';
 const logger = createLogger({ service: 'database' });
 
 declare global {
-    // eslint-disable-next-line no-var
     var __prisma: PrismaClient<typeof clientOptions> | undefined;
 }
 
 /**
- * IMPORTANT:
  * We include event-based log levels in the PrismaClient options so TypeScript
- * correctly types prisma.$on('query' | 'error' | 'warn' | 'info', ...). [web:218][web:197]
+ * correctly types prisma.$on('query' | 'error' | 'warn' | 'info', ...)
  *
  * Logging is still effectively controlled by whether we register listeners.
  */
@@ -24,9 +20,7 @@ const clientOptions = {
     log: [
         { emit: 'event' as const, level: 'query' as const },
         { emit: 'event' as const, level: 'error' as const },
-        { emit: 'event' as const, level: 'warn' as const },
-        // Keep info optional; enable if you use it
-        // { emit: 'event' as const, level: 'info' as const },
+        { emit: 'event' as const, level: 'warn' as const }
     ],
 };
 
@@ -65,9 +59,7 @@ prisma.$on('warn', (e: Prisma.LogEvent) => {
     logger.warn({ message: e.message, target: e.target }, 'Prisma warning');
 });
 
-/**
- * Connect to database
- */
+// Connect to database
 export async function connectDatabase(): Promise<void> {
     try {
         await prisma.$connect();
@@ -81,9 +73,7 @@ export async function connectDatabase(): Promise<void> {
     }
 }
 
-/**
- * Disconnect from database
- */
+// Disconnect from database
 export async function disconnectDatabase(): Promise<void> {
     try {
         await prisma.$disconnect();
@@ -94,9 +84,7 @@ export async function disconnectDatabase(): Promise<void> {
     }
 }
 
-/**
- * Health check
- */
+//Health check
 export async function checkDatabaseHealth(): Promise<boolean> {
     try {
         await prisma.$queryRaw`SELECT 1`;

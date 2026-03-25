@@ -4,7 +4,6 @@ import helmet from 'helmet';
 import { createLogger } from './config/logger.js';
 import { errorHandler, notFoundHandler } from './api/middleware/errorHandler.js';
 
-// Import routes
 import sensorRoutes from './routes/sensorRoutes.js';
 import fieldRoutes from './routes/fieldRoutes.js';
 import cropRoutes from './routes/crop.routes.js';
@@ -38,10 +37,10 @@ export function createApp() {
     app.use('/api/weather', weatherRoutes);
     app.use('/api/nodes', nodeRoutes);
 
-    // 404 handler (must be AFTER all routes)
+    // 404 handler 
     app.use(notFoundHandler);
 
-    // Error handling (must be LAST)
+    // Error handling 
     app.use(errorHandler);
 
     logger.info('Express application configured');
