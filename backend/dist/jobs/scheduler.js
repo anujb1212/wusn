@@ -1,4 +1,4 @@
-/**
+/*
  * Scheduled Jobs
  * - Daily GDD calculation
  * - Hourly weather cache refresh
@@ -78,7 +78,7 @@ export function startWeatherCacheJob() {
                     await getWeatherForecast(lat, lon);
                     logger.debug({ location: key }, 'Weather forecast refreshed');
                     successCount++;
-                    // Rate limiting: wait 1 second between API calls
+                    // Rate limiting
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
                 catch (error) {
@@ -94,18 +94,14 @@ export function startWeatherCacheJob() {
     });
     logger.info({ cronExpression }, 'Weather cache refresh job scheduled');
 }
-/**
- * Start all scheduled jobs
- */
+// Start all scheduled jobs
 export function startScheduler() {
     logger.info('Initializing scheduler');
     startGDDCalculationJob();
     startWeatherCacheJob();
     logger.info('All scheduled jobs started');
 }
-/**
- * Validate cron expression
- */
+// Validate cron expression
 export function validateCronExpression(expression) {
     return cron.validate(expression);
 }

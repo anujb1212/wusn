@@ -1,10 +1,8 @@
-/**
+/*
  * Irrigation Controller
  *
  * Handles irrigation decision and recommendation API endpoints
  * Uses FAO-56 soil water balance methodology
- *
- * UPDATED: Dec 11, 2025 - Enhanced with urgency filtering and statistics
  */
 import { z } from 'zod';
 import { makeIrrigationDecision, getIrrigationRecommendations, } from '../services/irrigation/irrigation.service.js';
@@ -12,20 +10,16 @@ import { getAllFields } from '../repositories/field.repository.js';
 import { createLogger } from '../config/logger.js';
 import { IRRIGATION_URGENCY } from '../utils/constants.js';
 const logger = createLogger({ service: 'irrigation-controller' });
-/**
- * Validation schema for nodeId parameter
- */
+// Validation schema for nodeId parameter
 const nodeIdSchema = z.object({
     nodeId: z.coerce.number().int().positive(),
 });
-/**
- * Validation schema for query parameters
- */
+// Validation schema for query parameters
 const querySchema = z.object({
     minUrgency: z.enum(['NONE', 'LOW', 'MODERATE', 'HIGH', 'CRITICAL']).optional(),
     includeNone: z.coerce.boolean().optional().default(true),
 });
-/**
+/*
  * GET /api/irrigation/decision/:nodeId
  *
  * Get irrigation decision for a specific field
@@ -91,7 +85,6 @@ export async function getIrrigationRecommendationsController(req, res) {
         const { minUrgency, includeNone } = querySchema.parse(req.query);
         logger.info({ minUrgency, includeNone }, 'Fetching irrigation recommendations for all fields');
         const fields = await getAllFields();
-        // Only get recommendations for fields with confirmed crops
         const nodeIds = fields
             .filter(f => f.cropConfirmed)
             .map(f => f.nodeId);
@@ -115,7 +108,6 @@ export async function getIrrigationRecommendationsController(req, res) {
             return;
         }
         let recommendations = await getIrrigationRecommendations(nodeIds);
-        // Apply urgency filters
         if (!includeNone) {
             recommendations = recommendations.filter(r => r.urgency !== IRRIGATION_URGENCY.NONE);
         }

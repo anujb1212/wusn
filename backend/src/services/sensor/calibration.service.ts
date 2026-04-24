@@ -117,4 +117,3 @@ export function convertRawADCToVWC(smu: number, soilTexture: SoilTexture): numbe
 
     return curve[curve.length - 1]?.vwc ?? 0;
 }
-

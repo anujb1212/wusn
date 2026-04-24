@@ -1,6 +1,3 @@
-/**
- * Custom Error Classes
- */
 export declare class AppError extends Error {
     readonly statusCode: number;
     readonly isOperational: boolean;

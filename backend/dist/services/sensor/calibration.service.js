@@ -14,7 +14,7 @@
  * @returns VWC as percentage (0-100)
  */
 export function convertToVWC(moisture, soilTexture) {
-    // ✅ Direct conversion: MQTT sends pre-calibrated values
+    // Direct conversion: MQTT sends pre-calibrated values
     // Format: 0-1000 representing 0.0% to 100.0% VWC
     // Examples:
     //   380 → 38.0% (rice optimal)
@@ -37,7 +37,7 @@ export function convertSMUtoVWC(smu, soilTexture) {
  * @returns Temperature in Celsius
  */
 export function convertToTemperature(tempRaw) {
-    // ✅ MQTT format: temperature * 10
+    // MQTT format: temperature * 10
     // Examples:
     //   285 → 28.5°C
     //   220 → 22.0°C

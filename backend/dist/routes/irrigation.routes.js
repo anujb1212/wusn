@@ -1,6 +1,4 @@
-/**
- * Irrigation Routes
- */
+// Irrigation Routes
 import { Router } from 'express';
 import { asyncHandler } from '../api/middleware/asyncHandler.js';
 import { getIrrigationDecisionController, getIrrigationRecommendationsController, } from '../controllers/irrigation.controller.js';

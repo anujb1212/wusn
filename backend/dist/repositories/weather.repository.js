@@ -1,12 +1,8 @@
-/**
+/*
  * Weather Data Repository
  *
  * Handles air temperature data aggregation from SensorReading.airTemperature
  * (gateway-provided air measurements) and external weather forecast caching.
- *
- * Note: WeatherReading table is deprecated - air measurements now part of SensorReading
- *
- * UPDATED: Dec 11, 2025 - Removed problematic null filters, handle in JavaScript
  */
 import { prisma } from '../config/database.js';
 import { DatabaseError } from '../utils/errors.js';
@@ -165,9 +161,6 @@ export async function getAirTempReadingsForDateRange(nodeId, startDate, endDate)
         throw new DatabaseError('getAirTempReadingsForDateRange', error);
     }
 }
-// ============================================================================
-// EXTERNAL WEATHER FORECAST CACHING (OpenWeather API, etc.)
-// ============================================================================
 /**
  * Cache weather forecast from external API
  *
@@ -254,9 +247,6 @@ export async function cleanExpiredForecasts() {
         throw new DatabaseError('cleanExpiredForecasts', error);
     }
 }
-// ============================================================================
-// DEPRECATED FUNCTIONS (for backward compatibility during migration)
-// ============================================================================
 /**
  * @deprecated Use getDailyAirTempByNode instead
  *

@@ -1,9 +1,3 @@
-/**
- * Global Error Handler Middleware
- *
- * Handles all errors from controllers and services
- * Provides consistent error responses across the API
- */
 import { z } from 'zod';
 import { createLogger } from '../../config/logger.js';
 import { AppError, isOperationalError } from '../../utils/errors.js';
@@ -20,10 +14,6 @@ function formatZodError(error) {
         })),
     };
 }
-/**
- * Global error handler
- * Must have 4 parameters for Express to recognize it as error middleware. [web:261]
- */
 export function errorHandler(error, req, res, _next) {
     const logContext = {
         method: req.method,
@@ -70,10 +60,6 @@ export function errorHandler(error, req, res, _next) {
         timestamp: new Date().toISOString(),
     });
 }
-/**
- * 404 handler for unmatched routes
- * Should be registered AFTER all routes but BEFORE error handler.
- */
 export function notFoundHandler(req, res) {
     res.status(404).json({
         success: false,

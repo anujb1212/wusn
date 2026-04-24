@@ -1,6 +1,4 @@
-/**
- * GDD Routes
- */
+// GDD Routes
 import { Router } from 'express';
 import { asyncHandler } from '../api/middleware/asyncHandler.js';
 import { getGDDStatusController, calculateGDDController, recalculateGDDController, calculateMissingGDDController, } from '../controllers/gdd.controller.js';

@@ -1,3 +1,4 @@
+import "dotenv/config"
 import { PrismaClient, SoilTexture } from '@prisma/client';
 
 const prisma = new PrismaClient();

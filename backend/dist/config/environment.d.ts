@@ -1,14 +1,5 @@
-/**
- * Environment Variables Configuration with Validation
- *
- * IMPORTANT: This file has NO imports to avoid circular dependencies
- * Must be imported first before any other config files
- */
 import 'dotenv/config';
 import { z } from 'zod';
-/**
- * Environment variable schema
- */
 declare const envSchema: z.ZodObject<{
     NODE_ENV: z.ZodDefault<z.ZodEnum<["development", "production", "test"]>>;
     PORT: z.ZodDefault<z.ZodNumber>;
@@ -46,14 +37,7 @@ declare const envSchema: z.ZodObject<{
     WEATHER_CACHE_TTL_HOURS?: number | undefined;
     GDD_CALCULATION_HOUR?: number | undefined;
 }>;
-/**
- * Validated environment variables type
- */
 export type Environment = z.infer<typeof envSchema>;
-/**
- * Validated environment configuration
- * Use this throughout your application
- */
 export declare const env: {
     NODE_ENV: "development" | "production" | "test";
     PORT: number;
@@ -67,9 +51,6 @@ export declare const env: {
     GDD_CALCULATION_HOUR: number;
     MQTT_CLIENT_ID?: string | undefined;
 };
-/**
- * Environment helpers
- */
 export declare const isProduction: boolean;
 export declare const isDevelopment: boolean;
 export declare const isTest: boolean;

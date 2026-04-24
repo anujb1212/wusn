@@ -1,5 +1,4 @@
 class Field {
-  /// Backend: 'nodeId' (kept as id in app)
   final int id;
   final int nodeId;
   final String fieldName;
@@ -10,13 +9,10 @@ class Field {
   final String? cropType;
   final DateTime? sowingDate;
 
-  /// NEW: crop-specific
   final double? baseTemperature;
 
-  /// NEW: from crop.lateSeasonGDD
   final double? expectedGDDTotal;
 
-  /// NEW: Backend enum
   final String? currentGrowthStage;
 
   Field({
@@ -81,7 +77,6 @@ class Field {
   }
 }
 
-/// Local JSON coercion helpers (private to this file).
 class _Json {
   static String asString(dynamic v, {required String fallback}) {
     if (v == null) return fallback;

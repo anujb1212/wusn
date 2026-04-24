@@ -22,7 +22,27 @@ async function main() {
         // ====================================================================
         // FIELD CROPS / STAPLES
         // ====================================================================
-
+        {
+            cropName: 'okra',
+            soilTempMin: 18,
+            soilTempOptimal: 27,
+            soilTempMax: 35,
+            vwcMin: 22,
+            vwcOptimal: 30,
+            vwcMax: 38,
+            baseTemperature: 10,
+            totalGDD: 1800,
+            rootDepthCm: 80,
+            mad: 0.50,
+            kc: { ini: 0.45, mid: 1.15, end: 0.80 },
+            initialStageGDD: 270,
+            developmentStageGDD: 630,
+            midSeasonGDD: 1260,
+            lateSeasonGDD: 1800,
+            validForUP: true,
+            season: Season.ZAID,
+            soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM, SoilTexture.CLAY_LOAM],
+        },
         {
             cropName: 'wheat',
             soilTempMin: 10,
@@ -44,7 +64,6 @@ async function main() {
             season: Season.RABI,
             soilTexturePreference: [SoilTexture.LOAM, SoilTexture.CLAY_LOAM, SoilTexture.SANDY_LOAM],
         },
-
         {
             cropName: 'rice',
             soilTempMin: 20,
@@ -66,7 +85,6 @@ async function main() {
             season: Season.KHARIF,
             soilTexturePreference: [SoilTexture.CLAY_LOAM, SoilTexture.CLAY, SoilTexture.LOAM],
         },
-
         {
             cropName: 'maize',
             soilTempMin: 15,
@@ -88,7 +106,6 @@ async function main() {
             season: Season.KHARIF,
             soilTexturePreference: [SoilTexture.LOAM, SoilTexture.SANDY_LOAM, SoilTexture.CLAY_LOAM],
         },
-
         {
             cropName: 'chickpea',
             soilTempMin: 10,
@@ -110,7 +127,6 @@ async function main() {
             season: Season.RABI,
             soilTexturePreference: [SoilTexture.LOAM, SoilTexture.CLAY_LOAM, SoilTexture.SANDY_LOAM],
         },
-
         {
             cropName: 'lentil',
             soilTempMin: 8,
@@ -132,7 +148,6 @@ async function main() {
             season: Season.RABI,
             soilTexturePreference: [SoilTexture.LOAM, SoilTexture.SANDY_LOAM],
         },
-
         {
             cropName: 'pea',
             soilTempMin: 8,
@@ -154,7 +169,6 @@ async function main() {
             season: Season.RABI,
             soilTexturePreference: [SoilTexture.LOAM, SoilTexture.CLAY_LOAM],
         },
-
         {
             cropName: 'mustard',
             soilTempMin: 10,
@@ -176,7 +190,6 @@ async function main() {
             season: Season.RABI,
             soilTexturePreference: [SoilTexture.LOAM, SoilTexture.CLAY_LOAM, SoilTexture.SANDY_LOAM],
         },
-
         {
             cropName: 'sugarcane',
             soilTempMin: 20,
@@ -198,7 +211,6 @@ async function main() {
             season: Season.PERENNIAL,
             soilTexturePreference: [SoilTexture.LOAM, SoilTexture.CLAY_LOAM],
         },
-
         {
             cropName: 'potato',
             soilTempMin: 10,
@@ -220,11 +232,9 @@ async function main() {
             season: Season.RABI,
             soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
-
         // ====================================================================
         // VEGETABLES / LEAFY / CUCURBITS
         // ====================================================================
-
         {
             cropName: 'radish',
             soilTempMin: 8,
@@ -246,7 +256,6 @@ async function main() {
             season: Season.RABI,
             soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
-
         {
             cropName: 'carrot',
             soilTempMin: 10,
@@ -268,7 +277,6 @@ async function main() {
             season: Season.RABI,
             soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
-
         {
             cropName: 'tomato',
             soilTempMin: 15,
@@ -290,7 +298,6 @@ async function main() {
             season: Season.RABI,
             soilTexturePreference: [SoilTexture.LOAM, SoilTexture.SANDY_LOAM],
         },
-
         {
             cropName: 'spinach',
             soilTempMin: 8,
@@ -312,7 +319,6 @@ async function main() {
             season: Season.RABI,
             soilTexturePreference: [SoilTexture.LOAM, SoilTexture.SANDY_LOAM],
         },
-
         {
             cropName: 'mint',
             soilTempMin: 12,
@@ -334,7 +340,6 @@ async function main() {
             season: Season.PERENNIAL,
             soilTexturePreference: [SoilTexture.LOAM, SoilTexture.SANDY_LOAM],
         },
-
         {
             cropName: 'cucumber',
             soilTempMin: 18,
@@ -356,7 +361,6 @@ async function main() {
             season: Season.ZAID,
             soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
-
         {
             cropName: 'watermelon',
             soilTempMin: 18,
@@ -378,7 +382,6 @@ async function main() {
             season: Season.ZAID,
             soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
-
         {
             cropName: 'musk_melon',
             soilTempMin: 18,
@@ -400,7 +403,6 @@ async function main() {
             season: Season.ZAID,
             soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
-
         {
             cropName: 'bottle_gourd',
             soilTempMin: 18,
@@ -422,7 +424,6 @@ async function main() {
             season: Season.ZAID,
             soilTexturePreference: [SoilTexture.SANDY_LOAM, SoilTexture.LOAM],
         },
-
         {
             cropName: 'bitter_gourd',
             soilTempMin: 18,

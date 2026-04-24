@@ -1,6 +1,3 @@
-/**
- * Sensor Reading Repository
- */
 export interface SensorReadingInput {
     nodeId: number;
     moisture: number;

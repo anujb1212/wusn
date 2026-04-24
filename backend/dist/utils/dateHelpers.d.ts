@@ -1,6 +1,3 @@
-/**
- * Date Helpers
- */
 export declare function getStartOfDay(date: Date): Date;
 export declare function getEndOfDay(date: Date): Date;
 export declare function getDaysAgo(days: number): Date;

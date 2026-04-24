@@ -25,15 +25,19 @@ let client: mqtt.MqttClient | null = null;
  * - Air measurements: airTemperature, airHumidity, airPressure (from gateway BME280)
  */
 const sensorPayloadSchema = z.object({
-    nodeId: z.number().int().positive(),
-    // Soil measurements (from buried sensor node)
-    soilMoisture: z.number().min(0).max(1023),       // Raw sensor value (0-1023)
-    soilTemperature: z.number().min(-20).max(60),    // Soil temp in °C
-    // Air measurements (from gateway sensor)
-    airTemperature: z.number().min(-20).max(60),     // Air temp in °C (critical for GDD)
-    airHumidity: z.number().min(0).max(100),         // Relative humidity %
-    airPressure: z.number().min(800).max(1100).optional(), // Barometric pressure (hPa)
-});
+    node: z.number().int().positive(),
+    moisture: z.number().min(0).max(1023),
+    soil_temp: z.number().min(-20).max(60),
+    air_temp: z.number().min(-20).max(60),
+    score: z.number().min(0).max(100),
+    cycle: z.number().optional(),
+}).transform(data => ({
+    nodeId: data.node,
+    soilMoisture: data.moisture,
+    soilTemperature: data.soil_temp,
+    airTemperature: data.air_temp,
+    airHumidity: data.score,
+}));
 
 // Initialize MQTT connection and subscribe to sensor data topic
 export function initializeMQTT(): void {
@@ -66,7 +70,7 @@ export function initializeMQTT(): void {
 
             // Validate and process sensor data
             if (topic.startsWith('wusn/sensor/') && topic.endsWith('/data')) {
-                const validated = sensorPayloadSchema.parse(payload) as SensorPayload;
+                const validated = sensorPayloadSchema.parse(payload);
                 await processSensorData(validated);
 
                 logger.info(

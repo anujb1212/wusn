@@ -43,9 +43,9 @@ export interface ProcessedSensorData {
     soilMoistureVWC: number; // Calibrated volumetric water content (%)
     soilTemperature: number; // °C
     airTemperature: number; // °C - for GDD, ET calculations
-    airHumidity: number; // %
-    airPressure: number | null; // hPa
-    timestamp: Date;
+    airHumidity?: number; // %
+    airPressure?: number | null; // hPa
+    timestamp?: Date;
 }
 
 /*

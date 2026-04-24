@@ -1,6 +1,3 @@
-/**
- * Config barrel export
- */
 export { env, isDevelopment, isProduction, isTest } from './environment.js';
 export { createLogger } from './logger.js';
 export { prisma, connectDatabase, disconnectDatabase, checkDatabaseHealth } from './database.js';

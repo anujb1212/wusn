@@ -1,7 +1,4 @@
-// src/utils/dateHelpers.ts
-/**
- * Date Helpers
- */
+// Date Helpers
 import { TIME_CONSTANTS } from './constants.js';
 export function getStartOfDay(date) {
     const d = new Date(date);

@@ -10,9 +10,7 @@ import { cacheWeatherForecast, getCachedWeatherForecast, } from '../../repositor
 import { ExternalServiceError } from '../../utils/errors.js';
 const logger = createLogger({ service: 'weather' });
 const OWM_BASE_URL = 'https://api.openweathermap.org/data/2.5/forecast';
-/**
- * Fetch weather forecast from OpenWeatherMap API
- */
+// Fetch weather forecast from OpenWeatherMap API
 async function fetchFromAPI(latitude, longitude) {
     try {
         logger.info({ latitude, longitude }, 'Fetching weather from OpenWeatherMap');
@@ -83,18 +81,14 @@ async function fetchFromAPI(latitude, longitude) {
         throw error;
     }
 }
-/**
- * Validate and parse cached forecast data
- */
+// Validate and parse cached forecast data
 function parseCachedForecast(forecastData) {
     if (!Array.isArray(forecastData)) {
         throw new Error('Invalid cached forecast data format');
     }
     return forecastData;
 }
-/**
- * Get weather forecast with caching
- */
+// Get weather forecast with caching
 export async function getWeatherForecast(latitude, longitude) {
     try {
         // Check cache first
@@ -118,9 +112,7 @@ export async function getWeatherForecast(latitude, longitude) {
         throw error;
     }
 }
-/**
- * Check if significant rain is expected in forecast window
- */
+// Check if significant rain is expected in forecast window
 export async function isRainExpected(latitude, longitude, hoursAhead = 48, thresholdMm = 5) {
     try {
         const forecast = await getWeatherForecast(latitude, longitude);

@@ -1,22 +1,11 @@
 import { z } from 'zod';
 import * as fieldRepo from '../repositories/field.repository.js';
 import { NotFoundError } from '../utils/errors.js';
-/**
- * Helpers
- */
 function normalizeSoilTexture(v) {
     if (typeof v !== 'string')
         return v;
     return v.trim().toUpperCase();
 }
-/**
- * Normalize crop input to canonical IDs stored in DB:
- * - trim
- * - lower-case
- * - convert spaces/hyphens to underscore
- *
- * Final validation is done by checking existence in CropParameters table.
- */
 function normalizeCropType(v) {
     if (typeof v !== 'string')
         return v;
@@ -52,9 +41,7 @@ const setCropSchema = z.object({
     cropType: z.preprocess(normalizeCropType, z.string().min(1).max(64)),
     sowingDate: z.coerce.date(),
 });
-/**
- * POST /api/fields
- */
+// POST /api/fields
 export async function createFieldController(req, res) {
     const data = createFieldSchema.parse(req.body);
     const field = await fieldRepo.createField({
@@ -67,9 +54,7 @@ export async function createFieldController(req, res) {
         timestamp: new Date().toISOString(),
     });
 }
-/**
- * GET /api/fields/:nodeId
- */
+// GET /api/fields/:nodeId
 export async function getFieldController(req, res) {
     const { nodeId } = nodeIdSchema.parse(req.params);
     const field = await fieldRepo.getFieldByNodeId(nodeId);
@@ -82,9 +67,7 @@ export async function getFieldController(req, res) {
         timestamp: new Date().toISOString(),
     });
 }
-/**
- * GET /api/fields
- */
+// GET /api/fields
 export async function getAllFieldsController(_req, res) {
     const fields = await fieldRepo.getAllFields();
     res.json({
@@ -93,13 +76,10 @@ export async function getAllFieldsController(_req, res) {
         timestamp: new Date().toISOString(),
     });
 }
-/**
- * PATCH /api/fields/:nodeId
- */
+// PATCH /api/fields/:nodeId
 export async function updateFieldController(req, res) {
     const { nodeId } = nodeIdSchema.parse(req.params);
     const updates = updateFieldSchema.parse(req.body);
-    // Reject empty patch (prevents accidental no-op + confusing client behavior)
     if (updates.fieldName === undefined &&
         updates.latitude === undefined &&
         updates.longitude === undefined &&
@@ -112,7 +92,6 @@ export async function updateFieldController(req, res) {
         });
         return;
     }
-    // Keep your existing pattern (direct Prisma usage) but avoid narrowing issues.
     const { prisma } = await import('../config/database.js');
     const updateData = {};
     if (updates.fieldName !== undefined)
@@ -166,9 +145,7 @@ export async function setCropController(req, res) {
         timestamp: new Date().toISOString(),
     });
 }
-/**
- * DELETE /api/fields/:nodeId
- */
+// DELETE /api/fields/:nodeId
 export async function deleteFieldController(req, res) {
     const { nodeId } = nodeIdSchema.parse(req.params);
     const { prisma } = await import('../config/database.js');

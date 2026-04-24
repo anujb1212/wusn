@@ -1,6 +1,3 @@
-/**
- * Field Repository
- */
 import { GrowthStage } from '@prisma/client';
 import type { SoilTexture } from '@prisma/client';
 export interface CreateFieldInput {
@@ -26,9 +23,6 @@ export interface UpdateFieldInput {
     soilTexture?: SoilTexture;
     location?: string | null;
 }
-/**
- * Create field
- */
 export declare function createField(input: CreateFieldInput): Promise<{
     id: number;
     nodeId: number;
@@ -52,9 +46,6 @@ export declare function createField(input: CreateFieldInput): Promise<{
     createdAt: Date;
     updatedAt: Date;
 }>;
-/**
- * Get field by node ID
- */
 export declare function getFieldByNodeId(nodeId: number): Promise<{
     id: number;
     nodeId: number;
@@ -78,9 +69,6 @@ export declare function getFieldByNodeId(nodeId: number): Promise<{
     createdAt: Date;
     updatedAt: Date;
 }>;
-/**
- * Get field by ID
- */
 export declare function getFieldById(id: number): Promise<{
     id: number;
     nodeId: number;
@@ -104,9 +92,6 @@ export declare function getFieldById(id: number): Promise<{
     createdAt: Date;
     updatedAt: Date;
 }>;
-/**
- * Get all fields
- */
 export declare function getAllFields(): Promise<{
     id: number;
     nodeId: number;
@@ -130,9 +115,6 @@ export declare function getAllFields(): Promise<{
     createdAt: Date;
     updatedAt: Date;
 }[]>;
-/**
- * Update field crop configuration
- */
 export declare function updateFieldCrop(nodeId: number, input: UpdateFieldCropInput): Promise<{
     id: number;
     nodeId: number;
@@ -156,9 +138,6 @@ export declare function updateFieldCrop(nodeId: number, input: UpdateFieldCropIn
     createdAt: Date;
     updatedAt: Date;
 }>;
-/**
- * Update field GDD status
- */
 export declare function updateFieldGDD(nodeId: number, accumulatedGDD: number, growthStage: GrowthStage): Promise<{
     id: number;
     nodeId: number;
@@ -182,9 +161,6 @@ export declare function updateFieldGDD(nodeId: number, accumulatedGDD: number, g
     createdAt: Date;
     updatedAt: Date;
 }>;
-/**
- * Update last irrigation check
- */
 export declare function updateLastIrrigationCheck(nodeId: number): Promise<{
     id: number;
     nodeId: number;
@@ -208,9 +184,6 @@ export declare function updateLastIrrigationCheck(nodeId: number): Promise<{
     createdAt: Date;
     updatedAt: Date;
 }>;
-/**
- * Record irrigation action
- */
 export declare function recordIrrigationAction(nodeId: number): Promise<{
     id: number;
     nodeId: number;
@@ -234,9 +207,6 @@ export declare function recordIrrigationAction(nodeId: number): Promise<{
     createdAt: Date;
     updatedAt: Date;
 }>;
-/**
- * Get fields needing GDD update
- */
 export declare function getFieldsNeedingGDDUpdate(): Promise<{
     id: number;
     nodeId: number;
@@ -260,9 +230,6 @@ export declare function getFieldsNeedingGDDUpdate(): Promise<{
     createdAt: Date;
     updatedAt: Date;
 }[]>;
-/**
- * Update field (generic update)
- */
 export declare function updateField(nodeId: number, updates: UpdateFieldInput): Promise<{
     id: number;
     nodeId: number;
@@ -286,9 +253,6 @@ export declare function updateField(nodeId: number, updates: UpdateFieldInput): 
     createdAt: Date;
     updatedAt: Date;
 }>;
-/**
- * Delete field
- */
 export declare function deleteField(nodeId: number): Promise<{
     id: number;
     nodeId: number;

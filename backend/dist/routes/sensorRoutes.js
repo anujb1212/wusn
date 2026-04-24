@@ -1,6 +1,4 @@
-/**
- * Sensor Routes
- */
+// Sensor Routes
 import { Router } from 'express';
 import { asyncHandler } from '../api/middleware/asyncHandler.js';
 import { getLatestSensorData, getAverageSensorData, getSensorReadings } from '../controllers/sensorController.js';

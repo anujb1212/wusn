@@ -8,7 +8,6 @@ const createNodeSchema = z.object({
 });
 export async function createNodeController(req, res) {
     const data = createNodeSchema.parse(req.body);
-    // Build create data conditionally to avoid undefined
     const createData = {
         nodeId: data.nodeId,
         isActive: true,
@@ -19,7 +18,6 @@ export async function createNodeController(req, res) {
         createData.burialDepth = data.burialDepth;
     if (data.distanceToGW !== undefined)
         createData.distanceToGW = data.distanceToGW;
-    // Build update data conditionally
     const updateData = {
         lastSeen: new Date(),
     };

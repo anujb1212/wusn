@@ -1,20 +1,4 @@
-/**
- * Common Types for WUSN Backend
- *
- * All types aligned with 20-crop universe and gateway data contract
- * Gateway provides: nodeId, soilMoisture, soilTemperature, airTemperature, airHumidity, airPressure
- */
 import type { CropName, GrowthStage, SoilTexture, IrrigationUrgency, IrrigationMethod, Season } from '../utils/constants.js';
-/**
- * Raw sensor payload from gateway via MQTT
- *
- * Contract: Each gateway reading includes both soil and air measurements
- * - soilMoisture: Raw sensor value (to be calibrated to VWC%)
- * - soilTemperature: Soil temp at sensor depth (°C)
- * - airTemperature: Air temp for GDD and ET calculations (°C)
- * - airHumidity: Relative humidity (%)
- * - airPressure: Atmospheric pressure (hPa), optional
- */
 export interface SensorPayload {
     nodeId: number;
     soilMoisture: number;
@@ -24,23 +8,15 @@ export interface SensorPayload {
     airPressure?: number;
     timestamp?: string;
 }
-/**
- * Processed and validated sensor data
- * Post-calibration, ready for agronomic calculations
- */
 export interface ProcessedSensorData {
     nodeId: number;
     soilMoistureVWC: number;
     soilTemperature: number;
     airTemperature: number;
-    airHumidity: number;
-    airPressure: number | null;
-    timestamp: Date;
+    airHumidity?: number;
+    airPressure?: number | null;
+    timestamp?: Date;
 }
-/**
- * Field configuration
- * Core entity linking physical field to crop, location, and agronomic state
- */
 export interface FieldConfig {
     id: number;
     nodeId: number;
@@ -58,11 +34,6 @@ export interface FieldConfig {
     currentGrowthStage: GrowthStage | null;
     lastGDDUpdate: Date | null;
 }
-/**
- * Daily GDD calculation result
- * Formula: GDD = max(0, (Tmax + Tmin)/2 - Tbase)
- * Uses airTemperature from gateway readings aggregated daily
- */
 export interface GDDResult {
     date: Date;
     dailyGDD: number;
@@ -73,9 +44,6 @@ export interface GDDResult {
     growthStage: GrowthStage;
     readingsCount: number;
 }
-/**
- * GDD status summary for a field
- */
 export interface GDDStatus {
     fieldId: number;
     nodeId: number;
@@ -89,9 +57,6 @@ export interface GDDStatus {
     estimatedDaysToHarvest: number | null;
     lastUpdate: Date | null;
 }
-/**
- * Weather forecast daily entry (from external API like OpenWeather)
- */
 export interface WeatherForecastDay {
     date: string;
     tempMax: number;
@@ -102,9 +67,6 @@ export interface WeatherForecastDay {
     windSpeed?: number;
     description: string;
 }
-/**
- * Complete weather forecast
- */
 export interface WeatherForecast {
     latitude: number;
     longitude: number;
@@ -112,10 +74,6 @@ export interface WeatherForecast {
     expiresAt: Date;
     forecast: WeatherForecastDay[];
 }
-/**
- * Crop scoring breakdown
- * Used by recommendation engine to rank crops
- */
 export interface CropScore {
     cropName: CropName;
     totalScore: number;
@@ -130,9 +88,6 @@ export interface CropScore {
     explanation: string;
     suitable: boolean;
 }
-/**
- * Crop recommendation result
- */
 export interface CropRecommendation {
     nodeId: number;
     fieldName: string;
@@ -148,14 +103,6 @@ export interface CropRecommendation {
     };
     timestamp: Date;
 }
-/**
- * Irrigation decision
- * Based on soil water balance, crop stage, and weather forecast
- *
- * Notes:
- * - suggestedDepthMm/duration should be 0 when decision == "do_not_irrigate".
- * - "applicationRateMmPerHour" is an explicit assumption used to convert depth -> time.
- */
 export interface IrrigationDecision {
     nodeId: number;
     fieldName: string;
@@ -179,16 +126,6 @@ export interface IrrigationDecision {
     nextCheckHours: number;
     timestamp: Date;
 }
-/**
- * Soil water balance
- * FAO-56 style water accounting for irrigation decisions
- *
- * Formulas:
- * - TAW = (FC - PWP) / 100 * rootDepth(cm) * 10  [mm]
- * - RAW = TAW * MAD  [mm]
- * - currentDepth = currentVWC / 100 * rootDepth(cm) * 10  [mm]
- * - depletion = (FC_depth - currentDepth) / TAW * 100  [%]
- */
 export interface SoilWaterBalance {
     soilTexture: SoilTexture;
     rootDepthCm: number;
@@ -203,11 +140,6 @@ export interface SoilWaterBalance {
     depletionPercent: number;
     stressLevel: 'none' | 'mild' | 'moderate' | 'severe';
 }
-/**
- * Reference ET calculation result
- * Simplified Hargreaves method: ET0 = 0.0023 * (Tavg + 17.8) * (Tmax - Tmin)^0.5
- * Uses airTemperature data from gateway
- */
 export interface ETCalculation {
     date: Date;
     et0: number;
@@ -217,10 +149,6 @@ export interface ETCalculation {
     cropKc: number;
     etc: number;
 }
-/**
- * Irrigation event record
- * Logged when irrigation is applied (manual or automated)
- */
 export interface IrrigationEvent {
     id: number;
     fieldId: number;
@@ -234,10 +162,6 @@ export interface IrrigationEvent {
     vwcAfter: number | null;
     notes: string | null;
 }
-/**
- * Calibration parameters for soil moisture sensor
- * Linear calibration: VWC = slope * rawValue + intercept
- */
 export interface SensorCalibration {
     nodeId: number;
     slope: number;
@@ -247,9 +171,6 @@ export interface SensorCalibration {
     calibratedAt: Date;
     notes: string | null;
 }
-/**
- * Error response structure
- */
 export interface ErrorResponse {
     error: string;
     message: string;
@@ -258,9 +179,6 @@ export interface ErrorResponse {
     path?: string;
     details?: unknown;
 }
-/**
- * Success response wrapper
- */
 export interface SuccessResponse<T = unknown> {
     success: true;
     data: T;

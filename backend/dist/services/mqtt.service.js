@@ -20,18 +20,20 @@ let client = null;
  * - Air measurements: airTemperature, airHumidity, airPressure (from gateway BME280)
  */
 const sensorPayloadSchema = z.object({
-    nodeId: z.number().int().positive(),
-    // Soil measurements (from buried sensor node)
-    soilMoisture: z.number().min(0).max(1023), // Raw sensor value (0-1023)
-    soilTemperature: z.number().min(-20).max(60), // Soil temp in °C
-    // Air measurements (from gateway sensor)
-    airTemperature: z.number().min(-20).max(60), // Air temp in °C (critical for GDD)
-    airHumidity: z.number().min(0).max(100), // Relative humidity %
-    airPressure: z.number().min(800).max(1100).optional(), // Barometric pressure (hPa)
-});
-/**
- * Initialize MQTT connection and subscribe to sensor data topic
- */
+    node: z.number().int().positive(),
+    moisture: z.number().min(0).max(1023),
+    soil_temp: z.number().min(-20).max(60),
+    air_temp: z.number().min(-20).max(60),
+    score: z.number().min(0).max(100),
+    cycle: z.number().optional(),
+}).transform(data => ({
+    nodeId: data.node,
+    soilMoisture: data.moisture,
+    soilTemperature: data.soil_temp,
+    airTemperature: data.air_temp,
+    airHumidity: data.score,
+}));
+// Initialize MQTT connection and subscribe to sensor data topic
 export function initializeMQTT() {
     if (client) {
         logger.warn('MQTT already initialized');
@@ -112,15 +114,11 @@ export function publishMessage(topic, payload) {
         }
     });
 }
-/**
- * Check if MQTT client is connected
- */
+// Check if MQTT client is connected
 export function isConnected() {
     return client?.connected ?? false;
 }
-/**
- * Disconnect MQTT client gracefully
- */
+// Disconnect MQTT client gracefully
 export async function disconnectMQTT() {
     return new Promise((resolve) => {
         if (client) {

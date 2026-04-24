@@ -9,17 +9,12 @@
  *          If Tmax < Tbase, set Tmax = Tbase
  *          If Tmax > Tupper (optional ceiling), set Tmax = Tupper
  *
- * This method prevents negative contributions and properly handles cold days.
- *
  * References:
  * - McMaster & Wilhelm (1997): "Growing degree-days: one equation, two interpretations"
  * - Michigan State University: Calculating Growing Degree Days
  * - FAO crop growth modeling standards
  *
  * All calculations use AIR temperature from SensorReading.airTemperature, NOT soil temperature.
- *
- * UPDATED: Dec 11, 2025 - Aligned with new Prisma CropParameters schema
- * Changes: stages.initial/development/midSeason/lateSeason → initialStageGDD/developmentStageGDD/midSeasonGDD/lateSeasonGDD
  */
 import type { GDDResult, GDDStatus } from '../../models/common.types.js';
 /**
@@ -48,9 +43,6 @@ export declare function calculateDailyGDD(nodeId: number, date: Date): Promise<G
  * - Current growth stage
  * - Days from sowing
  * - Estimated days to harvest
- *
- * FIXED: Now calculates expectedGDDTotal from cropParams.lateSeasonGDD
- *
  * @param nodeId - Sensor node ID
  * @returns GDDStatus
  * @throws ValidationError if field doesn't have confirmed crop
@@ -63,9 +55,6 @@ export declare function getGDDStatus(nodeId: number): Promise<GDDStatus>;
  * - Correcting historical data after sensor calibration
  * - Backfilling missing GDD records
  * - Recalculating after base temperature change
- *
- * WARNING: Deletes existing records in range before recalculating
- *
  * @param nodeId - Sensor node ID
  * @param startDate - Start date (inclusive)
  * @param endDate - End date (inclusive)

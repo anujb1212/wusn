@@ -2,17 +2,11 @@
  * MQTT Configuration
  * Underground nodes send ONLY: moisture + temperature
  */
-/**
- * MQTT Topics
- */
 export declare const MQTT_TOPICS: {
     readonly SENSOR_DATA: "wusn/sensor/+/data";
     readonly DASHBOARD_UPDATES: "wusn/dashboard/updates";
     readonly ALERTS: "wusn/alerts/#";
 };
-/**
- * MQTT Connection Config
- */
 export declare const MQTT_CONFIG: {
     readonly brokerUrl: `mqtt://${string}:${number}`;
     readonly clientId: string;
@@ -30,10 +24,6 @@ export declare const MQTT_CONFIG: {
         };
     };
 };
-/**
- * Sensor validation thresholds
- * ONLY moisture and temperature
- */
 export declare const SENSOR_THRESHOLDS: {
     readonly MOISTURE: {
         readonly MIN: 0;

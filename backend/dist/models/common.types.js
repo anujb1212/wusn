@@ -1,4 +1,4 @@
-/**
+/*
  * Common Types for WUSN Backend
  *
  * All types aligned with 20-crop universe and gateway data contract

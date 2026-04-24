@@ -1,4 +1,4 @@
-/**
+/*
  * GDD (Growing Degree Days) Repository
  */
 import { Prisma, GrowthStage } from '@prisma/client';
@@ -21,9 +21,7 @@ function toGrowthStage(value) {
     // Invalid -> null (or throw if you want strict behavior)
     return null;
 }
-/**
- * Create GDD record
- */
+// Create GDD record
 export async function createGDDRecord(input) {
     try {
         return await prisma.gDDRecord.create({
@@ -46,9 +44,7 @@ export async function createGDDRecord(input) {
         throw new DatabaseError('createGDDRecord', error);
     }
 }
-/**
- * Get GDD record for specific date
- */
+// Get GDD record for specific date
 export async function getGDDRecordForDate(fieldId, date) {
     try {
         const dateOnly = new Date(date);
@@ -66,9 +62,7 @@ export async function getGDDRecordForDate(fieldId, date) {
         throw new DatabaseError('getGDDRecordForDate', error);
     }
 }
-/**
- * Get all GDD records for field since sowing
- */
+// Get all GDD records for field since sowing
 export async function getGDDRecordsSinceSowing(fieldId, sowingDate) {
     try {
         return await prisma.gDDRecord.findMany({
@@ -83,9 +77,7 @@ export async function getGDDRecordsSinceSowing(fieldId, sowingDate) {
         throw new DatabaseError('getGDDRecordsSinceSowing', error);
     }
 }
-/**
- * Get latest GDD record
- */
+// Get latest GDD record
 export async function getLatestGDDRecord(fieldId) {
     try {
         return await prisma.gDDRecord.findFirst({
@@ -97,9 +89,7 @@ export async function getLatestGDDRecord(fieldId) {
         throw new DatabaseError('getLatestGDDRecord', error);
     }
 }
-/**
- * Delete GDD records for date range
- */
+// Delete GDD records for date range
 export async function deleteGDDRecordsInRange(fieldId, startDate, endDate) {
     try {
         const result = await prisma.gDDRecord.deleteMany({
@@ -117,9 +107,7 @@ export async function deleteGDDRecordsInRange(fieldId, startDate, endDate) {
         throw new DatabaseError('deleteGDDRecordsInRange', error);
     }
 }
-/**
- * Get cumulative GDD for field
- */
+// Get cumulative GDD for field
 export async function getCumulativeGDD(fieldId) {
     try {
         const latest = await getLatestGDDRecord(fieldId);

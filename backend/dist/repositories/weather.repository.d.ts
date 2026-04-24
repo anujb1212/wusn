@@ -1,17 +1,3 @@
-/**
- * Weather Data Repository
- *
- * Handles air temperature data aggregation from SensorReading.airTemperature
- * (gateway-provided air measurements) and external weather forecast caching.
- *
- * Note: WeatherReading table is deprecated - air measurements now part of SensorReading
- *
- * UPDATED: Dec 11, 2025 - Removed problematic null filters, handle in JavaScript
- */
-/**
- * Daily air temperature aggregation result
- * Used for GDD calculations and ET estimation
- */
 export interface DailyAirTempData {
     avgAirTemp: number;
     minAirTemp: number;

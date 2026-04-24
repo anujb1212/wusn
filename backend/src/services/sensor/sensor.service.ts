@@ -71,8 +71,9 @@ export async function processSensorData(payload: SensorPayload): Promise<Process
             throw new ValidationError(`Invalid air temperature: ${payload.airTemperature}°C`);
         }
 
-        if (payload.airHumidity < 0 || payload.airHumidity > 100) {
-            throw new ValidationError(`Invalid air humidity: ${payload.airHumidity}%`);
+        const airHumidity = payload.airHumidity;
+        if (airHumidity < 0 || airHumidity > 100) {
+            throw new ValidationError(`Invalid air humidity: ${airHumidity}%`);
         }
 
         // Store in database with all measurements (type-safe, no 'any')
@@ -83,7 +84,7 @@ export async function processSensorData(payload: SensorPayload): Promise<Process
             soilMoistureVWC,
             soilTemperature,
             airTemperature: payload.airTemperature,
-            airHumidity: payload.airHumidity,
+            airHumidity: airHumidity,
             timestamp,
             ...(payload.airPressure !== undefined && { airPressure: payload.airPressure }),
         };
@@ -105,7 +106,7 @@ export async function processSensorData(payload: SensorPayload): Promise<Process
             soilMoistureVWC,
             soilTemperature,
             airTemperature: payload.airTemperature,
-            airHumidity: payload.airHumidity,
+            airHumidity: airHumidity,
             airPressure: payload.airPressure ?? null,
             timestamp,
         };

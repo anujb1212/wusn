@@ -1,16 +1,6 @@
-// src/config/environment.ts
-/**
- * Environment Variables Configuration with Validation
- *
- * IMPORTANT: This file has NO imports to avoid circular dependencies
- * Must be imported first before any other config files
- */
-// Load dotenv at the very top - before any other code
 import 'dotenv/config';
 import { z } from 'zod';
-/**
- * Environment variable schema
- */
+// Env var
 const envSchema = z.object({
     // Server
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -30,9 +20,7 @@ const envSchema = z.object({
     WEATHER_CACHE_TTL_HOURS: z.coerce.number().positive().default(1),
     GDD_CALCULATION_HOUR: z.coerce.number().int().min(0).max(23).default(1),
 });
-/**
- * Parse and validate environment variables
- */
+// Parse and validate environment variables
 function validateEnvironment() {
     const result = envSchema.safeParse(process.env);
     if (!result.success) {
@@ -42,14 +30,12 @@ function validateEnvironment() {
     }
     return result.data;
 }
-/**
+/*
  * Validated environment configuration
  * Use this throughout your application
  */
 export const env = validateEnvironment();
-/**
- * Environment helpers
- */
+// Environment helpers
 export const isProduction = env.NODE_ENV === 'production';
 export const isDevelopment = env.NODE_ENV === 'development';
 export const isTest = env.NODE_ENV === 'test';

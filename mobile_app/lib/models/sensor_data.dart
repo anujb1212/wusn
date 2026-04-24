@@ -2,8 +2,6 @@ class SensorData {
   final int nodeId;
   final String fieldName;
 
-  /// Confirmed crop (from Field table). Example: "wheat"
-  /// This is NOT the recommendation.
   final String cropType;
 
   /// Backend VWC%
@@ -17,8 +15,6 @@ class SensorData {
 
   final DateTime timestamp;
 
-  /// Internal status backing field (can be snake_case/camelCase depending on source).
-  /// Prefer using [status] for UI keys.
   final String soilStatus;
 
   final String irrigationAdvice;

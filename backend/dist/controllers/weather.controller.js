@@ -1,7 +1,4 @@
-// src/controllers/weather.controller.ts
-/**
- * Weather Controller
- */
+// Weather Controller
 import { z } from 'zod';
 import { getWeatherForecast } from '../services/weather/weather.sevice.js';
 import { getFieldByNodeId } from '../repositories/field.repository.js';
@@ -9,7 +6,7 @@ import { ValidationError } from '../utils/errors.js';
 const nodeIdSchema = z.object({
     nodeId: z.coerce.number().int().positive(),
 });
-/**
+/*
  * GET /api/weather/:nodeId/forecast
  * Get weather forecast for field
  */

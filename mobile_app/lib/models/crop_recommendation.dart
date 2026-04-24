@@ -1,5 +1,4 @@
 class CropRecommendation {
-  /// Backend primary response
   final List<CropSuitabilityDetail> topCrops;
 
   /// {currentVWC, currentSoilTemp, currentAirTemp, ...}

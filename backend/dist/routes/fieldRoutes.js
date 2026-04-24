@@ -1,6 +1,4 @@
-/**
- * Field Routes
- */
+// Field Routes
 import { Router } from 'express';
 import { asyncHandler } from '../api/middleware/asyncHandler.js';
 import { createFieldController, getAllFieldsController, getFieldController, updateFieldController, deleteFieldController, setCropController, } from '../controllers/fieldController.js';

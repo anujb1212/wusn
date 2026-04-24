@@ -11,16 +11,6 @@
  * - Paredes et al. (2025) - Growing Degree Days research
  * - UP Agricultural Extension data
  * - Field observations from Lucknow region (sandy loam soil)
- *
- * UPDATED: Dec 11, 2025 - Aligned with new Prisma CropParameters schema
- * Changes: moistureMin/Optimal/Max → vwcMin/Optimal/Max
- *          optimalTempMin/Max → soilTempMin/Optimal/Max
- *          stages.initial/development/midSeason/lateSeason → initialStageGDD/developmentStageGDD/midSeasonGDD/lateSeasonGDD
- */
-/**
- * FIXED 20-CROP UNIVERSE
- * Field crops/staples (9): wheat, rice, maize, chickpea, lentil, pea, mustard, sugarcane, potato
- * Vegetables/leafy/cucurbits (11): radish, carrot, tomato, spinach, mint, cucumber, watermelon, musk melon, bottle gourd, bitter gourd
  */
 export declare const VALID_CROPS: readonly ["wheat", "rice", "maize", "chickpea", "lentil", "pea", "mustard", "sugarcane", "potato", "radish", "carrot", "tomato", "spinach", "mint", "cucumber", "watermelon", "musk_melon", "bottle_gourd", "bitter_gourd"];
 export type CropName = typeof VALID_CROPS[number];
@@ -173,9 +163,6 @@ export declare const CROP_DATABASE: Record<CropName, CropParameters>;
  * Zaid: Mar-May (summer)
  */
 export declare function getCurrentSeason(date?: Date): Season;
-/**
- * Time Constants
- */
 export declare const TIME_CONSTANTS: {
     readonly MS_PER_SECOND: 1000;
     readonly SECONDS_PER_MINUTE: 60;
@@ -183,17 +170,11 @@ export declare const TIME_CONSTANTS: {
     readonly HOURS_PER_DAY: 24;
     readonly MS_PER_DAY: 86400000;
 };
-/**
- * Weather API Constants
- */
 export declare const WEATHER_CONSTANTS: {
     readonly CACHE_TTL_HOURS: 1;
     readonly FORECAST_DAYS: 5;
     readonly API_TIMEOUT_MS: 5000;
 };
-/**
- * Irrigation Decision Constants
- */
 export declare const IRRIGATION_CONSTANTS: {
     readonly RAIN_THRESHOLD_MM: 5;
     readonly RAIN_FORECAST_HOURS: 48;

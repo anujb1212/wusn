@@ -3,13 +3,7 @@
  * Fetches 5-day forecast with caching
  */
 import type { WeatherForecast } from '../../models/common.types.js';
-/**
- * Get weather forecast with caching
- */
 export declare function getWeatherForecast(latitude: number, longitude: number): Promise<WeatherForecast>;
-/**
- * Check if significant rain is expected in forecast window
- */
 export declare function isRainExpected(latitude: number, longitude: number, hoursAhead?: number, thresholdMm?: number): Promise<{
     expected: boolean;
     totalMm: number;

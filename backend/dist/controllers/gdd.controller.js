@@ -1,21 +1,12 @@
 /**
  * GDD (Growing Degree Days) Controller
- *
- * Handles GDD calculation and tracking API endpoints
- * Uses USDA Method 2 for daily GDD calculation
- *
- * Method 2: If Tmax or Tmin < Tbase, they are reset to Tbase
  * GDD = max(0, (adjusted_Tmax + adjusted_Tmin)/2 - Tbase)
- *
- * UPDATED: Dec 11, 2025 - Aligned with new schema (stage-based GDD thresholds)
  */
 import { z } from 'zod';
 import { getGDDStatus, calculateDailyGDD, recalculateGDDRange, calculateMissingGDD, } from '../services/gdd/gdd.service.js';
 import { createLogger } from '../config/logger.js';
 const logger = createLogger({ service: 'gdd-controller' });
-/**
- * Validation schemas
- */
+// Validation schemas
 const nodeIdSchema = z.object({
     nodeId: z.coerce.number().int().positive(),
 });
@@ -43,14 +34,6 @@ const dateRangeSchema = z.object({
  *
  * @example
  * GET /api/gdd/1/status
- * Response:
- * {
- *   "accumulatedGDD": 850,
- *   "currentStage": "DEVELOPMENT",
- *   "nextStage": "MID_SEASON",
- *   "progressPercent": 40.5,
- *   "daysToHarvest": 65
- * }
  */
 export async function getGDDStatusController(req, res) {
     try {
@@ -86,15 +69,6 @@ export async function getGDDStatusController(req, res) {
  *
  * @example
  * POST /api/gdd/1/calculate
- * Body: { "date": "2025-12-10" }
- * Response:
- * {
- *   "date": "2025-12-10",
- *   "dailyGDD": 15.5,
- *   "tmin": 18.2,
- *   "tmax": 31.8,
- *   "baseTemp": 10
- * }
  */
 export async function calculateGDDController(req, res) {
     try {
@@ -124,16 +98,6 @@ export async function calculateGDDController(req, res) {
 }
 /**
  * POST /api/gdd/:nodeId/recalculate
- *
- * Recalculate GDD for a date range
- *
- * Useful for:
- * - Correcting historical data after sensor calibration
- * - Backfilling after crop confirmation or base temperature change
- * - Data correction after errors
- * - Updating after schema migration (e.g., totalGDD → stage-based thresholds)
- *
- * WARNING: Deletes existing records in range before recalculating
  *
  * @param req.params.nodeId - Sensor node ID
  * @param req.body.startDate - Start date (YYYY-MM-DD)
@@ -191,12 +155,6 @@ export async function recalculateGDDController(req, res) {
  *
  * @example
  * POST /api/gdd/1/calculate-missing
- * Response:
- * {
- *   "nodeId": 1,
- *   "calculated": 3,
- *   "message": "Successfully calculated 3 missing GDD record(s)"
- * }
  */
 export async function calculateMissingGDDController(req, res) {
     try {

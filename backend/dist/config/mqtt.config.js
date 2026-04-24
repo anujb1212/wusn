@@ -1,20 +1,15 @@
-// src/config/mqtt.config.ts
 /**
  * MQTT Configuration
  * Underground nodes send ONLY: moisture + temperature
  */
 import { env } from './environment.js';
-/**
- * MQTT Topics
- */
+// MQTT Topics
 export const MQTT_TOPICS = {
     SENSOR_DATA: 'wusn/sensor/+/data',
     DASHBOARD_UPDATES: 'wusn/dashboard/updates',
     ALERTS: 'wusn/alerts/#',
 };
-/**
- * MQTT Connection Config
- */
+// MQTT Connection Config
 export const MQTT_CONFIG = {
     brokerUrl: `mqtt://${env.MQTT_BROKER_HOST}:${env.MQTT_BROKER_PORT}`,
     clientId: env.MQTT_CLIENT_ID || `wusn-backend-${Math.random().toString(16).slice(2, 10)}`,
@@ -35,7 +30,7 @@ export const MQTT_CONFIG = {
         },
     },
 };
-/**
+/*
  * Sensor validation thresholds
  * ONLY moisture and temperature
  */

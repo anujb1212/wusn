@@ -11,9 +11,6 @@ export interface CreateGDDRecordInput {
     baseTemperature: number;
     growthStage?: string | undefined;
 }
-/**
- * Create GDD record
- */
 export declare function createGDDRecord(input: CreateGDDRecordInput): Promise<{
     id: number;
     cropType: string | null;
@@ -29,9 +26,6 @@ export declare function createGDDRecord(input: CreateGDDRecordInput): Promise<{
     dailyGDD: number;
     cumulativeGDD: number;
 }>;
-/**
- * Get GDD record for specific date
- */
 export declare function getGDDRecordForDate(fieldId: number, date: Date): Promise<{
     id: number;
     cropType: string | null;
@@ -47,9 +41,6 @@ export declare function getGDDRecordForDate(fieldId: number, date: Date): Promis
     dailyGDD: number;
     cumulativeGDD: number;
 } | null>;
-/**
- * Get all GDD records for field since sowing
- */
 export declare function getGDDRecordsSinceSowing(fieldId: number, sowingDate: Date): Promise<{
     id: number;
     cropType: string | null;
@@ -65,9 +56,6 @@ export declare function getGDDRecordsSinceSowing(fieldId: number, sowingDate: Da
     dailyGDD: number;
     cumulativeGDD: number;
 }[]>;
-/**
- * Get latest GDD record
- */
 export declare function getLatestGDDRecord(fieldId: number): Promise<{
     id: number;
     cropType: string | null;
@@ -83,12 +71,6 @@ export declare function getLatestGDDRecord(fieldId: number): Promise<{
     dailyGDD: number;
     cumulativeGDD: number;
 } | null>;
-/**
- * Delete GDD records for date range
- */
 export declare function deleteGDDRecordsInRange(fieldId: number, startDate: Date, endDate: Date): Promise<number>;
-/**
- * Get cumulative GDD for field
- */
 export declare function getCumulativeGDD(fieldId: number): Promise<number>;
 //# sourceMappingURL=gdd.repository.d.ts.map
