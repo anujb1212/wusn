@@ -41,7 +41,7 @@ class Field {
 
     return Field(
       id: id,
-      nodeId: (json['nodeId'] as num).toInt(),
+      nodeId: _Json.asInt(json['nodeId'] ?? json['id'] ?? json['fieldId'], fallback: 0),
       fieldName: fieldName,
       latitude: _Json.asDouble(json['latitude'] ?? json['lat'], fallback: 0.0),
       longitude: _Json.asDouble(json['longitude'] ?? json['lng'] ?? json['lon'],

@@ -13,6 +13,7 @@ class SensorProvider with ChangeNotifier {
   bool _isLoading = false;
   String _errorMessage = '';
   bool _isWebSocketConnected = false;
+  DateTime? _lastFetchedAt;
 
   Timer? _pollingTimer;
   bool _disposed = false;
@@ -22,6 +23,7 @@ class SensorProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
   bool get isWebSocketConnected => _isWebSocketConnected;
+  DateTime? get lastFetchedAt => _lastFetchedAt;
 
   SensorProvider() {
     fetchData();
@@ -80,6 +82,7 @@ class SensorProvider with ChangeNotifier {
     } finally {
       _isLoading = false;
       _fetchInFlight = false;
+      _lastFetchedAt = DateTime.now();
       _safeNotify();
     }
   }
@@ -188,9 +191,13 @@ class SensorProvider with ChangeNotifier {
         );
       } else {
         data = data.copyWith(
-          soilStatus: _statusFromUrgency(irrigation.urgency),
+          soilStatus: _statusFromUrgency(
+            irrigation.urgency,
+            currentVWC: irrigation.currentVWC,
+            targetVWC: irrigation.targetVWC,
+          ),
           irrigationAdvice: irrigation.reasonEn,
-          confidence: irrigation.urgencyScore, // 0-100 scale
+          confidence: irrigation.urgencyScore,
           fuzzyScores: _fuzzyFromIrrigation(irrigation),
         );
       }
@@ -238,18 +245,26 @@ class SensorProvider with ChangeNotifier {
 
   // -------------------- Helpers --------------------
 
-  String _statusFromUrgency(String urgency) {
-    switch (urgency) {
-      case 'CRITICAL':
-      case 'HIGH':
-        return 'needs_water';
-      case 'MODERATE':
-      case 'LOW':
-      case 'NONE':
-      default:
-        return 'optimal';
-    }
+  String _statusFromUrgency(
+  String urgency, {
+  double? currentVWC,
+  double? targetVWC,
+}) {
+  if (currentVWC != null && targetVWC != null && targetVWC > 0) {
+    if (currentVWC > targetVWC * 1.05) return 'too_wet';
   }
+
+  switch (urgency) {
+    case 'CRITICAL':
+    case 'HIGH':
+    case 'MODERATE':
+      return 'needs_water';
+    case 'LOW':
+    case 'NONE':
+    default:
+      return 'optimal';
+  }
+}
 
   String _statusFromVwc({
     required double vwc,
@@ -324,31 +339,41 @@ class SensorProvider with ChangeNotifier {
   }
 
   FuzzyScores _fuzzyFromIrrigation(IrrigationDecision irrigation) {
-    final current = irrigation.currentVWC;
-    final target = irrigation.targetVWC <= 0 ? 1.0 : irrigation.targetVWC;
+  final current = irrigation.currentVWC;
+  final target = irrigation.targetVWC <= 0 ? 1.0 : irrigation.targetVWC;
 
-    final depletionPct =
-        (((target - current) / target) * 100).clamp(0.0, 100.0).toDouble();
-
-    double dry = 0.0, optimal = 0.0, wet = 0.0;
-
-    if (depletionPct >= 70) {
-      dry = depletionPct;
-      optimal = (100.0 - depletionPct) / 2.0;
-    } else if (depletionPct >= 40) {
-      dry = depletionPct / 2.0;
-      optimal = (100.0 - depletionPct);
-    } else {
-      optimal = (100.0 - depletionPct);
-      wet = depletionPct / 2.0;
-    }
-
+  if (current > target) {
+    final excessPct =
+        (((current - target) / target) * 100).clamp(0.0, 100.0).toDouble();
     return FuzzyScores(
-      dry: dry.clamp(0.0, 100.0).toDouble(),
-      optimal: optimal.clamp(0.0, 100.0).toDouble(),
-      wet: wet.clamp(0.0, 100.0).toDouble(),
+      dry: 0.0,
+      optimal: (100.0 - excessPct).clamp(0.0, 100.0).toDouble(),
+      wet: excessPct,
     );
   }
+
+  final depletionPct =
+      (((target - current) / target) * 100).clamp(0.0, 100.0).toDouble();
+
+  double dry = 0.0, optimal = 0.0, wet = 0.0;
+
+  if (depletionPct >= 70) {
+    dry = depletionPct;
+    optimal = (100.0 - depletionPct) / 2.0;
+  } else if (depletionPct >= 40) {
+    dry = depletionPct / 2.0;
+    optimal = (100.0 - depletionPct);
+  } else {
+    optimal = (100.0 - depletionPct);
+    wet = depletionPct / 2.0;
+  }
+
+  return FuzzyScores(
+    dry: dry.clamp(0.0, 100.0).toDouble(),
+    optimal: optimal.clamp(0.0, 100.0).toDouble(),
+    wet: wet.clamp(0.0, 100.0).toDouble(),
+  );
+}
 
   // -------------------- MQTT updates --------------------
 
@@ -388,23 +413,21 @@ class SensorProvider with ChangeNotifier {
       soilTemp: soilTemp,
       airTemp: airTemp,
       timestamp: DateTime.now().toUtc(),
-      soilStatus: shouldAutoUpdateFuzzy
-          ? _statusFromVwc(
-              vwc: vwc,
-              vwcMin: current.vwcMin,
-              vwcOptimal: current.vwcOptimal,
-              vwcMax: current.vwcMax,
-            )
-          : current.soilStatus,
-      fuzzyScores: shouldAutoUpdateFuzzy
-          ? _basicFuzzyFromVwc(
-              vwc: vwc,
-              vwcMin: current.vwcMin,
-              vwcOptimal: current.vwcOptimal,
-              vwcMax: current.vwcMax,
-            )
-          : current.fuzzyScores,
-    );
+      soilStatus: _statusFromVwc(           
+        vwc: vwc,
+        vwcMin: current.vwcMin,
+        vwcOptimal: current.vwcOptimal,
+        vwcMax: current.vwcMax,
+      ),
+      fuzzyScores: shouldAutoUpdateFuzzy    
+      ? _basicFuzzyFromVwc(
+          vwc: vwc,
+          vwcMin: current.vwcMin,
+          vwcOptimal: current.vwcOptimal,
+          vwcMax: current.vwcMax,
+        )
+      : current.fuzzyScores,
+);
 
     _safeNotify();
   }

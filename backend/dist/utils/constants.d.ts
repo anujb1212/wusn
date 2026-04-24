@@ -12,7 +12,7 @@
  * - UP Agricultural Extension data
  * - Field observations from Lucknow region (sandy loam soil)
  */
-export declare const VALID_CROPS: readonly ["wheat", "rice", "maize", "chickpea", "lentil", "pea", "mustard", "sugarcane", "potato", "radish", "carrot", "tomato", "spinach", "mint", "cucumber", "watermelon", "musk_melon", "bottle_gourd", "bitter_gourd"];
+export declare const VALID_CROPS: readonly ["wheat", "rice", "maize", "chickpea", "lentil", "pea", "mustard", "sugarcane", "potato", "radish", "carrot", "okra", "tomato", "spinach", "mint", "cucumber", "watermelon", "musk_melon", "bottle_gourd", "bitter_gourd"];
 export type CropName = typeof VALID_CROPS[number];
 /**
  * Seasons (Lucknow, Uttar Pradesh, India)

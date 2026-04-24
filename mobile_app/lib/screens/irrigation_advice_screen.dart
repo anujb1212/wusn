@@ -10,11 +10,13 @@ import '../services/api_service.dart';
 class IrrigationAdviceScreen extends StatefulWidget {
   final int fieldId; // This is nodeId in backend
   final String language;
+  final DateTime? lastSensorTimestamp;
 
   const IrrigationAdviceScreen({
     super.key,
     required this.fieldId,
     required this.language,
+    this.lastSensorTimestamp,
   });
 
   @override
@@ -151,7 +153,9 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
       );
     }
 
-    final reason = _isHindi ? _decision!.reasonHi : _decision!.reasonEn;
+    final reason = _isHindi
+        ? (_decision!.reasonHi.isNotEmpty ? _decision!.reasonHi : _decision!.reasonEn)
+        : _decision!.reasonEn;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -617,7 +621,10 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
               _isHindi ? 'स्थिति' : 'Status', _isHindi ? 'सक्रिय' : 'Active'),
           _buildInfoRow(
             _isHindi ? 'अंतिम अपडेट' : 'Last Update',
-            DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now()),
+            widget.lastSensorTimestamp != null
+                  ? DateFormat('dd MMM yyyy, hh:mm a')
+                      .format(widget.lastSensorTimestamp!.toLocal())
+                  : (_isHindi ? 'उपलब्ध नहीं' : 'Unavailable'),
           ),
         ]),
       ),

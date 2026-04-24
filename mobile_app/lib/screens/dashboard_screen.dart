@@ -128,8 +128,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           DashboardHeader(
                             title: _t('dashboard'),
-                            subtitle:
-                                '${_t('lastUpdated')}: ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+                            subtitle: provider.lastFetchedAt != null
+                                ? '${_t('lastUpdated')}: ${_formatFetchTime(provider.lastFetchedAt!)}'
+                                : _t('loading'),
                           ),
                           const SizedBox(height: 12),
                           ElevatedButton.icon(
@@ -264,6 +265,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           builder: (context) => IrrigationAdviceScreen(
                             fieldId: sensor.nodeId, // nodeId
                             language: widget.language,
+                            lastSensorTimestamp: sensor.timestamp,
                           ),
                         ),
                       );
@@ -301,5 +303,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
     );
+  }
+
+  String _formatFetchTime(DateTime dt) {
+    final local = dt.toLocal();
+    final h = local.hour.toString();
+    final m = local.minute.toString().padLeft(2, '0');
+    final s = local.second.toString().padLeft(2, '0');
+    return '$h:$m:$s';
   }
 }

@@ -27,6 +27,7 @@ export const VALID_CROPS = [
     // Vegetables / leafy / cucurbits
     'radish',
     'carrot',
+    'okra',
     'tomato',
     'spinach',
     'mint',
@@ -632,6 +633,27 @@ export const CROP_DATABASE: Record<CropName, CropParameters> = {
         midSeasonGDD: 1050,
         lateSeasonGDD: 1600,
         preferredSoils: ['SANDY_LOAM', 'LOAM'],
+    },
+
+    okra: {
+        name: 'okra',
+        scientificName: 'Abelmoschus esculentus',
+        season: 'ZAID',
+        baseTemp: 10,
+        soilTempMin: 18,
+        soilTempOptimal: 27,
+        soilTempMax: 35,
+        vwcMin: 22,
+        vwcOptimal: 30,
+        vwcMax: 38,
+        rootDepthCm: 80,
+        mad: 0.50,
+        kc: { ini: 0.45, mid: 1.15, end: 0.80 },
+        initialStageGDD: 270,
+        developmentStageGDD: 630,
+        midSeasonGDD: 1260,
+        lateSeasonGDD: 1800,
+        preferredSoils: ['SANDY_LOAM', 'LOAM', 'CLAY_LOAM'],
     },
 };
 
