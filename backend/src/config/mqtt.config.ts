@@ -28,8 +28,9 @@ export const MQTT_CONFIG = {
         keepalive: 60,
         qos: 1 as 0 | 1 | 2,
 
-        username: env.MQTT_USERNAME,
-        password: env.MQTT_PASSWORD,
+        // ADD — conditional spread instead of direct assignment
+        ...(env.MQTT_USERNAME && { username: env.MQTT_USERNAME }),
+        ...(env.MQTT_PASSWORD && { password: env.MQTT_PASSWORD }),
 
         ...(env.NODE_ENV === 'production' && {
             rejectUnauthorized: true,

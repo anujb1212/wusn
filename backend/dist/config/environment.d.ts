@@ -7,6 +7,8 @@ declare const envSchema: z.ZodObject<{
     MQTT_BROKER_HOST: z.ZodDefault<z.ZodString>;
     MQTT_BROKER_PORT: z.ZodDefault<z.ZodNumber>;
     MQTT_CLIENT_ID: z.ZodOptional<z.ZodString>;
+    MQTT_USERNAME: z.ZodOptional<z.ZodString>;
+    MQTT_PASSWORD: z.ZodOptional<z.ZodString>;
     OPENWEATHER_API_KEY: z.ZodString;
     LOG_LEVEL: z.ZodDefault<z.ZodEnum<["fatal", "error", "warn", "info", "debug", "trace"]>>;
     LOG_PRETTY: z.ZodDefault<z.ZodBoolean>;
@@ -24,6 +26,8 @@ declare const envSchema: z.ZodObject<{
     WEATHER_CACHE_TTL_HOURS: number;
     GDD_CALCULATION_HOUR: number;
     MQTT_CLIENT_ID?: string | undefined;
+    MQTT_USERNAME?: string | undefined;
+    MQTT_PASSWORD?: string | undefined;
 }, {
     DATABASE_URL: string;
     OPENWEATHER_API_KEY: string;
@@ -32,6 +36,8 @@ declare const envSchema: z.ZodObject<{
     MQTT_BROKER_HOST?: string | undefined;
     MQTT_BROKER_PORT?: number | undefined;
     MQTT_CLIENT_ID?: string | undefined;
+    MQTT_USERNAME?: string | undefined;
+    MQTT_PASSWORD?: string | undefined;
     LOG_LEVEL?: "fatal" | "error" | "warn" | "info" | "debug" | "trace" | undefined;
     LOG_PRETTY?: boolean | undefined;
     WEATHER_CACHE_TTL_HOURS?: number | undefined;
@@ -50,6 +56,8 @@ export declare const env: {
     WEATHER_CACHE_TTL_HOURS: number;
     GDD_CALCULATION_HOUR: number;
     MQTT_CLIENT_ID?: string | undefined;
+    MQTT_USERNAME?: string | undefined;
+    MQTT_PASSWORD?: string | undefined;
 };
 export declare const isProduction: boolean;
 export declare const isDevelopment: boolean;

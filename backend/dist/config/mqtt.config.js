@@ -2,6 +2,7 @@
  * MQTT Configuration
  * Underground nodes send ONLY: moisture + temperature
  */
+import "dotenv/config";
 import { env } from './environment.js';
 // MQTT Topics
 export const MQTT_TOPICS = {
@@ -11,7 +12,9 @@ export const MQTT_TOPICS = {
 };
 // MQTT Connection Config
 export const MQTT_CONFIG = {
-    brokerUrl: `mqtt://${env.MQTT_BROKER_HOST}:${env.MQTT_BROKER_PORT}`,
+    brokerUrl: env.NODE_ENV === 'production'
+        ? `mqtts://${env.MQTT_BROKER_HOST}:${env.MQTT_BROKER_PORT}`
+        : `mqtt://${env.MQTT_BROKER_HOST}:${env.MQTT_BROKER_PORT}`,
     clientId: env.MQTT_CLIENT_ID || `wusn-backend-${Math.random().toString(16).slice(2, 10)}`,
     options: {
         clean: true,
@@ -19,6 +22,12 @@ export const MQTT_CONFIG = {
         connectTimeout: 30000,
         keepalive: 60,
         qos: 1,
+        // ADD — conditional spread instead of direct assignment
+        ...(env.MQTT_USERNAME && { username: env.MQTT_USERNAME }),
+        ...(env.MQTT_PASSWORD && { password: env.MQTT_PASSWORD }),
+        ...(env.NODE_ENV === 'production' && {
+            rejectUnauthorized: true,
+        }),
         will: {
             topic: 'wusn/backend/status',
             payload: Buffer.from(JSON.stringify({

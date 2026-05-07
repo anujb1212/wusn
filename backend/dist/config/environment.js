@@ -11,6 +11,8 @@ const envSchema = z.object({
     MQTT_BROKER_HOST: z.string().default('127.0.0.1'),
     MQTT_BROKER_PORT: z.coerce.number().int().positive().default(1883),
     MQTT_CLIENT_ID: z.string().optional(),
+    MQTT_USERNAME: z.string().optional(),
+    MQTT_PASSWORD: z.string().optional(),
     // OpenWeatherMap API
     OPENWEATHER_API_KEY: z.string().min(1, 'OPENWEATHER_API_KEY is required'),
     // Logging
