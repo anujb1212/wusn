@@ -9,6 +9,7 @@ import '../l10n/translations.dart';
 
 import '../models/sensor_data.dart';
 
+import 'node_setup_screen.dart';
 import 'crop_confirmation_screen.dart';
 import 'irrigation_advice_screen.dart';
 import 'api_test_screen.dart';
@@ -180,13 +181,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     style: const TextStyle(
                                         fontSize: 18, color: Colors.grey),
                                   ),
-                                  const SizedBox(height: 20),
-                                  Text(
-                                    widget.language == 'hi'
-                                        ? 'ऊपर "डेटा रिफ्रेश करें" बटन दबाएं'
-                                        : 'Press "Refresh Data" button above',
-                                    style: const TextStyle(
-                                        fontSize: 14, color: Colors.grey),
+                                  const SizedBox(height: 24),
+                                  ElevatedButton.icon(
+                                    onPressed: () async {
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) => NodeSetupScreen()),
+                                      );
+                                      if (!context.mounted) return;
+                                      Provider.of<SensorProvider>(context, listen: false)
+                                          .fetchData();
+                                    },
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Add Sensor Node'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF4CAF50),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 24, vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12)),
+                                    ),
                                   ),
                                 ],
                               ),
