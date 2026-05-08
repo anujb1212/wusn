@@ -31,7 +31,7 @@ const soilTextureSchema = z.preprocess(
 
 const createFieldSchema = z.object({
     nodeId: z.coerce.number().int().positive(),
-    gatewayId: z.string().min(1),
+    gatewayId: z.string().min(1).optional().default("gateway-1"),
     fieldName: z.string().min(1),
     latitude: z.coerce.number().min(-90).max(90),
     longitude: z.coerce.number().min(-180).max(180),

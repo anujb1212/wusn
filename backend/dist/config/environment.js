@@ -1,6 +1,8 @@
-import 'dotenv/config';
+import * as dotenv from 'dotenv';
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config();
+}
 import { z } from 'zod';
-// Env var
 const envSchema = z.object({
     // Server
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -22,8 +24,11 @@ const envSchema = z.object({
     WEATHER_CACHE_TTL_HOURS: z.coerce.number().positive().default(1),
     GDD_CALCULATION_HOUR: z.coerce.number().int().min(0).max(23).default(1),
 });
-// Parse and validate environment variables
 function validateEnvironment() {
+    if (process.env.NODE_ENV === 'production') {
+        console.log('DB URL exists:', !!process.env.DATABASE_URL);
+        console.log('OWM KEY exists:', !!process.env.OPENWEATHER_API_KEY);
+    }
     const result = envSchema.safeParse(process.env);
     if (!result.success) {
         console.error('❌ Environment validation failed:');
@@ -32,12 +37,7 @@ function validateEnvironment() {
     }
     return result.data;
 }
-/*
- * Validated environment configuration
- * Use this throughout your application
- */
 export const env = validateEnvironment();
-// Environment helpers
 export const isProduction = env.NODE_ENV === 'production';
 export const isDevelopment = env.NODE_ENV === 'development';
 export const isTest = env.NODE_ENV === 'test';

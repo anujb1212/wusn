@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { z } from 'zod';
 declare const envSchema: z.ZodObject<{
     NODE_ENV: z.ZodDefault<z.ZodEnum<["development", "production", "test"]>>;
@@ -15,7 +14,7 @@ declare const envSchema: z.ZodObject<{
     WEATHER_CACHE_TTL_HOURS: z.ZodDefault<z.ZodNumber>;
     GDD_CALCULATION_HOUR: z.ZodDefault<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
-    NODE_ENV: "development" | "production" | "test";
+    NODE_ENV: "production" | "development" | "test";
     PORT: number;
     DATABASE_URL: string;
     MQTT_BROKER_HOST: string;
@@ -31,7 +30,7 @@ declare const envSchema: z.ZodObject<{
 }, {
     DATABASE_URL: string;
     OPENWEATHER_API_KEY: string;
-    NODE_ENV?: "development" | "production" | "test" | undefined;
+    NODE_ENV?: "production" | "development" | "test" | undefined;
     PORT?: number | undefined;
     MQTT_BROKER_HOST?: string | undefined;
     MQTT_BROKER_PORT?: number | undefined;
@@ -45,7 +44,7 @@ declare const envSchema: z.ZodObject<{
 }>;
 export type Environment = z.infer<typeof envSchema>;
 export declare const env: {
-    NODE_ENV: "development" | "production" | "test";
+    NODE_ENV: "production" | "development" | "test";
     PORT: number;
     DATABASE_URL: string;
     MQTT_BROKER_HOST: string;

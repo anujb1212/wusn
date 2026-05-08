@@ -13,6 +13,7 @@ import type { SensorPayload, ProcessedSensorData } from '../../models/common.typ
 import type { SoilTexture } from '../../utils/constants.js';
 import { ValidationError } from '../../utils/errors.js';
 import { getLatestReading, getAverageSoilReadings, getAverageAirReadings } from '../../repositories/sensor.repository.js';
+import { prisma } from '../../config/database.js';
 
 const logger = createLogger({ service: 'sensor' });
 
@@ -39,15 +40,22 @@ export async function processSensorData(payload: SensorPayload): Promise<Process
         try {
             field = await getFieldByNodeId(payload.nodeId);
         } catch (error) {
-            // Field doesn't exist, create with defaults (Lucknow campus location)
             logger.warn({ nodeId: payload.nodeId }, 'Field not found, creating default config');
+
+            // Upsert Node first (Field has FK → Node.nodeId)
+            await prisma.node.upsert({
+                where: { nodeId: payload.nodeId },
+                create: { nodeId: payload.nodeId, isActive: true },
+                update: { lastSeen: new Date() },
+            });
+
             field = await createField({
                 nodeId: payload.nodeId,
                 gatewayId: `gateway-${payload.nodeId}`,
                 fieldName: `Field ${payload.nodeId}`,
-                latitude: 26.8467,  // Lucknow, UP
+                latitude: 26.8467,
                 longitude: 80.9462,
-                soilTexture: 'SANDY_LOAM', // Default for Lucknow campus
+                soilTexture: 'SANDY_LOAM',
             });
         }
 
