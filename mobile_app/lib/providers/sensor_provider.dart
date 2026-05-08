@@ -28,7 +28,7 @@ class SensorProvider with ChangeNotifier {
   SensorProvider() {
     fetchData();
     _pollingTimer = Timer.periodic(
-      const Duration(minutes: 5),
+      const Duration(minutes: 15),
       (_) => fetchData(silent: true),
     );
   }

@@ -55,6 +55,7 @@ class MqttService {
     );
 
     client.port = port;
+    client.secure = true;
     client.keepAlivePeriod = 60;
     client.logging(on: false);
 
@@ -77,6 +78,7 @@ class MqttService {
     final connMessage = MqttConnectMessage()
         .withClientIdentifier(
             'flutter_client_${DateTime.now().millisecondsSinceEpoch}')
+        .authenticateAs(AppConfig.mqttUsername, AppConfig.mqttPassword)
         .startClean()
         .withWillQos(MqttQos.atLeastOnce);
 

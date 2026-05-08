@@ -24,6 +24,12 @@ class AppConfig {
     return '127.0.0.1';
   }
 
+  static String get mqttUsername =>
+      dotenv.get('MQTT_USERNAME', fallback: '');
+
+  static String get mqttPassword =>
+      dotenv.get('MQTT_PASSWORD', fallback: '');
+
   static int get mqttPort => dotenv.getInt('MQTT_PORT', fallback: 1883);
 
   static const String appTitle = 'Soil Monitor';

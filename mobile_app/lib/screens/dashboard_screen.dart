@@ -75,8 +75,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: StatusIndicator(
                     isConnected: provider.isWebSocketConnected,
                     label: provider.isWebSocketConnected
-                        ? _t('realtime')
-                        : _t('offline'),
+                        ? 'Live'
+                        : 'Polling',
                   ),
                 ),
               ),
