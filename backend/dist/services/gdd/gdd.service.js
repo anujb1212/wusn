@@ -19,7 +19,7 @@
 import { createLogger } from '../../config/logger.js';
 import { CROP_DATABASE, GROWTH_STAGES, VALID_CROPS } from '../../utils/constants.js';
 import { getFieldByNodeId, updateFieldGDD } from '../../repositories/field.repository.js';
-import { getDailyAverageAirTemp } from '../../repositories/weather.repository.js';
+import { getDailyAirTempByNode } from '../../repositories/weather.repository.js';
 import { createGDDRecord, getGDDRecordForDate, getLatestGDDRecord, getGDDRecordsSinceSowing, deleteGDDRecordsInRange, } from '../../repositories/gdd.repository.js';
 import { ValidationError, NotFoundError } from '../../utils/errors.js';
 const logger = createLogger({ service: 'gdd' });
@@ -134,7 +134,7 @@ export async function calculateDailyGDD(nodeId, date) {
             };
         }
         // Get daily air temperature data (aggregated from SensorReading.airTemperature)
-        const tempData = await getDailyAverageAirTemp(field.gatewayId, dateOnly);
+        const tempData = await getDailyAirTempByNode(nodeId, dateOnly);
         if (!tempData || tempData.readingsCount === 0) {
             logger.warn({ nodeId, date: dateOnly.toISOString().split('T')[0] }, 'No air temperature data available');
             return null;

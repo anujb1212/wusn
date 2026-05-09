@@ -24,7 +24,7 @@ export function convertToVWC(moisture: number, soilTexture: SoilTexture): number
     //   250 → 25.0% (wheat optimal)
     //   150 → 15.0% (dry, needs water)
 
-    const vwc = moisture / 10;
+    const vwc = moisture;
 
     // Clamp to valid range and round to 1 decimal
     return Math.max(0, Math.min(100, Number(vwc.toFixed(1))));

@@ -11,6 +11,7 @@ import { convertToVWC } from './calibration.service.js';
 import { ValidationError } from '../../utils/errors.js';
 import { getLatestReading, getAverageSoilReadings, getAverageAirReadings } from '../../repositories/sensor.repository.js';
 import { prisma } from '../../config/database.js';
+import { calculateDailyGDD } from '../gdd/gdd.service.js';
 const logger = createLogger({ service: 'sensor' });
 /**
  * Process incoming sensor data from gateway
@@ -82,6 +83,11 @@ export async function processSensorData(payload) {
             ...(payload.airPressure !== undefined && { airPressure: payload.airPressure }),
         };
         await createSensorReading(readingData);
+        // Fire-and-forget GDD trigger — must never block sensor storage
+        const todayDate = timestamp.toISOString().slice(0, 10); // 'YYYY-MM-DD' — always string
+        calculateDailyGDD(payload.nodeId, new Date(todayDate)).catch((gddErr) => {
+            logger.warn({ nodeId: payload.nodeId, date: todayDate, err: gddErr }, 'GDD trigger failed (non-fatal)');
+        });
         logger.info({
             nodeId: payload.nodeId,
             soilVWC: soilMoistureVWC.toFixed(1),

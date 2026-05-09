@@ -7,8 +7,8 @@
  */
 import mqtt from 'mqtt';
 import { z } from 'zod';
-import { MQTT_CONFIG, MQTT_TOPICS } from '../config/mqtt.config.js';
 import { createLogger } from '../config/logger.js';
+import { MQTT_CONFIG, MQTT_TOPICS } from '../config/mqtt.config.js';
 import { processSensorData } from './sensor/sensor.service.js';
 const logger = createLogger({ service: 'mqtt' });
 let client = null;
@@ -21,7 +21,7 @@ let client = null;
  */
 const sensorPayloadSchema = z.object({
     node: z.number().int().positive(),
-    moisture: z.number().min(0).max(1023),
+    moisture: z.number().min(0).max(100),
     soil_temp: z.number().min(-20).max(60),
     air_temp: z.number().min(-20).max(60),
     score: z.number().min(0).max(100),
