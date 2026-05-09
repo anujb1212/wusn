@@ -14,7 +14,7 @@ class StatusIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color dotColor = isConnected ? Colors.green : Colors.grey;
     final Color bgColor =
-        (isConnected ? Colors.green : Colors.grey).withOpacity(0.15);
+        (isConnected ? Colors.green : Colors.grey).withValues(alpha: 0.15);
 
     // Use readable text on a light background.
     final Color textColor = Theme.of(context).colorScheme.onSurface;
@@ -27,7 +27,7 @@ class StatusIndicator extends StatelessWidget {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: dotColor.withOpacity(0.35)),
+          border: Border.all(color: dotColor.withValues(alpha: 0.35)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

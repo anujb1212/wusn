@@ -217,10 +217,8 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
         break;
     }
 
-    final decisionLabel = decision.decisionLabel(isHindi: _isHindi);
-
     return Card(
-      color: color.withOpacity(0.10),
+      color: color.withValues(alpha: 0.10),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -236,38 +234,18 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              alignment: WrapAlignment.center,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                      color: color, borderRadius: BorderRadius.circular(20)),
-                  child: Text(
-                    urgency,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    decisionLabel,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ],
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: color, width: 1.5),
+              ),
+              child: Text(
+                urgency,
+                style: TextStyle(
+                    color: color, fontSize: 14, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(height: 16),
             Text(
@@ -352,7 +330,7 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF2196F3).withOpacity(0.1),
+                color: const Color(0xFF2196F3).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -443,7 +421,7 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
         : deficitPctFromApi;
 
     // User-facing duration formatting (h + min).
-    String _formatDuration(int minutes) {
+    String formatDuration(int minutes) {
       if (minutes <= 0) return _isHindi ? 'कोई सिंचाई नहीं' : 'No irrigation';
       final h = minutes ~/ 60;
       final m = minutes % 60;
@@ -486,7 +464,9 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
           _buildInfoRowWithTooltip(
             _isHindi ? 'वर्तमान नमी (VWC)' : 'Current moisture (VWC)',
             '${decision.currentVWC.toStringAsFixed(1)}%',
-            _isHindi ? 'सेंसर द्वारा मापी गई' : 'Measured by sensor',
+            _isHindi
+                ? 'आपकी मिट्टी में कितना पानी कम है। लक्ष्य VWC और वर्तमान VWC का अंतर।'
+                : 'How much water your soil is missing. Difference between target and current VWC.',
           ),
           _buildInfoRowWithTooltip(
             _isHindi ? 'लक्ष्य नमी (VWC)' : 'Target moisture (VWC)',
@@ -513,17 +493,17 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
                 ? '${decision.suggestedDepthMm.toStringAsFixed(1)} mm (≈ ${decision.suggestedDepthMm.toStringAsFixed(1)} L/m²)'
                 : (_isHindi ? 'कोई सिंचाई नहीं' : 'No irrigation'),
             _isHindi
-                ? 'यह प्रति वर्ग मीटर पानी की गहराई है। 1 mm ≈ 1 लीटर/m².'
-                : 'Water depth to apply per square metre. 1 mm ≈ 1 litre/m².',
+                ? 'मिट्टी की कमी पूरी करने के लिए कितना पानी डालें। 1 mm = 1 लीटर प्रति वर्ग मीटर।'
+                : 'Water needed to fill soil deficit. Calculated as: deficit × soil depth × correction factor. 1mm = 1 litre/m².',
           ),
           _buildInfoRowWithTooltip(
             _isHindi ? 'सुझाई गई अवधि' : 'Suggested duration',
             hasRun
-                ? _formatDuration(decision.suggestedDurationMin)
+                ? formatDuration(decision.suggestedDurationMin)
                 : (_isHindi ? 'कोई सिंचाई नहीं' : 'No irrigation'),
             _isHindi
-                ? 'अनुमानित सिंचाई समय। गहराई और लागू दर (mm/घंटा) पर आधारित।'
-                : 'Estimated irrigation time, based on depth and application rate (mm/hour).',
+                ? 'सिंचाई का समय = गहराई ÷ लागू दर (mm/घंटा)। यह आपकी सिंचाई विधि पर निर्भर है।'
+                : 'Duration = depth ÷ application rate (mm/hour). Varies by your irrigation method (drip/sprinkler/flood).',
           ),
           if (rateText != null) ...[
             const SizedBox(height: 4),

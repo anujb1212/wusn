@@ -151,6 +151,27 @@ class AppTranslations {
       'refresh': 'Refresh',
       'viewDetails': 'View Details',
       'back': 'Back',
+
+      'cropAlreadyConfirmed': 'Crop already confirmed',
+      'cropAlreadyConfirmedHint':
+          'Changing sowing date will reset GDD calculation.',
+      'updateCrop': 'Update Crop',
+      'why': 'Why?',
+      'reloadCropList': 'Reload crop list',
+      'irrigationNeeded': 'No irrigation needed',
+      'urgencyScore': 'urgency score',
+      'noAdvice': 'No recommendation available',
+      'skipIrrigationTitle': 'SKIP IRRIGATION',
+      'addAnotherNode': 'Add another node',
+      'nodeLabel': 'Node',
+      'burialDepth': 'Burial Depth (cm)',
+      'locationOptional': 'Location (optional)',
+      'continueToField': 'Continue to Field Setup',
+      'creatingNode': 'Creating Node...',
+      'deficitTooltip':
+          'How much water your soil is missing. Difference between target and current VWC.',
+      'depthTooltip': 'Water needed to fill soil deficit. 1mm = 1 litre/m².',
+      'durationTooltip': 'Duration = depth ÷ application rate (mm/hour).',
     },
     'hi': {
       // Existing translations
@@ -304,6 +325,26 @@ class AppTranslations {
       'refresh': 'रिफ्रेश करें',
       'viewDetails': 'विवरण देखें',
       'back': 'वापस',
+
+      'cropAlreadyConfirmed': 'फसल पहले से पुष्टि हो चुकी है',
+      'cropAlreadyConfirmedHint': 'बुवाई की तारीख बदलने से GDD रीसेट हो जाएगा।',
+      'updateCrop': 'अपडेट करें',
+      'why': 'क्यों?',
+      'reloadCropList': 'फसल सूची फिर से लोड करें',
+      'irrigationNeeded': 'सिंचाई की आवश्यकता नहीं',
+      'urgencyScore': 'तात्कालिकता स्कोर',
+      'noAdvice': 'कोई सुझाव उपलब्ध नहीं है',
+      'skipIrrigationTitle': 'सिंचाई न करें',
+      'addAnotherNode': 'और नोड जोड़ें',
+      'nodeLabel': 'नोड',
+      'burialDepth': 'दफन गहराई (सेमी)',
+      'locationOptional': 'स्थान (वैकल्पिक)',
+      'continueToField': 'खेत सेटअप जारी रखें',
+      'creatingNode': 'नोड बना रहे हैं...',
+      'deficitTooltip': 'आपकी मिट्टी में कितना पानी कम है।',
+      'depthTooltip':
+          'मिट्टी की कमी पूरी करने के लिए कितना पानी डालें। 1mm = 1 लीटर/m².',
+      'durationTooltip': 'सिंचाई का समय = गहराई ÷ लागू दर (mm/घंटा)।',
     },
   };
 

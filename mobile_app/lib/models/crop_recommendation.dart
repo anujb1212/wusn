@@ -253,7 +253,7 @@ class _Json {
     if (v == null) return <String>[];
     if (v is List) {
       return v
-          .map((e) => e == null ? null : e.toString().trim())
+          .map((e) => e?.toString().trim())
           .whereType<String>()
           .where((s) => s.isNotEmpty)
           .toList();

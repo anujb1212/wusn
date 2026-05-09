@@ -13,6 +13,24 @@ class SensorCard extends StatelessWidget {
     required this.language,
   });
 
+  Color _fuzzyDominantColor() {
+    final d = sensor.fuzzyScores.dry;
+    final o = sensor.fuzzyScores.optimal;
+    final w = sensor.fuzzyScores.wet;
+    if (d >= o && d >= w) return Colors.red;
+    if (w >= o && w >= d) return Colors.blue;
+    return Colors.green;
+  }
+
+  String _fuzzyDominantLabel() {
+    final d = sensor.fuzzyScores.dry;
+    final o = sensor.fuzzyScores.optimal;
+    final w = sensor.fuzzyScores.wet;
+    if (d >= o && d >= w) return _t('dry');
+    if (w >= o && w >= d) return _t('wet');
+    return _t('optimal');
+  }
+
   String _t(String key) => AppTranslations.translate(key, language);
 
   bool get _isHindi => language == 'hi';
@@ -192,9 +210,10 @@ class SensorCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.15),
+            color: statusColor.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: statusColor.withOpacity(0.3), width: 1.5),
+            border: Border.all(
+                color: statusColor.withValues(alpha: 0.3), width: 1.5),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -351,19 +370,37 @@ class SensorCard extends StatelessWidget {
   }
 
   Widget _buildFuzzyAnalysis() {
-    final confidence = sensor.confidence.clamp(0.0, 100.0).toDouble();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${_t('fuzzyAnalysis')} '
-          '(${confidence.toStringAsFixed(0)}${_t('percent')} ${_t('confidence')})',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[700],
-          ),
+        Row(
+          children: [
+            Text(
+              _t('fuzzyAnalysis'),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
+            const Spacer(),
+            // Show fuzzy dominant label instead of irrigation confidence
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: _fuzzyDominantColor().withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                _fuzzyDominantLabel(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: _fuzzyDominantColor(),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         _buildFuzzyBar(_t('dry'), sensor.fuzzyScores.dry, Colors.red),
@@ -561,7 +598,7 @@ class SensorCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: color, size: 28),
@@ -616,7 +653,7 @@ class SensorCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
-                        color: color.withOpacity(0.3),
+                        color: color.withValues(alpha: 0.3),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),

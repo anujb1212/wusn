@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/api_service.dart';
-import '../models/field_model.dart';
 
 class FieldSetupScreen extends StatefulWidget {
   final int nodeId;
@@ -68,16 +67,11 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
         ),
       );
 
-      // Go back to root (Dashboard will refresh and show new field)
       Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to create field: ${e.message}';
-      });
+      setState(() => _errorMessage = 'Failed to create field: ${e.message}');
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Unexpected error: $e';
-      });
+      setState(() => _errorMessage = 'Unexpected error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -88,6 +82,7 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
       _isGpsLoading = true;
       _errorMessage = null;
     });
+
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -104,15 +99,16 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
         }
       }
       if (permission == LocationPermission.deniedForever) {
-        setState(() => _errorMessage =
-            'Location permission permanently denied. Enable from settings.');
+        setState(
+          () => _errorMessage =
+              'Location permission permanently denied. Enable from settings.',
+        );
         return;
       }
 
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
       );
 
       setState(() {
@@ -158,7 +154,7 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF4CAF50).withOpacity(0.1),
+                          color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.landscape,
@@ -206,13 +202,13 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
               _buildLabel('Soil Texture *'),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _soilTexture,
+                initialValue: _soilTexture,
                 decoration: _inputDecoration(
                   hint: 'Select soil type',
                   icon: Icons.terrain,
                 ),
                 items: _soilOptions
-                    .map((o) => DropdownMenuItem(
+                    .map((o) => DropdownMenuItem<String>(
                           value: o['value'],
                           child: Text(o['label']!),
                         ))
@@ -221,7 +217,7 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Latitude
+              // GPS button
               _buildLabel('Latitude *'),
               const SizedBox(height: 4),
               SizedBox(
@@ -261,8 +257,9 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Required';
                   final n = double.tryParse(v.trim());
-                  if (n == null || n < -90 || n > 90)
+                  if (n == null || n < -90 || n > 90) {
                     return 'Enter valid latitude (-90 to 90)';
+                  }
                   return null;
                 },
               ),
@@ -282,8 +279,9 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Required';
                   final n = double.tryParse(v.trim());
-                  if (n == null || n < -180 || n > 180)
+                  if (n == null || n < -180 || n > 180) {
                     return 'Enter valid longitude (-180 to 180)';
+                  }
                   return null;
                 },
               ),

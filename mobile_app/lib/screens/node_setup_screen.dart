@@ -3,31 +3,38 @@ import '../services/api_service.dart';
 import 'field_setup_screen.dart';
 
 class NodeSetupScreen extends StatefulWidget {
-  NodeSetupScreen({super.key});
+  const NodeSetupScreen({super.key});
 
   @override
   State<NodeSetupScreen> createState() => _NodeSetupScreenState();
 }
 
 class _NodeSetupScreenState extends State<NodeSetupScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _nodeIdController = TextEditingController();
-  final _locationController = TextEditingController();
-  final _burialDepthController = TextEditingController();
-
   bool _isLoading = false;
   String? _errorMessage;
 
+  final List<_NodeEntry> _nodes = [_NodeEntry()];
+
   @override
   void dispose() {
-    _nodeIdController.dispose();
-    _locationController.dispose();
-    _burialDepthController.dispose();
+    for (final n in _nodes) {
+      n.dispose();
+    }
     super.dispose();
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    bool allValid = true;
+    for (final n in _nodes) {
+      if (!n.formKey.currentState!.validate()) allValid = false;
+    }
+    if (!allValid) return;
+
+    final ids = _nodes.map((n) => n.nodeIdCtrl.text.trim()).toList();
+    if (ids.toSet().length != ids.length) {
+      setState(() => _errorMessage = 'Duplicate Node IDs found.');
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -35,34 +42,36 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
     });
 
     try {
-      final nodeData = <String, dynamic>{
-        'nodeId': int.parse(_nodeIdController.text.trim()),
-        if (_locationController.text.trim().isNotEmpty)
-          'location': _locationController.text.trim(),
-        if (_burialDepthController.text.trim().isNotEmpty)
-          'burialDepth': int.parse(_burialDepthController.text.trim()),
-      };
-
-      await ApiService.createNode(nodeData);
+      for (final n in _nodes) {
+        final nodeData = <String, dynamic>{
+          'nodeId': int.parse(n.nodeIdCtrl.text.trim()),
+          if (n.locationCtrl.text.trim().isNotEmpty)
+            'location': n.locationCtrl.text.trim(),
+          if (n.depthCtrl.text.trim().isNotEmpty)
+            'burialDepth': int.parse(n.depthCtrl.text.trim()),
+        };
+        await ApiService.createNode(nodeData);
+      }
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => FieldSetupScreen(
-            nodeId: int.parse(_nodeIdController.text.trim()),
+      for (int i = 0; i < _nodes.length; i++) {
+        final nodeId = int.parse(_nodes[i].nodeIdCtrl.text.trim());
+        if (!mounted) return;
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => FieldSetupScreen(nodeId: nodeId),
           ),
-        ),
-      );
+        );
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).popUntil((r) => r.isFirst);
     } on ApiException catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to create node: ${e.message}';
-      });
+      setState(() => _errorMessage = 'Failed to create node: ${e.message}');
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Unexpected error: $e';
-      });
+      setState(() => _errorMessage = 'Unexpected error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -74,7 +83,7 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text(
-          'Setup Sensor Node',
+          'Setup Sensor Nodes',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF4CAF50),
@@ -83,153 +92,187 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header card
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.sensors,
+                          color: Color(0xFF4CAF50), size: 28),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Step 1 of 2',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey)),
+                          Text('Node Configuration',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                          Text('Register one or more sensor nodes',
+                              style: TextStyle(
+                                  fontSize: 13, color: Colors.black54)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Dynamic node forms
+            ..._nodes.asMap().entries.map((entry) {
+              return _buildNodeForm(entry.key, entry.value);
+            }),
+
+            // Add node button (max 5)
+            if (_nodes.length < 5)
+              TextButton.icon(
+                onPressed: () => setState(() => _nodes.add(_NodeEntry())),
+                icon: const Icon(Icons.add, color: Color(0xFF4CAF50)),
+                label: const Text('Add another node',
+                    style: TextStyle(color: Color(0xFF4CAF50))),
+              ),
+
+            const SizedBox(height: 16),
+
+            // Error
+            if (_errorMessage != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  border: Border.all(color: Colors.red.shade200),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline,
+                        color: Colors.red.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(_errorMessage!,
+                          style: TextStyle(color: Colors.red.shade700)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Submit button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: _isLoading ? null : _submit,
+                icon: _isLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.arrow_forward),
+                label: Text(
+                  _isLoading ? 'Creating Nodes...' : 'Continue to Field Setup',
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4CAF50),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNodeForm(int index, _NodeEntry n) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Form(
-          key: _formKey,
+          key: n.formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header card
-              Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4CAF50).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.sensors,
-                            color: Color(0xFF4CAF50), size: 28),
-                      ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Step 1 of 2',
-                                style: TextStyle(
-                                    fontSize: 12, color: Colors.grey)),
-                            Text('Node Configuration',
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold)),
-                            Text('Register your sensor node',
-                                style: TextStyle(
-                                    fontSize: 13, color: Colors.black54)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              Row(
+                children: [
+                  Text('Node ${index + 1}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 15)),
+                  const Spacer(),
+                  if (_nodes.length > 1)
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline,
+                          color: Colors.red),
+                      onPressed: () => setState(() => _nodes.removeAt(index)),
+                    ),
+                ],
               ),
-              const SizedBox(height: 24),
-
-              // Node ID
+              const SizedBox(height: 12),
               _buildLabel('Node ID *'),
               const SizedBox(height: 8),
               TextFormField(
-                controller: _nodeIdController,
+                controller: n.nodeIdCtrl,
                 keyboardType: TextInputType.number,
-                decoration: _inputDecoration(
-                  hint: 'e.g. 1, 2, 3',
-                  icon: Icons.tag,
-                ),
+                decoration: _inputDecoration(hint: 'e.g. 1', icon: Icons.tag),
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Node ID is required';
-                  final n = int.tryParse(v.trim());
-                  if (n == null || n <= 0) return 'Enter a valid positive number';
+                  if (v == null || v.trim().isEmpty) return 'Required';
+                  final num = int.tryParse(v.trim());
+                  if (num == null || num <= 0) {
+                    return 'Enter a valid positive number';
+                  }
                   return null;
                 },
               ),
-              const SizedBox(height: 20),
-
-              // Location
+              const SizedBox(height: 12),
               _buildLabel('Location (optional)'),
               const SizedBox(height: 8),
               TextFormField(
-                controller: _locationController,
+                controller: n.locationCtrl,
                 decoration: _inputDecoration(
-                  hint: 'e.g. North Field, Plot A',
-                  icon: Icons.place_outlined,
-                ),
+                    hint: 'e.g. North Field', icon: Icons.place_outlined),
               ),
-              const SizedBox(height: 20),
-
-              // Burial Depth
+              const SizedBox(height: 12),
               _buildLabel('Burial Depth in cm (optional)'),
               const SizedBox(height: 8),
               TextFormField(
-                controller: _burialDepthController,
+                controller: n.depthCtrl,
                 keyboardType: TextInputType.number,
-                decoration: _inputDecoration(
-                  hint: 'e.g. 30',
-                  icon: Icons.straighten,
-                ),
+                decoration:
+                    _inputDecoration(hint: 'e.g. 30', icon: Icons.straighten),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return null;
-                  final n = int.tryParse(v.trim());
-                  if (n == null || n <= 0) return 'Enter a valid depth';
+                  final num = int.tryParse(v.trim());
+                  if (num == null || num <= 0) return 'Enter a valid depth';
                   return null;
                 },
-              ),
-              const SizedBox(height: 32),
-
-              // Error
-              if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    border: Border.all(color: Colors.red.shade200),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline,
-                          color: Colors.red.shade600, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(_errorMessage!,
-                            style: TextStyle(color: Colors.red.shade700)),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Submit button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _submit,
-                  icon: _isLoading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Icon(Icons.arrow_forward),
-                  label: Text(
-                    _isLoading ? 'Creating Node...' : 'Continue to Field Setup',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CAF50),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
               ),
             ],
           ),
@@ -243,7 +286,8 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14));
   }
 
-  InputDecoration _inputDecoration({required String hint, required IconData icon}) {
+  InputDecoration _inputDecoration(
+      {required String hint, required IconData icon}) {
     return InputDecoration(
       hintText: hint,
       prefixIcon: Icon(icon, color: const Color(0xFF4CAF50)),
@@ -262,5 +306,18 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
         borderSide: const BorderSide(color: Color(0xFF4CAF50), width: 2),
       ),
     );
+  }
+}
+
+class _NodeEntry {
+  final nodeIdCtrl = TextEditingController();
+  final locationCtrl = TextEditingController();
+  final depthCtrl = TextEditingController();
+  final formKey = GlobalKey<FormState>();
+
+  void dispose() {
+    nodeIdCtrl.dispose();
+    locationCtrl.dispose();
+    depthCtrl.dispose();
   }
 }

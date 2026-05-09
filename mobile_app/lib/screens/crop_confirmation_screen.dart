@@ -3,15 +3,20 @@ import 'package:flutter/material.dart';
 import '../models/field_model.dart';
 import '../models/sensor_data.dart';
 import '../services/api_service.dart';
+import '../l10n/translations.dart';
 
 class CropConfirmationScreen extends StatefulWidget {
   final SensorData sensorData;
   final String language;
+  final bool isAlreadyConfirmed;
+  final DateTime? confirmedSowingDate;
 
   const CropConfirmationScreen({
     super.key,
     required this.sensorData,
     required this.language,
+    this.isAlreadyConfirmed = false,
+    this.confirmedSowingDate,
   });
 
   @override
@@ -20,19 +25,16 @@ class CropConfirmationScreen extends StatefulWidget {
 
 class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
   String? _selectedCrop;
-
   DateTime _sowingDate = DateTime.now();
-
   bool _isLoading = false;
   bool _isCatalogLoading = true;
   String? _errorMessage;
-
   List<CropCatalogItem> _catalog = <CropCatalogItem>[];
 
+  // ── i18n ──────────────────────────────────────────────────────────────────
+  String _t(String key) => AppTranslations.translate(key, widget.language);
   bool get _isHindi => widget.language == 'hi';
 
-  // Optional Hindi labels (fallback to English if missing).
-  // This does NOT hardcode the crop list; it only provides optional display strings.
   static const Map<String, String> _hiLabels = <String, String>{
     'wheat': 'गेहूं',
     'rice': 'चावल',
@@ -58,7 +60,9 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
   @override
   void initState() {
     super.initState();
-
+    if (widget.confirmedSowingDate != null) {
+      _sowingDate = widget.confirmedSowingDate!;
+    }
     _loadCatalogAndPreselect();
   }
 
@@ -73,17 +77,11 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
   }
 
   String _extractRecommendedCropId(String raw) {
-    // Handles: "RADISH 71%", "Radish", "musk_melon", etc.
     final normalized = _normalizeCandidate(raw);
     if (normalized.isEmpty) return '';
-
-    // If it's multiple tokens, keep the first "word-ish" token.
     final parts =
         normalized.split('_').where((p) => p.trim().isNotEmpty).toList();
     if (parts.isEmpty) return normalized;
-
-    // If the original already matches underscore style (like musk_melon), keep it.
-    // Otherwise, reduce to the first token to avoid "radish_71" style values.
     if (normalized.contains('_') && parts.length >= 2) return normalized;
     return parts.first;
   }
@@ -108,12 +106,10 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
 
       String? selected;
       if (recommendedId.isNotEmpty) {
-        // 1) Match by canonical value
         final byValue = catalog.where((c) => c.value == recommendedId).toList();
         if (byValue.isNotEmpty) {
           selected = byValue.first.value;
         } else {
-          // 2) Try match by labelEn (e.g., recommendation sends "Radish" instead of "radish")
           final recLabelNorm =
               _normalizeCandidate(recommendedId).replaceAll('_', '');
           final byLabel = catalog.where((c) {
@@ -136,18 +132,15 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
         _catalog = <CropCatalogItem>[];
         _selectedCrop = null;
         _isCatalogLoading = false;
-        _errorMessage = _isHindi
-            ? 'फसल सूची लोड नहीं हो पाई: ${e.toString().replaceAll('Exception: ', '')}'
-            : 'Failed to load crop list: ${e.toString().replaceAll('Exception: ', '')}';
+        _errorMessage =
+            '${_t('error')}: ${e.toString().replaceAll('Exception: ', '')}';
       });
     }
   }
 
   Future<void> _confirmCrop() async {
     if (_selectedCrop == null) {
-      setState(() {
-        _errorMessage = _isHindi ? 'कृपया फसल चुनें' : 'Please select a crop';
-      });
+      setState(() => _errorMessage = _t('selectCropFirst'));
       return;
     }
 
@@ -157,7 +150,6 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
     });
 
     try {
-      // ApiService.confirmCrop returns Field (after migration)
       final Field updatedField = await ApiService.confirmCrop(
         nodeId: widget.sensorData.nodeId,
         cropName: _selectedCrop!,
@@ -168,35 +160,22 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            _isHindi
-                ? 'फसल सफलतापूर्वक पुष्टि की गई!'
-                : 'Crop confirmed successfully!',
-          ),
+          content: Text(_t('cropConfirmed')),
           backgroundColor: Colors.green,
         ),
       );
 
-      // Return true so dashboard refreshes.
       Navigator.of(context).pop(true);
-
       // ignore: unused_local_variable
       final _ = updatedField;
-      return;
     } catch (e) {
       if (!mounted) return;
-
       setState(() {
-        _errorMessage = _isHindi
-            ? 'त्रुटि: ${e.toString().replaceAll('Exception: ', '')}'
-            : 'Error: ${e.toString().replaceAll('Exception: ', '')}';
+        _errorMessage =
+            '${_t('error')}: ${e.toString().replaceAll('Exception: ', '')}';
       });
-      return;
     } finally {
-      // IMPORTANT: After Navigator.pop, this State may be disposed.
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -205,8 +184,8 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
     final recommendedId = _extractRecommendedCropId(widget.sensorData.bestCrop);
     final recommendedItem = _catalog
         .where((c) => c.value == recommendedId)
-        .toList()
-        .cast<CropCatalogItem?>();
+        .cast<CropCatalogItem?>()
+        .toList();
     final recommendedLabel =
         (recommendedItem.isNotEmpty && recommendedItem.first != null)
             ? _displayLabel(recommendedItem.first!)
@@ -214,14 +193,55 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isHindi ? 'फसल की पुष्टि करें' : 'Confirm Crop'),
+        title: Text(_t('cropConfirmation')),
         backgroundColor: const Color(0xFF4CAF50),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Recommendation card
+          // ── Already-confirmed warning banner ─────────────────────────────
+          if (widget.isAlreadyConfirmed) ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.shade300, width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lock, color: Colors.orange.shade700, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _t('cropAlreadyConfirmed'),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _t('cropAlreadyConfirmedHint'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // ── Recommendation card ───────────────────────────────────────────
           Card(
             elevation: 4,
             color: const Color(0xFFE8F5E9),
@@ -242,7 +262,7 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  _isHindi ? 'सिफारिश' : 'Recommendation',
+                                  _t('recommendation'),
                                   style: const TextStyle(
                                       fontSize: 12, color: Colors.black54),
                                 ),
@@ -265,7 +285,7 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            '${widget.sensorData.cropConfidence.toStringAsFixed(0)}%',
+                            '${widget.sensorData.cropConfidence.toStringAsFixed(0)}${AppTranslations.translate('percent', widget.language)}',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -278,7 +298,7 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                     const SizedBox(height: 12),
                     const Divider(),
                     Text(
-                      _isHindi ? 'क्यों?' : 'Why?',
+                      _t('why'),
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 14),
                     ),
@@ -292,14 +312,14 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Crop dropdown (API-driven)
+          // ── Crop dropdown ─────────────────────────────────────────────────
           DropdownButtonFormField<String>(
-            value: (_selectedCrop != null &&
+            initialValue: (_selectedCrop != null &&
                     _catalog.any((c) => c.value == _selectedCrop))
                 ? _selectedCrop
                 : null,
             decoration: InputDecoration(
-              labelText: _isHindi ? 'फसल चुनें' : 'Select Crop',
+              labelText: _t('selectCrop'),
               border: const OutlineInputBorder(),
               prefixIcon: _isCatalogLoading
                   ? const Padding(
@@ -313,12 +333,10 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                   : const Icon(Icons.agriculture),
             ),
             items: _catalog
-                .map(
-                  (c) => DropdownMenuItem<String>(
-                    value: c.value,
-                    child: Text(_displayLabel(c)),
-                  ),
-                )
+                .map((c) => DropdownMenuItem<String>(
+                      value: c.value,
+                      child: Text(_displayLabel(c)),
+                    ))
                 .toList(),
             onChanged: (_isLoading || _isCatalogLoading)
                 ? null
@@ -330,14 +348,17 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
             TextButton.icon(
               onPressed: _loadCatalogAndPreselect,
               icon: const Icon(Icons.refresh),
-              label: Text(
-                  _isHindi ? 'फसल सूची फिर से लोड करें' : 'Reload crop list'),
+              label: Text(_t('reloadCropList')),
             ),
 
           const SizedBox(height: 10),
 
-          // Sowing Date Picker
-          InkWell(
+          // ── Sowing Date Picker ────────────────────────────────────────────
+          TextFormField(
+            key: ValueKey(_sowingDate),
+            initialValue:
+                '${_sowingDate.day}/${_sowingDate.month}/${_sowingDate.year}',
+            readOnly: true,
             onTap: _isLoading
                 ? null
                 : () async {
@@ -347,26 +368,20 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                       firstDate:
                           DateTime.now().subtract(const Duration(days: 365)),
                       lastDate: DateTime.now(),
-                      helpText: _isHindi
-                          ? 'बुवाई की तारीख चुनें'
-                          : 'Select sowing date',
+                      helpText: _t('sowingDate'),
                     );
                     if (picked != null) setState(() => _sowingDate = picked);
                   },
-            child: InputDecorator(
-              decoration: InputDecoration(
-                labelText: _isHindi ? 'बुवाई की तारीख' : 'Sowing Date',
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.calendar_today),
-              ),
-              child: Text(
-                '${_sowingDate.day}/${_sowingDate.month}/${_sowingDate.year}',
-                style: const TextStyle(fontSize: 16),
-              ),
+            decoration: InputDecoration(
+              labelText: _t('sowingDate'),
+              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.calendar_today),
+              suffixIcon: const Icon(Icons.arrow_drop_down),
             ),
           ),
           const SizedBox(height: 10),
-          // Confirm button
+
+          // ── Confirm button ────────────────────────────────────────────────
           ElevatedButton(
             onPressed: (_isLoading || _isCatalogLoading || _catalog.isEmpty)
                 ? null
@@ -385,21 +400,23 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                         color: Colors.white, strokeWidth: 2.5),
                   )
                 : Text(
-                    _isHindi ? 'पुष्टि करें' : 'Confirm',
+                    widget.isAlreadyConfirmed
+                        ? _t('updateCrop')
+                        : _t('confirm'),
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.bold),
                   ),
           ),
 
-          // Error message
+          // ── Error message ─────────────────────────────────────────────────
           if (_errorMessage != null) ...[
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [

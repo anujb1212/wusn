@@ -74,9 +74,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Center(
                   child: StatusIndicator(
                     isConnected: provider.isWebSocketConnected,
-                    label: provider.isWebSocketConnected
-                        ? 'Live'
-                        : 'Polling',
+                    label: provider.isWebSocketConnected ? 'Live' : 'Polling',
                   ),
                 ),
               ),
@@ -136,19 +134,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const SizedBox(height: 12),
                           ElevatedButton.icon(
                             onPressed: () async {
-                              await provider.fetchData();
-                              if (!context.mounted) return;
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    widget.language == 'hi'
-                                        ? 'डेटा अपडेट किया गया!'
-                                        : 'Data refreshed!',
-                                  ),
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
+                              final prov = Provider.of<SensorProvider>(context,
+                                  listen: false);
+                              await prov.fetchData();
                             },
                             icon: const Icon(Icons.refresh),
                             label: Text(
@@ -187,10 +175,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       await Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                            builder: (_) => NodeSetupScreen()),
+                                            builder: (_) =>
+                                                const NodeSetupScreen()),
                                       );
                                       if (!context.mounted) return;
-                                      Provider.of<SensorProvider>(context, listen: false)
+                                      Provider.of<SensorProvider>(context,
+                                              listen: false)
                                           .fetchData();
                                     },
                                     icon: const Icon(Icons.add),
@@ -201,7 +191,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 24, vertical: 14),
                                       shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12)),
+                                          borderRadius:
+                                              BorderRadius.circular(12)),
                                     ),
                                   ),
                                 ],
@@ -241,19 +232,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () async {
+                      final provider =
+                          Provider.of<SensorProvider>(context, listen: false);
                       final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => CropConfirmationScreen(
                             sensorData: sensor,
                             language: widget.language,
+                            isAlreadyConfirmed: sensor.cropType.isNotEmpty,
+                            confirmedSowingDate: null,
                           ),
                         ),
                       );
 
-                      if (result == true && context.mounted) {
-                        Provider.of<SensorProvider>(context, listen: false)
-                            .fetchData();
+                      if (result == true) {
+                        provider.fetchData();
                       }
                     },
                     icon: const Icon(Icons.agriculture, size: 20),
