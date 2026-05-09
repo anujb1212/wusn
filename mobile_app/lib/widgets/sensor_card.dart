@@ -414,8 +414,9 @@ class SensorCard extends StatelessWidget {
 
   Widget _buildCropRecommendation() {
     final cropConfidence = sensor.cropConfidence.clamp(0.0, 100.0).toDouble();
-    final bestCrop =
-        sensor.bestCrop.trim().isEmpty ? '-' : sensor.bestCrop.toUpperCase();
+    final bestCrop = sensor.bestCrop.trim().isEmpty
+        ? '-'
+        : _formatCropName(sensor.bestCrop.trim().toLowerCase()).toUpperCase();
     final summary = sensor.summary.trim().isEmpty
         ? (_isHindi ? 'जानकारी उपलब्ध नहीं' : 'No details available')
         : sensor.summary;
@@ -519,7 +520,7 @@ class SensorCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      c.cropName,
+                      _formatCropName(c.cropName.trim().toLowerCase()),
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
@@ -682,13 +683,17 @@ class SensorCard extends StatelessWidget {
     final difference = now.difference(timestamp);
 
     if (difference.inSeconds < 60) {
-      return '${difference.inSeconds}s ${_t('timeAgo')}';
+      final unit = _isHindi ? 'सेकंड' : 's';
+      return '${difference.inSeconds}$unit ${_t('timeAgo')}';
     } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ${_t('timeAgo')}';
+      final unit = _isHindi ? 'मिनट' : 'm';
+      return '${difference.inMinutes}$unit ${_t('timeAgo')}';
     } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ${_t('timeAgo')}';
+      final unit = _isHindi ? 'घंटे' : 'h';
+      return '${difference.inHours}$unit ${_t('timeAgo')}';
     } else {
-      return '${difference.inDays}d ${_t('timeAgo')}';
+      final unit = _isHindi ? 'दिन' : 'd';
+      return '${difference.inDays}$unit ${_t('timeAgo')}';
     }
   }
 

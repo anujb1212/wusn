@@ -5,10 +5,12 @@ import 'package:provider/provider.dart';
 import 'screens/dashboard_screen.dart';
 import 'providers/sensor_provider.dart';
 import 'services/mqtt_service.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
+  await initializeDateFormatting('hi', null);
   runApp(const MyApp());
 }
 

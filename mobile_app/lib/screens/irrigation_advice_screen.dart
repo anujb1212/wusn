@@ -33,6 +33,23 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
 
   bool get _isHindi => widget.language == 'hi';
 
+  String _urgencyHindi(String urgency) {
+    switch (urgency) {
+      case 'CRITICAL':
+        return 'अति आवश्यक';
+      case 'HIGH':
+        return 'जल्द करें';
+      case 'MODERATE':
+        return 'मध्यम';
+      case 'LOW':
+        return 'कम';
+      case 'NONE':
+        return 'आवश्यक नहीं';
+      default:
+        return urgency;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -242,7 +259,7 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
                 border: Border.all(color: color, width: 1.5),
               ),
               child: Text(
-                urgency,
+                _isHindi ? _urgencyHindi(urgency) : urgency,
                 style: TextStyle(
                     color: color, fontSize: 14, fontWeight: FontWeight.bold),
               ),
@@ -274,7 +291,8 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
                 ),
               ],
             ),
-            if (decision.scoreBasis != null &&
+            if (!_isHindi &&
+                decision.scoreBasis != null &&
                 decision.scoreBasis!.trim().isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
@@ -382,8 +400,12 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(DateFormat('EEE, MMM d').format(date),
-              style: const TextStyle(fontSize: 13)),
+          Text(
+            _isHindi
+                ? DateFormat('d MMM, EEE', 'hi').format(date)
+                : DateFormat('EEE, MMM d').format(date),
+            style: const TextStyle(fontSize: 13),
+          ),
           Row(
             children: [
               Text(icon, style: const TextStyle(fontSize: 16)),
@@ -395,7 +417,7 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
               ),
               const SizedBox(width: 16),
               Text(
-                'Rain ${rain.toStringAsFixed(0)}mm',
+                '${_isHindi ? 'बारिश' : 'Rain'} ${rain.toStringAsFixed(0)}mm',
                 style: TextStyle(
                   fontSize: 13,
                   color: rain > 5 ? const Color(0xFF2196F3) : Colors.grey,
@@ -520,7 +542,7 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
             ),
           _buildInfoRow(
             _isHindi ? 'अगला चेक' : 'Next check',
-            '${decision.nextCheckHours}h',
+            '${decision.nextCheckHours}${_isHindi ? ' घंटे' : 'h'}',
           ),
         ]),
       ),
