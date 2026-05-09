@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../services/api_service.dart';
 import '../models/field_model.dart';
 
@@ -19,6 +20,7 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
 
   String _soilTexture = 'SANDY_LOAM';
   bool _isLoading = false;
+  bool _isGpsLoading = false;
   String? _errorMessage;
 
   static const List<Map<String, String>> _soilOptions = [
@@ -81,6 +83,49 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
     }
   }
 
+  Future<void> _fetchGpsLocation() async {
+    setState(() {
+      _isGpsLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _errorMessage = 'Location services are disabled.');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() => _errorMessage = 'Location permission denied.');
+          return;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        setState(() => _errorMessage =
+            'Location permission permanently denied. Enable from settings.');
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
+      setState(() {
+        _latController.text = position.latitude.toStringAsFixed(4);
+        _lngController.text = position.longitude.toStringAsFixed(4);
+      });
+    } catch (e) {
+      setState(() => _errorMessage = 'GPS error: $e');
+    } finally {
+      if (mounted) setState(() => _isGpsLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -129,8 +174,7 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                                     fontSize: 12, color: Colors.grey)),
                             const Text('Field Configuration',
                                 style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold)),
+                                    fontSize: 16, fontWeight: FontWeight.bold)),
                             Text('Node ID: ${widget.nodeId}',
                                 style: const TextStyle(
                                     fontSize: 13, color: Colors.black54)),
@@ -152,8 +196,9 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                   hint: 'e.g. North Field, Plot A',
                   icon: Icons.edit_outlined,
                 ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Field name is required' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Field name is required'
+                    : null,
               ),
               const SizedBox(height: 20),
 
@@ -178,11 +223,37 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
 
               // Latitude
               _buildLabel('Latitude *'),
+              const SizedBox(height: 4),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed:
+                      (_isLoading || _isGpsLoading) ? null : _fetchGpsLocation,
+                  icon: _isGpsLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.gps_fixed, color: Color(0xFF4CAF50)),
+                  label: Text(
+                    _isGpsLoading
+                        ? 'Getting location...'
+                        : 'Auto-fill from GPS',
+                    style: const TextStyle(color: Color(0xFF4CAF50)),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF4CAF50)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _latController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true, signed: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true, signed: true),
                 decoration: _inputDecoration(
                   hint: 'e.g. 26.8467',
                   icon: Icons.my_location,
@@ -190,7 +261,8 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Required';
                   final n = double.tryParse(v.trim());
-                  if (n == null || n < -90 || n > 90) return 'Enter valid latitude (-90 to 90)';
+                  if (n == null || n < -90 || n > 90)
+                    return 'Enter valid latitude (-90 to 90)';
                   return null;
                 },
               ),
@@ -201,8 +273,8 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _lngController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true, signed: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true, signed: true),
                 decoration: _inputDecoration(
                   hint: 'e.g. 80.9462',
                   icon: Icons.location_on_outlined,
@@ -210,7 +282,8 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Required';
                   final n = double.tryParse(v.trim());
-                  if (n == null || n < -180 || n > 180) return 'Enter valid longitude (-180 to 180)';
+                  if (n == null || n < -180 || n > 180)
+                    return 'Enter valid longitude (-180 to 180)';
                   return null;
                 },
               ),
@@ -296,8 +369,7 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide:
-            const BorderSide(color: Color(0xFF4CAF50), width: 2),
+        borderSide: const BorderSide(color: Color(0xFF4CAF50), width: 2),
       ),
     );
   }

@@ -154,7 +154,9 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
     }
 
     final reason = _isHindi
-        ? (_decision!.reasonHi.isNotEmpty ? _decision!.reasonHi : _decision!.reasonEn)
+        ? (_decision!.reasonHi.isNotEmpty
+            ? _decision!.reasonHi
+            : _decision!.reasonEn)
         : _decision!.reasonEn;
 
     return SingleChildScrollView(
@@ -284,7 +286,11 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
                 Icon(Icons.speed, size: 18, color: color),
                 const SizedBox(width: 6),
                 Text(
-                  '${urgencyScore.toStringAsFixed(0)}/100 ${_isHindi ? 'स्कोर' : 'score'}',
+                  urgency == 'NONE'
+                      ? (_isHindi
+                          ? 'सिंचाई की आवश्यकता नहीं'
+                          : 'No irrigation needed')
+                      : '${urgencyScore.toStringAsFixed(0)}/100 ${_isHindi ? 'तात्कालिकता स्कोर' : 'urgency score'}',
                   style: TextStyle(
                       color: color, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
@@ -622,9 +628,9 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
           _buildInfoRow(
             _isHindi ? 'अंतिम अपडेट' : 'Last Update',
             widget.lastSensorTimestamp != null
-                  ? DateFormat('dd MMM yyyy, hh:mm a')
-                      .format(widget.lastSensorTimestamp!.toLocal())
-                  : (_isHindi ? 'उपलब्ध नहीं' : 'Unavailable'),
+                ? DateFormat('dd MMM yyyy, hh:mm a')
+                    .format(widget.lastSensorTimestamp!.toLocal())
+                : (_isHindi ? 'उपलब्ध नहीं' : 'Unavailable'),
           ),
         ]),
       ),
@@ -770,6 +776,7 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
       'potato': _isHindi ? 'आलू' : 'Potato',
       'lentil': _isHindi ? 'मसूर' : 'Lentil',
       'pea': _isHindi ? 'मटर' : 'Pea',
+      'okra': _isHindi ? 'भिंडी' : 'Okra'
     };
     return crops[crop.toLowerCase()] ?? crop;
   }

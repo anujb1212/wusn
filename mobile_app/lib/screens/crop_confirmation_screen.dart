@@ -21,8 +21,7 @@ class CropConfirmationScreen extends StatefulWidget {
 class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
   String? _selectedCrop;
 
-  // Keep current behavior: sowing date defaults to "now".
-  late final DateTime _sowingDate;
+  DateTime _sowingDate = DateTime.now();
 
   bool _isLoading = false;
   bool _isCatalogLoading = true;
@@ -60,7 +59,6 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
   void initState() {
     super.initState();
 
-    _sowingDate = DateTime.now();
     _loadCatalogAndPreselect();
   }
 
@@ -338,6 +336,36 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
 
           const SizedBox(height: 10),
 
+          // Sowing Date Picker
+          InkWell(
+            onTap: _isLoading
+                ? null
+                : () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _sowingDate,
+                      firstDate:
+                          DateTime.now().subtract(const Duration(days: 365)),
+                      lastDate: DateTime.now(),
+                      helpText: _isHindi
+                          ? 'बुवाई की तारीख चुनें'
+                          : 'Select sowing date',
+                    );
+                    if (picked != null) setState(() => _sowingDate = picked);
+                  },
+            child: InputDecorator(
+              decoration: InputDecoration(
+                labelText: _isHindi ? 'बुवाई की तारीख' : 'Sowing Date',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.calendar_today),
+              ),
+              child: Text(
+                '${_sowingDate.day}/${_sowingDate.month}/${_sowingDate.year}',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           // Confirm button
           ElevatedButton(
             onPressed: (_isLoading || _isCatalogLoading || _catalog.isEmpty)

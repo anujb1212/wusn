@@ -51,6 +51,40 @@ class SensorCard extends StatelessWidget {
     }
   }
 
+  String _formatCropName(String crop) {
+    const hiNames = <String, String>{
+      'wheat': 'गेहूं',
+      'rice': 'चावल',
+      'maize': 'मक्का',
+      'chickpea': 'चना',
+      'lentil': 'मसूर',
+      'pea': 'मटर',
+      'mustard': 'सरसों',
+      'sugarcane': 'गन्ना',
+      'potato': 'आलू',
+      'radish': 'मूली',
+      'carrot': 'गाजर',
+      'tomato': 'टमाटर',
+      'spinach': 'पालक',
+      'mint': 'पुदीना',
+      'cucumber': 'खीरा',
+      'watermelon': 'तरबूज',
+      'musk_melon': 'खरबूजा',
+      'bottle_gourd': 'लौकी',
+      'bitter_gourd': 'करेला',
+      'okra': 'भिंडी',
+    };
+    final normalized = crop.trim().toLowerCase();
+    if (_isHindi && hiNames.containsKey(normalized)) {
+      return hiNames[normalized]!;
+    }
+
+    return normalized
+        .split('_')
+        .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+        .join(' ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final statusKey = _statusKey(sensor.status);
@@ -114,7 +148,9 @@ class SensorCard extends StatelessWidget {
         ? sensor.fieldName
         : '${_t('node')} ${sensor.nodeId}';
 
-    final cropLabel = (sensor.cropType.trim().isEmpty) ? '-' : sensor.cropType;
+    final cropLabel = (sensor.cropType.trim().isEmpty)
+        ? '-'
+        : _formatCropName(sensor.cropType);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
