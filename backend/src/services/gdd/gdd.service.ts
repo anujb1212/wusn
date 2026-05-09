@@ -28,6 +28,7 @@ import {
     getLatestGDDRecord,
     getGDDRecordsSinceSowing,
     deleteGDDRecordsInRange,
+    getLatestGDDRecordBefore,
 } from '../../repositories/gdd.repository.js';
 import type { GDDResult, GDDStatus } from '../../models/common.types.js';
 import { ValidationError, NotFoundError } from '../../utils/errors.js';
@@ -190,8 +191,8 @@ export async function calculateDailyGDD(
             field.baseTemperature
         );
 
-        // Get previous cumulative GDD (chronologically)
-        const latestRecord = await getLatestGDDRecord(field.id);
+        // Get the most recent GDD record BEFORE this date (chronological predecessor)
+        const latestRecord = await getLatestGDDRecordBefore(field.id, dateOnly);
         const previousCumulativeGDD = latestRecord?.cumulativeGDD ?? 0;
         const cumulativeGDD = previousCumulativeGDD + dailyGDDValue;
 

@@ -20,7 +20,7 @@ import { createLogger } from '../../config/logger.js';
 import { CROP_DATABASE, GROWTH_STAGES, VALID_CROPS } from '../../utils/constants.js';
 import { getFieldByNodeId, updateFieldGDD } from '../../repositories/field.repository.js';
 import { getDailyAirTempByNode } from '../../repositories/weather.repository.js';
-import { createGDDRecord, getGDDRecordForDate, getLatestGDDRecord, getGDDRecordsSinceSowing, deleteGDDRecordsInRange, } from '../../repositories/gdd.repository.js';
+import { createGDDRecord, getGDDRecordForDate, getLatestGDDRecord, getGDDRecordsSinceSowing, deleteGDDRecordsInRange, getLatestGDDRecordBefore, } from '../../repositories/gdd.repository.js';
 import { ValidationError, NotFoundError } from '../../utils/errors.js';
 const logger = createLogger({ service: 'gdd' });
 /**
@@ -146,8 +146,8 @@ export async function calculateDailyGDD(nodeId, date) {
         }
         // Calculate daily GDD using USDA Method 2
         const dailyGDDValue = calculateGDDValue(tempData.minAirTemp, tempData.maxAirTemp, field.baseTemperature);
-        // Get previous cumulative GDD (chronologically)
-        const latestRecord = await getLatestGDDRecord(field.id);
+        // Get the most recent GDD record BEFORE this date (chronological predecessor)
+        const latestRecord = await getLatestGDDRecordBefore(field.id, dateOnly);
         const previousCumulativeGDD = latestRecord?.cumulativeGDD ?? 0;
         const cumulativeGDD = previousCumulativeGDD + dailyGDDValue;
         // Determine growth stage

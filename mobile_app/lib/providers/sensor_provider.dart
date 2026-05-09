@@ -233,7 +233,14 @@ class SensorProvider with ChangeNotifier {
         final days = gdd.estimatedDaysToHarvest;
         final gddSummary = 'GDD: ${gdd.progressPercent.toStringAsFixed(1)}%'
             '${days == null ? '' : ' • ${days.toStringAsFixed(0)} days to harvest'}';
-        data = data.copyWith(summary: gddSummary);
+        final existingSummary = data.summary.isNotEmpty &&
+                data.summary != 'Loading data...'
+            ? data.summary
+            : '';
+        final combined = existingSummary.isNotEmpty
+            ? '$existingSummary\n$gddSummary'
+            : gddSummary;
+        data = data.copyWith(summary: combined);
       }
     } catch (e) {
       // Keep card usable; do not throw.
@@ -355,23 +362,15 @@ class SensorProvider with ChangeNotifier {
   final depletionPct =
       (((target - current) / target) * 100).clamp(0.0, 100.0).toDouble();
 
-  double dry = 0.0, optimal = 0.0, wet = 0.0;
-
-  if (depletionPct >= 70) {
-    dry = depletionPct;
-    optimal = (100.0 - depletionPct) / 2.0;
-  } else if (depletionPct >= 40) {
-    dry = depletionPct / 2.0;
-    optimal = (100.0 - depletionPct);
-  } else {
-    optimal = (100.0 - depletionPct);
-    wet = depletionPct / 2.0;
-  }
+  // dry increases linearly with depletion; optimal = remainder; wet = 0
+  // This guarantees dry + optimal + wet == 100 always
+  final dry = depletionPct;
+  final optimal = (100.0 - depletionPct).clamp(0.0, 100.0).toDouble();
 
   return FuzzyScores(
-    dry: dry.clamp(0.0, 100.0).toDouble(),
-    optimal: optimal.clamp(0.0, 100.0).toDouble(),
-    wet: wet.clamp(0.0, 100.0).toDouble(),
+    dry: dry,
+    optimal: optimal,
+    wet: 0.0,
   );
 }
 
@@ -413,12 +412,14 @@ class SensorProvider with ChangeNotifier {
       soilTemp: soilTemp,
       airTemp: airTemp,
       timestamp: DateTime.now().toUtc(),
-      soilStatus: _statusFromVwc(           
-        vwc: vwc,
-        vwcMin: current.vwcMin,
-        vwcOptimal: current.vwcOptimal,
-        vwcMax: current.vwcMax,
-      ),
+      soilStatus: current.confidence > 0
+          ? current.soilStatus
+          : _statusFromVwc(
+              vwc: vwc,
+              vwcMin: current.vwcMin,
+              vwcOptimal: current.vwcOptimal,
+              vwcMax: current.vwcMax,
+            ),
       fuzzyScores: shouldAutoUpdateFuzzy    
       ? _basicFuzzyFromVwc(
           vwc: vwc,

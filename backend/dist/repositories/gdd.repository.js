@@ -89,6 +89,15 @@ export async function getLatestGDDRecord(fieldId) {
         throw new DatabaseError('getLatestGDDRecord', error);
     }
 }
+export async function getLatestGDDRecordBefore(fieldId, beforeDate) {
+    return prisma.gDDRecord.findFirst({
+        where: {
+            fieldId,
+            date: { lt: beforeDate },
+        },
+        orderBy: { date: 'desc' },
+    });
+}
 // Delete GDD records for date range
 export async function deleteGDDRecordsInRange(fieldId, startDate, endDate) {
     try {

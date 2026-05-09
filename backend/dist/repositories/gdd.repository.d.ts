@@ -71,6 +71,21 @@ export declare function getLatestGDDRecord(fieldId: number): Promise<{
     growthStage: import(".prisma/client").$Enums.GrowthStage | null;
     fieldId: number;
 } | null>;
+export declare function getLatestGDDRecordBefore(fieldId: number, beforeDate: Date): Promise<{
+    id: number;
+    baseTemperature: number;
+    createdAt: Date;
+    cropType: string | null;
+    readingsCount: number;
+    avgAirTemp: number;
+    minAirTemp: number | null;
+    maxAirTemp: number | null;
+    date: Date;
+    dailyGDD: number;
+    cumulativeGDD: number;
+    growthStage: import(".prisma/client").$Enums.GrowthStage | null;
+    fieldId: number;
+} | null>;
 export declare function deleteGDDRecordsInRange(fieldId: number, startDate: Date, endDate: Date): Promise<number>;
 export declare function getCumulativeGDD(fieldId: number): Promise<number>;
 //# sourceMappingURL=gdd.repository.d.ts.map

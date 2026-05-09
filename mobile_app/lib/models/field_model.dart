@@ -30,9 +30,9 @@ class Field {
   });
 
   factory Field.fromJson(Map<String, dynamic> json) {
-    final id = _Json.asInt(
-        json['nodeId'] ?? json['id'] ?? json['fieldId'] ?? json['field_id'],
+    final id = _Json.asInt(json['id'] ?? json['fieldId'] ?? json['field_id'],
         fallback: 0);
+    final nodeId = _Json.asInt(json['nodeId'] ?? json['id'], fallback: 0);
 
     final fieldName = _Json.asString(
       json['fieldName'] ?? json['field_name'],
@@ -41,7 +41,7 @@ class Field {
 
     return Field(
       id: id,
-      nodeId: _Json.asInt(json['nodeId'] ?? json['id'] ?? json['fieldId'], fallback: 0),
+      nodeId: nodeId,
       fieldName: fieldName,
       latitude: _Json.asDouble(json['latitude'] ?? json['lat'], fallback: 0.0),
       longitude: _Json.asDouble(json['longitude'] ?? json['lng'] ?? json['lon'],
