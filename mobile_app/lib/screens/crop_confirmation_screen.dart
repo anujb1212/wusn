@@ -139,6 +139,13 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
   }
 
   Future<void> _confirmCrop() async {
+    if (widget.isAlreadyConfirmed) {
+      setState(() => _errorMessage = _isHindi
+          ? 'फसल पहले से बोई जा चुकी है। बदलाव संभव नहीं।'
+          : 'Crop already sown. Cannot be changed.');
+      return;
+    }
+
     if (_selectedCrop == null) {
       setState(() => _errorMessage = _t('selectCropFirst'));
       return;

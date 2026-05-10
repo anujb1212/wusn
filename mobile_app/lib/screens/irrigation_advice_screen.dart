@@ -235,14 +235,24 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
     }
 
     return Card(
-      color: color.withValues(alpha: 0.10),
+      color: Colors.white,
       elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: color.withValues(alpha: 0.4), width: 2),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(22),
         child: Column(
           children: [
-            Icon(icon, size: 78, color: color),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.10),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 60, color: color),
+            ),
             const SizedBox(height: 16),
             Text(
               title,

@@ -231,32 +231,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final provider =
-                          Provider.of<SensorProvider>(context, listen: false);
-                      final result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CropConfirmationScreen(
-                            sensorData: sensor,
-                            language: widget.language,
-                            isAlreadyConfirmed: sensor.cropType.isNotEmpty,
-                            confirmedSowingDate: null,
-                          ),
-                        ),
-                      );
-
-                      if (result == true) {
-                        provider.fetchData();
-                      }
-                    },
-                    icon: const Icon(Icons.agriculture, size: 20),
+                    onPressed: sensor.cropType.isNotEmpty
+                        ? () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  widget.language == 'hi'
+                                      ? '🔒 फसल पहले से बोई जा चुकी है: ${sensor.cropType.toUpperCase()}'
+                                      : '🔒 Crop already sown: ${sensor.cropType.toUpperCase()}',
+                                ),
+                                backgroundColor: Colors.orange,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                        : () async {
+                            final prov = Provider.of<SensorProvider>(context,
+                                listen: false);
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CropConfirmationScreen(
+                                  sensorData: sensor,
+                                  language: widget.language,
+                                  isAlreadyConfirmed: false,
+                                  confirmedSowingDate: null,
+                                ),
+                              ),
+                            );
+                            if (result == true) {
+                              prov.fetchData();
+                            }
+                          },
+                    icon: Icon(
+                      sensor.cropType.isNotEmpty
+                          ? Icons.lock
+                          : Icons.agriculture,
+                      size: 20,
+                    ),
                     label: Text(
-                      widget.language == 'hi' ? 'फसल पुष्टि' : 'Confirm Crop',
+                      sensor.cropType.isNotEmpty
+                          ? (widget.language == 'hi'
+                              ? 'फसल बोई गई 🔒'
+                              : 'Crop Sown 🔒')
+                          : (widget.language == 'hi'
+                              ? 'फसल पुष्टि'
+                              : 'Confirm Crop'),
                       style: const TextStyle(fontSize: 14),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4CAF50),
+                      backgroundColor: sensor.cropType.isNotEmpty
+                          ? Colors.grey.shade400
+                          : const Color(0xFF4CAF50),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(

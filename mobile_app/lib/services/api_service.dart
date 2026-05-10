@@ -261,13 +261,28 @@ class ApiService {
     final uri = _buildUri('/sensors/$nodeId/latest', queryParameters: qp);
     final res = await _getJson('/sensors/$nodeId/latest', queryParameters: qp);
 
-    final map = _expectMap(
-      res,
-      method: 'GET',
-      uri: uri,
-      contextMessage:
-          'Invalid latest sensor response shape (expected JSON object)',
-    );
+    Map<String, dynamic> map;
+    if (res is List && res.isNotEmpty) {
+      final first = _asMapOrNull(res.first);
+      if (first == null) {
+        throw ApiException(
+          message:
+              'Invalid latest sensor response shape (expected JSON object)',
+          method: 'GET',
+          uri: uri,
+          decodedBody: res,
+        );
+      }
+      map = first;
+    } else {
+      map = _expectMap(
+        res,
+        method: 'GET',
+        uri: uri,
+        contextMessage:
+            'Invalid latest sensor response shape (expected JSON object)',
+      );
+    }
 
     // Support multiple backend key variants (robust parsing).
     final vwc = _asDouble(map['soilMoistureVWC'] ?? map['vwc'], fallback: 0.0);

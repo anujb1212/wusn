@@ -35,6 +35,16 @@ class SensorCard extends StatelessWidget {
 
   bool get _isHindi => language == 'hi';
 
+  static const Map<String, String> _adviceMap = {
+    'Soil moisture exceeds optimal range - risk of waterlogging. Avoid irrigation until moisture depletes to 38%':
+        'मिट्टी की नमी इष्टतम सीमा से अधिक है - जलभराव का खतरा। जब तक नमी 38% तक न घटे, सिंचाई न करें।',
+    'Soil moisture is within optimal range. No irrigation needed.':
+        'मिट्टी की नमी इष्टतम सीमा में है। सिंचाई की आवश्यकता नहीं।',
+    'Soil moisture is below optimal range. Irrigation recommended.':
+        'मिट्टी की नमी इष्टतम सीमा से कम है। सिंचाई की सलाह दी जाती है।',
+    'No advice available': 'कोई सलाह उपलब्ध नहीं',
+  };
+
   /// Normalize multiple backend/app variants into the translation keys
   /// used by the UI (`needsWater`, `tooWet`, `goodCondition`, `unknown`).
   String _statusKey(String raw) {
@@ -67,6 +77,30 @@ class SensorCard extends StatelessWidget {
       default:
         return 'unknown';
     }
+  }
+
+  String _translateAdvice(String advice) {
+    if (!_isHindi || advice.trim().isEmpty) return advice;
+
+    final trimmed = advice.trim();
+    if (_adviceMap.containsKey(trimmed)) return _adviceMap[trimmed]!;
+
+    // Partial keyword match fallback
+    if (trimmed.toLowerCase().contains('waterlogging') ||
+        trimmed.toLowerCase().contains('exceeds optimal')) {
+      return 'मिट्टी में ज्यादा पानी है। सिंचाई न करें जब तक नमी कम न हो।';
+    }
+    if (trimmed.toLowerCase().contains('below optimal') ||
+        trimmed.toLowerCase().contains('needs water') ||
+        trimmed.toLowerCase().contains('irrigation recommended')) {
+      return 'मिट्टी सूखी है। सिंचाई करें।';
+    }
+    if (trimmed.toLowerCase().contains('within optimal') ||
+        trimmed.toLowerCase().contains('no irrigation')) {
+      return 'मिट्टी की नमी ठीक है। सिंचाई की जरूरत नहीं।';
+    }
+
+    return advice;
   }
 
   String _formatCropName(String crop) {
@@ -541,9 +575,10 @@ class SensorCard extends StatelessWidget {
   }
 
   Widget _buildIrrigationAdvice() {
-    final advice = sensor.irrigationAdvice.trim().isEmpty
+    final rawAdvice = sensor.irrigationAdvice.trim().isEmpty
         ? (_isHindi ? 'कोई सलाह उपलब्ध नहीं' : 'No advice available')
         : sensor.irrigationAdvice;
+    final advice = _translateAdvice(rawAdvice);
 
     return Container(
       padding: const EdgeInsets.all(16),

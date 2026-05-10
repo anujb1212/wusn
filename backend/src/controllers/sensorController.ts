@@ -3,7 +3,7 @@
 import type { Request, Response } from 'express';
 import * as sensorService from '../services/sensor/sensor.service.js';
 import * as sensorRepo from '../repositories/sensor.repository.js';
-import { ValidationError } from '../utils/errors.js';
+import { NotFoundError, ValidationError } from '../utils/errors.js';
 
 /*
  * Get latest sensor data for a node
@@ -24,8 +24,12 @@ export async function getLatestSensorData(req: Request, res: Response): Promise<
 
     const data = await sensorService.getLatestSensorData(nodeId);
 
+    if (data === null) {
+        throw new NotFoundError('SensorReading', `nodeId=${nodeId}`);
+    }
+
     res.json({
-        status: 'ok',
+        status: true,
         data,
         timestamp: new Date().toISOString(),
     });

@@ -1,7 +1,7 @@
 class AppTranslations {
   static const Map<String, Map<String, String>> translations = {
     'en': {
-      'appTitle': 'Soil Monitor',
+      'appTitle': 'Smart Farming',
       'dashboard': 'Dashboard',
 
       'node': 'Sensor',
@@ -174,8 +174,7 @@ class AppTranslations {
       'durationTooltip': 'Duration = depth ÷ application rate (mm/hour).',
     },
     'hi': {
-      // Existing translations
-      'appTitle': 'खेत की नमी',
+      'appTitle': 'स्मार्ट खेती',
       'dashboard': 'मुख्य पेज',
 
       'node': 'सेंसर',
