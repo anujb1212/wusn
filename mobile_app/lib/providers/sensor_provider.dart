@@ -242,6 +242,14 @@ class SensorProvider with ChangeNotifier {
             : gddSummary;
         data = data.copyWith(summary: combined);
       }
+
+      final growthDays = gddStatus?.growthInfo?.estimatedDaysToHarvest;
+      if (growthDays != null && growthDays > 0) {
+        data = data.copyWith(estimatedDaysToHarvest: growthDays);
+      } else if (gdd?.estimatedDaysToHarvest != null) {
+        data =
+            data.copyWith(estimatedDaysToHarvest: gdd!.estimatedDaysToHarvest);
+      }
     } catch (e) {
       // Keep card usable; do not throw.
       _debugLog('Partial load error for nodeId=$nodeId: $e');

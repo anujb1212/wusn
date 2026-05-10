@@ -10,6 +10,7 @@ class CropConfirmationScreen extends StatefulWidget {
   final String language;
   final bool isAlreadyConfirmed;
   final DateTime? confirmedSowingDate;
+  final bool isHarvestReset;
 
   const CropConfirmationScreen({
     super.key,
@@ -17,6 +18,7 @@ class CropConfirmationScreen extends StatefulWidget {
     required this.language,
     this.isAlreadyConfirmed = false,
     this.confirmedSowingDate,
+    this.isHarvestReset = false,
   });
 
   @override
@@ -139,7 +141,7 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
   }
 
   Future<void> _confirmCrop() async {
-    if (widget.isAlreadyConfirmed) {
+    if (widget.isAlreadyConfirmed && !widget.isHarvestReset) {
       setState(() => _errorMessage = _isHindi
           ? 'फसल पहले से बोई जा चुकी है। बदलाव संभव नहीं।'
           : 'Crop already sown. Cannot be changed.');

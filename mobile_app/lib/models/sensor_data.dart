@@ -33,6 +33,7 @@ class SensorData {
   final double? vwcMin;
   final double? vwcOptimal;
   final double? vwcMax;
+  final double? estimatedDaysToHarvest;
 
   SensorData({
     required this.nodeId,
@@ -56,6 +57,7 @@ class SensorData {
     this.vwcMin,
     this.vwcOptimal,
     this.vwcMax,
+    this.estimatedDaysToHarvest,
   });
 
   factory SensorData.initial(int id, String name) {
@@ -116,6 +118,9 @@ class SensorData {
       vwcMin: _Json.asNullableDouble(json['vwcMin']),
       vwcOptimal: _Json.asNullableDouble(json['vwcOptimal']),
       vwcMax: _Json.asNullableDouble(json['vwcMax']),
+      estimatedDaysToHarvest: _Json.asNullableDouble(
+        json['estimatedDaysToHarvest'] ?? json['estimated_days_to_harvest'],
+      ),
     );
   }
 
@@ -142,6 +147,7 @@ class SensorData {
       'vwcMin': vwcMin,
       'vwcOptimal': vwcOptimal,
       'vwcMax': vwcMax,
+      'estimatedDaysToHarvest': estimatedDaysToHarvest,
     };
   }
 
@@ -169,6 +175,7 @@ class SensorData {
     Object? vwcMin = _unset,
     Object? vwcOptimal = _unset,
     Object? vwcMax = _unset,
+    Object? estimatedDaysToHarvest = _unset,
   }) {
     return SensorData(
       nodeId: nodeId,
@@ -200,6 +207,9 @@ class SensorData {
           ? this.vwcOptimal
           : vwcOptimal as double?,
       vwcMax: identical(vwcMax, _unset) ? this.vwcMax : vwcMax as double?,
+      estimatedDaysToHarvest: identical(estimatedDaysToHarvest, _unset)
+          ? this.estimatedDaysToHarvest
+          : estimatedDaysToHarvest as double?,
     );
   }
 

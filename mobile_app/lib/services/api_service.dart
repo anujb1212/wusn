@@ -485,6 +485,18 @@ class ApiService {
     return Field.fromJson(map);
   }
 
+  static Future<Field> harvestCrop({required int nodeId}) async {
+    final uri = _buildUri('/fields/$nodeId/harvest');
+    final res = await _postJson('/fields/$nodeId/harvest', body: {});
+    final map = _expectMap(
+      res,
+      method: 'POST',
+      uri: uri,
+      contextMessage: 'Invalid harvestCrop response shape',
+    );
+    return Field.fromJson(map);
+  }
+
   // Backward Compatibility (weather may be unavailable)
   static Future<Map<String, dynamic>> getWeatherForecast(int nodeId) async {
     final uri = _buildUri('/weather/$nodeId/forecast');
