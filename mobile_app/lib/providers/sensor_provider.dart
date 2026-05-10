@@ -233,10 +233,10 @@ class SensorProvider with ChangeNotifier {
         final days = gdd.estimatedDaysToHarvest;
         final gddSummary = 'GDD: ${gdd.progressPercent.toStringAsFixed(1)}%'
             '${days == null ? '' : ' • ${days.toStringAsFixed(0)} days to harvest'}';
-        final existingSummary = data.summary.isNotEmpty &&
-                data.summary != 'Loading data...'
-            ? data.summary
-            : '';
+        final existingSummary =
+            data.summary.isNotEmpty && data.summary != 'Loading data...'
+                ? data.summary
+                : '';
         final combined = existingSummary.isNotEmpty
             ? '$existingSummary\n$gddSummary'
             : gddSummary;
@@ -253,25 +253,25 @@ class SensorProvider with ChangeNotifier {
   // -------------------- Helpers --------------------
 
   String _statusFromUrgency(
-  String urgency, {
-  double? currentVWC,
-  double? targetVWC,
-}) {
-  if (currentVWC != null && targetVWC != null && targetVWC > 0) {
-    if (currentVWC > targetVWC * 1.05) return 'too_wet';
-  }
+    String urgency, {
+    double? currentVWC,
+    double? targetVWC,
+  }) {
+    if (currentVWC != null && targetVWC != null && targetVWC > 0) {
+      if (currentVWC > targetVWC * 1.05) return 'too_wet';
+    }
 
-  switch (urgency) {
-    case 'CRITICAL':
-    case 'HIGH':
-    case 'MODERATE':
-      return 'needs_water';
-    case 'LOW':
-    case 'NONE':
-    default:
-      return 'optimal';
+    switch (urgency) {
+      case 'CRITICAL':
+      case 'HIGH':
+      case 'MODERATE':
+        return 'needs_water';
+      case 'LOW':
+      case 'NONE':
+      default:
+        return 'optimal';
+    }
   }
-}
 
   String _statusFromVwc({
     required double vwc,
@@ -346,33 +346,33 @@ class SensorProvider with ChangeNotifier {
   }
 
   FuzzyScores _fuzzyFromIrrigation(IrrigationDecision irrigation) {
-  final current = irrigation.currentVWC;
-  final target = irrigation.targetVWC <= 0 ? 1.0 : irrigation.targetVWC;
+    final current = irrigation.currentVWC;
+    final target = irrigation.targetVWC <= 0 ? 1.0 : irrigation.targetVWC;
 
-  if (current > target) {
-    final excessPct =
-        (((current - target) / target) * 100).clamp(0.0, 100.0).toDouble();
+    if (current > target) {
+      final excessPct =
+          (((current - target) / target) * 100).clamp(0.0, 100.0).toDouble();
+      return FuzzyScores(
+        dry: 0.0,
+        optimal: (100.0 - excessPct).clamp(0.0, 100.0).toDouble(),
+        wet: excessPct,
+      );
+    }
+
+    final depletionPct =
+        (((target - current) / target) * 100).clamp(0.0, 100.0).toDouble();
+
+    // dry increases linearly with depletion; optimal = remainder; wet = 0
+    // This guarantees dry + optimal + wet == 100 always
+    final dry = depletionPct;
+    final optimal = (100.0 - depletionPct).clamp(0.0, 100.0).toDouble();
+
     return FuzzyScores(
-      dry: 0.0,
-      optimal: (100.0 - excessPct).clamp(0.0, 100.0).toDouble(),
-      wet: excessPct,
+      dry: dry,
+      optimal: optimal,
+      wet: 0.0,
     );
   }
-
-  final depletionPct =
-      (((target - current) / target) * 100).clamp(0.0, 100.0).toDouble();
-
-  // dry increases linearly with depletion; optimal = remainder; wet = 0
-  // This guarantees dry + optimal + wet == 100 always
-  final dry = depletionPct;
-  final optimal = (100.0 - depletionPct).clamp(0.0, 100.0).toDouble();
-
-  return FuzzyScores(
-    dry: dry,
-    optimal: optimal,
-    wet: 0.0,
-  );
-}
 
   // -------------------- MQTT updates --------------------
 
@@ -420,15 +420,15 @@ class SensorProvider with ChangeNotifier {
               vwcOptimal: current.vwcOptimal,
               vwcMax: current.vwcMax,
             ),
-      fuzzyScores: shouldAutoUpdateFuzzy    
-      ? _basicFuzzyFromVwc(
-          vwc: vwc,
-          vwcMin: current.vwcMin,
-          vwcOptimal: current.vwcOptimal,
-          vwcMax: current.vwcMax,
-        )
-      : current.fuzzyScores,
-);
+      fuzzyScores: shouldAutoUpdateFuzzy
+          ? _basicFuzzyFromVwc(
+              vwc: vwc,
+              vwcMin: current.vwcMin,
+              vwcOptimal: current.vwcOptimal,
+              vwcMax: current.vwcMax,
+            )
+          : current.fuzzyScores,
+    );
 
     _safeNotify();
   }

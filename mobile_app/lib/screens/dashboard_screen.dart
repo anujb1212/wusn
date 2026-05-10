@@ -12,7 +12,6 @@ import '../models/sensor_data.dart';
 import 'node_setup_screen.dart';
 import 'crop_confirmation_screen.dart';
 import 'irrigation_advice_screen.dart';
-import 'api_test_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String language;
@@ -58,17 +57,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             foregroundColor: Colors.white,
             elevation: 2,
             actions: [
-              IconButton(
-                icon: const Icon(Icons.bug_report),
-                tooltip: 'Test API',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const ApiTestScreen()),
-                  );
-                },
-              ),
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: Center(

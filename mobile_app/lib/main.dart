@@ -33,7 +33,6 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
 
-    // Keep manual ownership (needed because MqttService needs a stable instance reference).
     _sensorProvider = SensorProvider();
 
     _mqttService = MqttService(
@@ -47,7 +46,6 @@ class _MyAppState extends State<MyApp> {
       },
     );
 
-    // Fire-and-forget connect; provider will update connection state via callbacks.
     _mqttService.connect();
   }
 
@@ -57,9 +55,7 @@ class _MyAppState extends State<MyApp> {
 
     _mqttService.disconnect();
 
-    // This notifier is owned by this State object.
-    _sensorProvider
-        .dispose(); // ChangeNotifier.dispose should be called by the owner. [web:281]
+    _sensorProvider.dispose();
 
     super.dispose();
   }
@@ -72,8 +68,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Using `.value` is correct *only* because we're passing an already-created notifier;
-    // Provider will not dispose it, so we dispose manually above. [web:35]
     return ChangeNotifierProvider<SensorProvider>.value(
       value: _sensorProvider,
       child: MaterialApp(
