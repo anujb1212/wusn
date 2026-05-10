@@ -9,6 +9,7 @@ import {
     updateFieldController,
     deleteFieldController,
     setCropController,
+    harvestCropController,
 } from '../controllers/fieldController.js';
 
 const router = Router();
@@ -19,6 +20,7 @@ router.get('/', asyncHandler(getAllFieldsController));
 
 // Crop configuration (more specific route first; avoids future conflicts)
 router.post('/:nodeId/crop', asyncHandler(setCropController));
+router.post('/:nodeId/harvest', asyncHandler(harvestCropController));
 
 // Field CRUD (single)
 router.get('/:nodeId', asyncHandler(getFieldController));
