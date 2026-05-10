@@ -227,30 +227,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 : _t('loading'),
                           ),
                           const SizedBox(height: 12),
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              final prov = Provider.of<SensorProvider>(context,
-                                  listen: false);
-                              await prov.fetchData();
-                            },
-                            icon: const Icon(Icons.refresh),
-                            label: Text(
-                              widget.language == 'hi'
-                                  ? 'डेटा रिफ्रेश करें'
-                                  : 'Refresh Data',
-                              style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(double.infinity, 50),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 8),
                           if (provider.sensors.isEmpty)
                             Center(
                               child: Column(
@@ -306,6 +283,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ],
                               );
                             }),
+                          const SizedBox(height: 50),
                         ],
                       ),
                     ),
