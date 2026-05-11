@@ -79,6 +79,18 @@ class SensorCard extends StatelessWidget {
     }
   }
 
+  String _resolveAdvice(String raw) {
+    const sentinelMap = <String, String>{
+      'SENSOR_ZERO_READING': 'sensorZeroReading',
+      'INVALID_NODE_ID': 'invalidNodeId',
+      'INSUFFICIENT_READINGS': 'insufficientReadings',
+      'MOISTURE_UNAVAILABLE': 'moistureUnavailable',
+    };
+    final key = sentinelMap[raw.trim()];
+    if (key != null) return _t(key);
+    return _translateAdvice(raw);
+  }
+
   String _translateAdvice(String advice) {
     if (!_isHindi || advice.trim().isEmpty) return advice;
 
@@ -507,9 +519,11 @@ class SensorCard extends StatelessWidget {
     final bestCrop = sensor.bestCrop.trim().isEmpty
         ? '-'
         : _formatCropName(sensor.bestCrop.trim().toLowerCase()).toUpperCase();
-    final summary = sensor.summary.trim().isEmpty
-        ? (_isHindi ? 'जानकारी उपलब्ध नहीं' : 'No details available')
-        : sensor.summary;
+    final summary = _resolveAdvice(
+      sensor.summary.trim().isEmpty
+          ? (_isHindi ? 'जानकारी उपलब्ध नहीं' : 'No details available')
+          : sensor.summary,
+    );
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -634,7 +648,7 @@ class SensorCard extends StatelessWidget {
     final rawAdvice = sensor.irrigationAdvice.trim().isEmpty
         ? (_isHindi ? 'कोई सलाह उपलब्ध नहीं' : 'No advice available')
         : sensor.irrigationAdvice;
-    final advice = _translateAdvice(rawAdvice);
+    final advice = _resolveAdvice(rawAdvice);
 
     return Container(
       padding: const EdgeInsets.all(16),

@@ -9,6 +9,11 @@ import '../models/sensor_data.dart';
 import '../services/api_service.dart';
 
 class SensorProvider with ChangeNotifier {
+  static const String kSensorZeroReading = 'SENSOR_ZERO_READING';
+  static const String kInvalidNodeId = 'INVALID_NODE_ID';
+  static const String kInsufficientReadings = 'INSUFFICIENT_READINGS';
+  static const String kMoistureUnavailable = 'MOISTURE_UNAVAILABLE';
+
   List<SensorData> _sensors = <SensorData>[];
   bool _isLoading = false;
   String _errorMessage = '';
@@ -170,21 +175,17 @@ class SensorProvider with ChangeNotifier {
 
       if (latest.nodeId == 0 && field.nodeId == 0) {
         return data.copyWith(
-          summary:
-              'Invalid node ID received. Check gateway/backend configuration.',
+          summary: SensorProvider.kInvalidNodeId,
           soilStatus: 'unknown',
-          irrigationAdvice: 'Node ID error — cannot fetch advice.',
+          irrigationAdvice: SensorProvider.kInvalidNodeId,
         );
       }
 
       if (latest.vwc == 0.0 && latest.soilTemp == 0.0) {
         return data.copyWith(
-          summary:
-              'Sensor returned zero readings. Check node/gateway connection.',
+          summary: SensorProvider.kSensorZeroReading,
           soilStatus: 'unknown',
-          irrigationAdvice: field.cropType == null
-              ? 'Please confirm crop to get irrigation advice'
-              : 'Sensor offline — no reliable data available.',
+          irrigationAdvice: SensorProvider.kSensorZeroReading,
           fuzzyScores: const FuzzyScores(dry: 0.0, optimal: 0.0, wet: 0.0),
           cropType: field.cropType ?? '',
         );
@@ -220,8 +221,7 @@ class SensorProvider with ChangeNotifier {
       } else {
         if (irrigation.currentVWC == 0.0 && irrigation.targetVWC > 0) {
           data = data.copyWith(
-            irrigationAdvice:
-                'Moisture data unavailable — irrigation advice paused.',
+            irrigationAdvice: SensorProvider.kMoistureUnavailable,
             soilStatus: 'unknown',
             confidence: 0.0,
           );
@@ -245,8 +245,7 @@ class SensorProvider with ChangeNotifier {
 
         if (top.totalScore == 0) {
           data = data.copyWith(
-            summary:
-                'Insufficient data for crop recommendation. Wait for more readings.',
+            summary: SensorProvider.kInsufficientReadings,
           );
         } else {
           final alternatives = cropRec.topCrops

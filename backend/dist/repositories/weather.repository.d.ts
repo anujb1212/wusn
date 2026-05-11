@@ -38,11 +38,11 @@ export declare function getDailyAirTempByNode(nodeId: number, date: Date): Promi
  */
 export declare function getAirTempReadingsForDateRange(nodeId: number, startDate: Date, endDate: Date): Promise<{
     timestamp: Date;
+    id: number;
+    nodeId: number;
     airTemperature: number;
     airHumidity: number;
     airPressure: number | null;
-    id: number;
-    nodeId: number;
 }[]>;
 /**
  * Cache weather forecast from external API
@@ -56,9 +56,9 @@ export declare function getAirTempReadingsForDateRange(nodeId: number, startDate
  * @returns Cached forecast record
  */
 export declare function cacheWeatherForecast(latitude: number, longitude: number, forecastData: unknown, ttlHours: number): Promise<{
-    id: number;
     latitude: number;
     longitude: number;
+    id: number;
     forecastData: import("@prisma/client/runtime/library").JsonValue;
     fetchedAt: Date;
     expiresAt: Date;
@@ -71,9 +71,9 @@ export declare function cacheWeatherForecast(latitude: number, longitude: number
  * @returns Cached forecast or null if expired/not found
  */
 export declare function getCachedWeatherForecast(latitude: number, longitude: number): Promise<{
-    id: number;
     latitude: number;
     longitude: number;
+    id: number;
     forecastData: import("@prisma/client/runtime/library").JsonValue;
     fetchedAt: Date;
     expiresAt: Date;
@@ -96,9 +96,9 @@ export declare function cleanExpiredForecasts(): Promise<number>;
  */
 export declare function getLatestWeatherReading(gatewayId: string): Promise<{
     timestamp: Date;
-    airTemperature: number;
-    id: number;
     gatewayId: string;
+    id: number;
+    airTemperature: number;
     humidity: number;
     pressure: number | null;
 } | null>;
@@ -109,9 +109,9 @@ export declare function getLatestWeatherReading(gatewayId: string): Promise<{
  */
 export declare function getWeatherReadingsForDateRange(gatewayId: string, startDate: Date, endDate: Date): Promise<{
     timestamp: Date;
-    airTemperature: number;
-    id: number;
     gatewayId: string;
+    id: number;
+    airTemperature: number;
     humidity: number;
     pressure: number | null;
 }[]>;

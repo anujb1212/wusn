@@ -4,7 +4,7 @@
  * Handles incoming sensor payloads from MQTT gateway
  * Performs calibration and stores data in database
  */
-import type { SensorPayload, ProcessedSensorData } from '../../models/common.types.js';
+import type { ProcessedSensorData, SensorPayload } from '../../models/common.types.js';
 /**
  * Process incoming sensor data from gateway
  *

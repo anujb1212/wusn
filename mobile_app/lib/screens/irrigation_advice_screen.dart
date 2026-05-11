@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app/l10n/translations.dart';
 
 import '../models/gdd_status.dart';
 import '../models/irrigation_decision.dart';
@@ -32,6 +33,8 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
   Map<String, dynamic>? _weatherData;
 
   bool get _isHindi => widget.language == 'hi';
+
+  String _t(String key) => AppTranslations.translate(key, widget.language);
 
   String _urgencyHindi(String urgency) {
     switch (urgency) {
@@ -200,9 +203,7 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _isHindi
-                        ? '⚠️ डेटा पुराना है : सेंसर से ताज़ा रीडिंग नहीं मिली। सिंचाई निर्णय सटीक नहीं हो सकता।'
-                        : '⚠️ Stale data : no recent reading from sensor. Irrigation advice may be inaccurate.',
+                    _t('staleDataWarning'),
                     style:
                         TextStyle(fontSize: 13, color: Colors.orange.shade800),
                   ),
@@ -681,8 +682,8 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
                             .toUtc()
                             .difference(widget.lastSensorTimestamp!.toUtc()) <
                         const Duration(hours: 1)
-                    ? (_isHindi ? 'सक्रिय ✅' : 'Active ✅')
-                    : (_isHindi ? 'ऑफलाइन ⚠️' : 'Offline ⚠️'),
+                    ? _t('statusActive')
+                    : _t('statusOffline'),
           ),
           _buildInfoRow(
             _isHindi ? 'अंतिम अपडेट' : 'Last Update',

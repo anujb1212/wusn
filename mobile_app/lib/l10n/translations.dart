@@ -70,7 +70,7 @@ class AppTranslations {
       'lowBattery': 'Low Battery',
       'weakSignal': 'Weak Signal',
 
-      // NEW: Phase 2 - Crop Confirmation
+      //Crop Confirmation
       'confirmCrop': 'Confirm Crop',
       'cropConfirmation': 'Crop Confirmation',
       'recommendation': 'Recommendation',
@@ -97,7 +97,7 @@ class AppTranslations {
       'loam': 'Loam',
       'clayLoam': 'Clay Loam',
 
-      // NEW: Phase 3 - Irrigation Decision
+      //Irrigation Decision
       'irrigation': 'Irrigation',
       'irrigate': 'IRRIGATE',
       'skip': 'SKIP',
@@ -172,6 +172,32 @@ class AppTranslations {
           'How much water your soil is missing. Difference between target and current VWC.',
       'depthTooltip': 'Water needed to fill soil deficit. 1mm = 1 litre/m².',
       'durationTooltip': 'Duration = depth ÷ application rate (mm/hour).',
+
+      // Sensor / Node health
+      'sensorOffline': 'Sensor data unavailable',
+      'sensorZeroReading':
+          'Sensor returned zero readings. Check node/gateway connection.',
+      'invalidNodeId': 'Invalid node ID. Check gateway configuration.',
+      'partialData': 'Partial data — some readings unavailable.',
+
+      // Crop recommendation states
+      'cropLocked': 'Crop sown',
+      'cropLockedHint': 'New recommendations paused until next harvest.',
+      'insufficientReadings':
+          'Insufficient data for recommendation. Wait for more readings.',
+      'waitForReadings': 'Collect 3–7 days of readings before confirming crop.',
+
+      // Irrigation edge cases
+      'moistureUnavailable':
+          'Moisture data unavailable — irrigation advice paused.',
+      'soilTooWetSkip': 'Soil Too Wet — Skip Irrigation',
+      'staleDataWarning':
+          'Stale data — no recent reading from sensor. Irrigation advice may be inaccurate.',
+
+      // Status
+      'statusActive': 'Active ✅',
+      'statusOffline': 'Offline ⚠️',
+      'statusUnknown': 'Unknown',
     },
     'hi': {
       'appTitle': 'स्मार्ट खेती',
@@ -243,7 +269,7 @@ class AppTranslations {
       'lowBattery': 'कम बैटरी',
       'weakSignal': 'कमजोर सिग्नल',
 
-      // NEW: Phase 2 - Crop Confirmation
+      // Crop Confirmation
       'confirmCrop': 'फसल पुष्टि',
       'cropConfirmation': 'फसल की पुष्टि करें',
       'recommendation': 'सिफारिश',
@@ -270,7 +296,7 @@ class AppTranslations {
       'loam': 'दोमट',
       'clayLoam': 'चिकनी दोमट',
 
-      // NEW: Phase 3 - Irrigation Decision
+      // Irrigation Decision
       'irrigation': 'सिंचाई सलाह',
       'irrigate': 'सिंचाई करें',
       'skip': 'प्रतीक्षा करें',
@@ -344,6 +370,31 @@ class AppTranslations {
       'depthTooltip':
           'मिट्टी की कमी पूरी करने के लिए कितना पानी डालें। 1mm = 1 लीटर/m².',
       'durationTooltip': 'सिंचाई का समय = गहराई ÷ लागू दर (mm/घंटा)।',
+
+      // Sensor / Node health
+      'sensorOffline': 'सेंसर डेटा उपलब्ध नहीं',
+      'sensorZeroReading':
+          'सेंसर ने शून्य रीडिंग भेजी। नोड/गेटवे कनेक्शन जांचें।',
+      'invalidNodeId': 'नोड ID गलत है। गेटवे कॉन्फ़िगरेशन जांचें।',
+      'partialData': 'आंशिक डेटा — कुछ रीडिंग उपलब्ध नहीं।',
+
+      // Crop recommendation states
+      'cropLocked': 'फसल बोई गई',
+      'cropLockedHint': 'अगली कटाई तक नई सिफारिश रुकी है।',
+      'insufficientReadings':
+          'सिफारिश के लिए पर्याप्त डेटा नहीं। अधिक रीडिंग का इंतजार करें।',
+      'waitForReadings': 'फसल पुष्टि से पहले 3–7 दिन की रीडिंग लें।',
+
+      // Irrigation edge cases
+      'moistureUnavailable': 'नमी डेटा उपलब्ध नहीं — सिंचाई सलाह रुकी है।',
+      'soilTooWetSkip': 'मिट्टी बहुत गीली है — सिंचाई न करें',
+      'staleDataWarning':
+          'डेटा पुराना है — सेंसर से ताज़ा रीडिंग नहीं मिली। सिंचाई निर्णय सटीक नहीं हो सकता।',
+
+      // Status
+      'statusActive': 'सक्रिय ✅',
+      'statusOffline': 'ऑफलाइन ⚠️',
+      'statusUnknown': 'अज्ञात',
     },
   };
 

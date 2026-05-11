@@ -26,10 +26,11 @@ import type {
  */
 export interface SensorPayload {
     nodeId: number;
-    soilMoisture: number; // Raw value (calibrated to VWC in service)
+    soilMoistureVWC: number; // Raw value (calibrated to VWC in service)
     soilTemperature: number; // °C
     airTemperature: number; // °C - used for GDD calculation
-    airHumidity: number; // %
+    airHumidity?: number;
+    fuzzyScore?: number;
     airPressure?: number; // hPa (optional)
     timestamp?: string; // ISO 8601 string, defaults to server time if missing
 }

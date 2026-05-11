@@ -76,21 +76,6 @@ model SensorReading {
   @@index([timestamp])
 }
 
-// DEPRECATED: Use SensorReading.airTemperature instead
-model WeatherReading {
-  id        Int    @id @default(autoincrement())
-  gatewayId String
-
-  airTemperature Float
-  humidity       Float
-  pressure       Float?
-
-  timestamp DateTime @default(now())
-
-  @@index([gatewayId, timestamp])
-  @@index([timestamp])
-}
-
 model WeatherForecast {
   id        Int   @id @default(autoincrement())
   latitude  Float

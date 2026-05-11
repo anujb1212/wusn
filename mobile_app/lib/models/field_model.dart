@@ -15,6 +15,8 @@ class Field {
 
   final String? currentGrowthStage;
 
+  final DateTime? createdAt;
+
   Field({
     required this.id,
     required this.nodeId,
@@ -27,6 +29,7 @@ class Field {
     this.baseTemperature,
     this.expectedGDDTotal,
     this.currentGrowthStage,
+    this.createdAt,
   });
 
   factory Field.fromJson(Map<String, dynamic> json) {
@@ -60,6 +63,8 @@ class Field {
       currentGrowthStage: _Json.asNullableString(
         json['currentGrowthStage'] ?? json['current_growth_stage'],
       ),
+      createdAt:
+          _Json.asNullableDateTime(json['createdAt'] ?? json['created_at']),
     );
   }
 
@@ -75,6 +80,7 @@ class Field {
       'baseTemperature': baseTemperature,
       'expectedGDDTotal': expectedGDDTotal,
       'currentGrowthStage': currentGrowthStage,
+      'createdAt': createdAt?.toIso8601String(),
     };
   }
 }

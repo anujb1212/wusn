@@ -12,9 +12,9 @@ export interface CreateGDDRecordInput {
     growthStage?: string | undefined;
 }
 export declare function createGDDRecord(input: CreateGDDRecordInput): Promise<{
-    id: number;
     baseTemperature: number;
     createdAt: Date;
+    id: number;
     cropType: string | null;
     readingsCount: number;
     avgAirTemp: number;
@@ -27,9 +27,9 @@ export declare function createGDDRecord(input: CreateGDDRecordInput): Promise<{
     fieldId: number;
 }>;
 export declare function getGDDRecordForDate(fieldId: number, date: Date): Promise<{
-    id: number;
     baseTemperature: number;
     createdAt: Date;
+    id: number;
     cropType: string | null;
     readingsCount: number;
     avgAirTemp: number;
@@ -42,9 +42,9 @@ export declare function getGDDRecordForDate(fieldId: number, date: Date): Promis
     fieldId: number;
 } | null>;
 export declare function getGDDRecordsSinceSowing(fieldId: number, sowingDate: Date): Promise<{
-    id: number;
     baseTemperature: number;
     createdAt: Date;
+    id: number;
     cropType: string | null;
     readingsCount: number;
     avgAirTemp: number;
@@ -57,9 +57,9 @@ export declare function getGDDRecordsSinceSowing(fieldId: number, sowingDate: Da
     fieldId: number;
 }[]>;
 export declare function getLatestGDDRecord(fieldId: number): Promise<{
-    id: number;
     baseTemperature: number;
     createdAt: Date;
+    id: number;
     cropType: string | null;
     readingsCount: number;
     avgAirTemp: number;
@@ -72,9 +72,9 @@ export declare function getLatestGDDRecord(fieldId: number): Promise<{
     fieldId: number;
 } | null>;
 export declare function getLatestGDDRecordBefore(fieldId: number, beforeDate: Date): Promise<{
-    id: number;
     baseTemperature: number;
     createdAt: Date;
+    id: number;
     cropType: string | null;
     readingsCount: number;
     avgAirTemp: number;

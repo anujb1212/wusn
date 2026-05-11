@@ -88,9 +88,14 @@ export async function getFieldController(req: Request, res: Response): Promise<v
 export async function getAllFieldsController(_req: Request, res: Response): Promise<void> {
     const fields = await fieldRepo.getAllFields();
 
+    const safeFields = fields.map((f: any) => ({
+        ...f,
+        createdAt: f.createdAt ?? new Date().toISOString(),
+    }));
+
     res.json({
         status: 'ok',
-        data: fields,
+        data: safeFields,
         timestamp: new Date().toISOString(),
     });
 }
@@ -183,7 +188,7 @@ export async function harvestCropController(req: Request, res: Response): Promis
     if (!field.cropConfirmed) {
         res.status(400).json({
             success: false,
-            error: 'No confirmed crop to harvest',
+            error: `No confirmed crop on nodeId=${nodeId}. Confirm crop before harvesting.`,
             timestamp: new Date().toISOString(),
         });
         return;

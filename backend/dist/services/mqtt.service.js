@@ -28,10 +28,11 @@ const sensorPayloadSchema = z.object({
     cycle: z.number().optional(),
 }).transform(data => ({
     nodeId: data.node,
-    soilMoisture: data.moisture,
+    soilMoistureVWC: data.moisture,
     soilTemperature: data.soil_temp,
     airTemperature: data.air_temp,
-    airHumidity: data.score,
+    fuzzyScore: data.score, // WUSN reliability score
+    airHumidity: 0,
 }));
 // Initialize MQTT connection and subscribe to sensor data topic
 export function initializeMQTT() {
@@ -65,7 +66,7 @@ export function initializeMQTT() {
                     nodeId: validated.nodeId,
                     soilTemp: validated.soilTemperature,
                     airTemp: validated.airTemperature,
-                    soilMoisture: validated.soilMoisture,
+                    soilMoisture: validated.soilMoistureVWC,
                 }, 'Sensor data processed');
             }
             else {

@@ -1,13 +1,14 @@
 // Field Routes
 import { Router } from 'express';
 import { asyncHandler } from '../api/middleware/asyncHandler.js';
-import { createFieldController, getAllFieldsController, getFieldController, updateFieldController, deleteFieldController, setCropController, } from '../controllers/fieldController.js';
+import { createFieldController, getAllFieldsController, getFieldController, updateFieldController, deleteFieldController, setCropController, harvestCropController, } from '../controllers/fieldController.js';
 const router = Router();
 // Field CRUD (collection)
 router.post('/', asyncHandler(createFieldController));
 router.get('/', asyncHandler(getAllFieldsController));
 // Crop configuration (more specific route first; avoids future conflicts)
 router.post('/:nodeId/crop', asyncHandler(setCropController));
+router.post('/:nodeId/harvest', asyncHandler(harvestCropController));
 // Field CRUD (single)
 router.get('/:nodeId', asyncHandler(getFieldController));
 router.patch('/:nodeId', asyncHandler(updateFieldController));

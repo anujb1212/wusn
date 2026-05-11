@@ -24,8 +24,6 @@ export interface UpdateFieldInput {
     location?: string | null;
 }
 export declare function createField(input: CreateFieldInput): Promise<{
-    id: number;
-    nodeId: number;
     gatewayId: string;
     fieldName: string;
     location: string | null;
@@ -44,11 +42,11 @@ export declare function createField(input: CreateFieldInput): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    id: number;
+    nodeId: number;
     cropType: string | null;
 }>;
 export declare function getFieldByNodeId(nodeId: number): Promise<{
-    id: number;
-    nodeId: number;
     gatewayId: string;
     fieldName: string;
     location: string | null;
@@ -67,11 +65,11 @@ export declare function getFieldByNodeId(nodeId: number): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    id: number;
+    nodeId: number;
     cropType: string | null;
 }>;
 export declare function getFieldById(id: number): Promise<{
-    id: number;
-    nodeId: number;
     gatewayId: string;
     fieldName: string;
     location: string | null;
@@ -90,11 +88,11 @@ export declare function getFieldById(id: number): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    id: number;
+    nodeId: number;
     cropType: string | null;
 }>;
 export declare function getAllFields(): Promise<{
-    id: number;
-    nodeId: number;
     gatewayId: string;
     fieldName: string;
     location: string | null;
@@ -113,11 +111,11 @@ export declare function getAllFields(): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    id: number;
+    nodeId: number;
     cropType: string | null;
 }[]>;
 export declare function updateFieldCrop(nodeId: number, input: UpdateFieldCropInput): Promise<{
-    id: number;
-    nodeId: number;
     gatewayId: string;
     fieldName: string;
     location: string | null;
@@ -136,11 +134,11 @@ export declare function updateFieldCrop(nodeId: number, input: UpdateFieldCropIn
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    id: number;
+    nodeId: number;
     cropType: string | null;
 }>;
 export declare function updateFieldGDD(nodeId: number, accumulatedGDD: number, growthStage: GrowthStage): Promise<{
-    id: number;
-    nodeId: number;
     gatewayId: string;
     fieldName: string;
     location: string | null;
@@ -159,11 +157,11 @@ export declare function updateFieldGDD(nodeId: number, accumulatedGDD: number, g
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    id: number;
+    nodeId: number;
     cropType: string | null;
 }>;
 export declare function updateLastIrrigationCheck(nodeId: number): Promise<{
-    id: number;
-    nodeId: number;
     gatewayId: string;
     fieldName: string;
     location: string | null;
@@ -182,11 +180,11 @@ export declare function updateLastIrrigationCheck(nodeId: number): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    id: number;
+    nodeId: number;
     cropType: string | null;
 }>;
 export declare function recordIrrigationAction(nodeId: number): Promise<{
-    id: number;
-    nodeId: number;
     gatewayId: string;
     fieldName: string;
     location: string | null;
@@ -205,11 +203,11 @@ export declare function recordIrrigationAction(nodeId: number): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    id: number;
+    nodeId: number;
     cropType: string | null;
 }>;
 export declare function getFieldsNeedingGDDUpdate(): Promise<{
-    id: number;
-    nodeId: number;
     gatewayId: string;
     fieldName: string;
     location: string | null;
@@ -228,11 +226,11 @@ export declare function getFieldsNeedingGDDUpdate(): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    id: number;
+    nodeId: number;
     cropType: string | null;
 }[]>;
 export declare function updateField(nodeId: number, updates: UpdateFieldInput): Promise<{
-    id: number;
-    nodeId: number;
     gatewayId: string;
     fieldName: string;
     location: string | null;
@@ -251,11 +249,11 @@ export declare function updateField(nodeId: number, updates: UpdateFieldInput): 
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    id: number;
+    nodeId: number;
     cropType: string | null;
 }>;
 export declare function deleteField(nodeId: number): Promise<{
-    id: number;
-    nodeId: number;
     gatewayId: string;
     fieldName: string;
     location: string | null;
@@ -274,6 +272,8 @@ export declare function deleteField(nodeId: number): Promise<{
     lastIrrigationAction: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    id: number;
+    nodeId: number;
     cropType: string | null;
 }>;
 //# sourceMappingURL=field.repository.d.ts.map

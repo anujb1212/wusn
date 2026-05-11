@@ -8,5 +8,6 @@ export declare function updateFieldController(req: Request, res: Response): Prom
  * DB-driven validation: cropType must exist in CropParameters.cropName (validForUP=true).
  */
 export declare function setCropController(req: Request, res: Response): Promise<void>;
+export declare function harvestCropController(req: Request, res: Response): Promise<void>;
 export declare function deleteFieldController(req: Request, res: Response): Promise<void>;
 //# sourceMappingURL=fieldController.d.ts.map

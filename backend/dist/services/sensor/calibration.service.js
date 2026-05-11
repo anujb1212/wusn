@@ -1,51 +1,10 @@
 /**
- * Sensor Calibration Service
- * Converts sensor values to VWC and temperature
- *
- * MQTT Protocol: Sensors send pre-scaled values
- * - moisture: 0-1000 representing 0.0-100.0% VWC
- * - temperature: value * 10 (e.g., 285 = 28.5°C)
- */
-/**
- * Convert moisture value to VWC percentage
- *
- * @param moisture - Pre-scaled moisture value (0-1000 = 0-100% VWC)
- * @param soilTexture - Soil type (kept for future calibration refinements)
- * @returns VWC as percentage (0-100)
- */
-export function convertToVWC(moisture, soilTexture) {
-    // Direct conversion: MQTT sends pre-calibrated values
-    // Format: 0-1000 representing 0.0% to 100.0% VWC
-    // Examples:
-    //   380 → 38.0% (rice optimal)
-    //   250 → 25.0% (wheat optimal)
-    //   150 → 15.0% (dry, needs water)
-    const vwc = moisture;
-    // Clamp to valid range and round to 1 decimal
-    return Math.max(0, Math.min(100, Number(vwc.toFixed(1))));
-}
-/**
- * Alias for backward compatibility
- */
-export function convertSMUtoVWC(smu, soilTexture) {
-    return convertToVWC(smu, soilTexture);
-}
-/**
- * Convert raw temperature value to Celsius
- *
- * @param tempRaw - Temperature value * 10 (e.g., 285 = 28.5°C)
- * @returns Temperature in Celsius
- */
-export function convertToTemperature(tempRaw) {
-    // MQTT format: temperature * 10
-    // Examples:
-    //   285 → 28.5°C
-    //   220 → 22.0°C
-    //   30 → 3.0°C
-    const celsius = tempRaw / 10;
-    // Clamp to reasonable range and round to 1 decimal
-    return Math.max(-10, Math.min(60, Number(celsius.toFixed(1))));
-}
+  * Sensor Calibration Service
+  *
+  * Current gateway sends pre-calibrated VWC% directly.
+  * convertRawADCToVWC() is reserved for future hardware using raw ADC (0-1023).
+  * CALIBRATION_CURVES are validated for UP soil types (SANDY → CLAY).
+  */
 /**
  * ADVANCED CALIBRATION (Future Enhancement)
  *

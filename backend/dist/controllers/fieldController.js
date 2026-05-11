@@ -70,9 +70,13 @@ export async function getFieldController(req, res) {
 // GET /api/fields
 export async function getAllFieldsController(_req, res) {
     const fields = await fieldRepo.getAllFields();
+    const safeFields = fields.map((f) => ({
+        ...f,
+        createdAt: f.createdAt ?? new Date().toISOString(),
+    }));
     res.json({
         status: 'ok',
-        data: fields,
+        data: safeFields,
         timestamp: new Date().toISOString(),
     });
 }
@@ -142,6 +146,38 @@ export async function setCropController(req, res) {
     res.json({
         status: 'ok',
         data: field,
+        timestamp: new Date().toISOString(),
+    });
+}
+//POST /api/fields/:nodeId/harvest
+export async function harvestCropController(req, res) {
+    const { nodeId } = nodeIdSchema.parse(req.params);
+    const { prisma } = await import('../config/database.js');
+    const field = await fieldRepo.getFieldByNodeId(nodeId);
+    if (!field.cropConfirmed) {
+        res.status(400).json({
+            success: false,
+            error: `No confirmed crop on nodeId=${nodeId}. Confirm crop before harvesting.`,
+            timestamp: new Date().toISOString(),
+        });
+        return;
+    }
+    const updated = await prisma.field.update({
+        where: { nodeId },
+        data: {
+            cropType: null,
+            sowingDate: null,
+            cropConfirmed: false,
+            accumulatedGDD: 0,
+            currentGrowthStage: 'INITIAL',
+            lastGDDUpdate: null,
+            expectedHarvestDate: null,
+            lastIrrigationCheck: null,
+        },
+    });
+    res.json({
+        success: true,
+        data: updated,
         timestamp: new Date().toISOString(),
     });
 }

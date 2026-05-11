@@ -1,10 +1,11 @@
 import type { CropName, GrowthStage, SoilTexture, IrrigationUrgency, IrrigationMethod, Season } from '../utils/constants.js';
 export interface SensorPayload {
     nodeId: number;
-    soilMoisture: number;
+    soilMoistureVWC: number;
     soilTemperature: number;
     airTemperature: number;
-    airHumidity: number;
+    airHumidity?: number;
+    fuzzyScore?: number;
     airPressure?: number;
     timestamp?: string;
 }
