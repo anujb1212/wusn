@@ -119,7 +119,7 @@ class IrrigationDecision {
           json['currentVwc'] ??
           json['current_vwc'] ??
           json['vwc'],
-      fallback: 0.0,
+      fallback: double.nan,
     );
 
     final targetVWC = _Json.asDouble(

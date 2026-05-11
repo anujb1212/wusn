@@ -113,7 +113,9 @@ class CropSuitabilityDetail {
     );
 
     final totalScore =
-        _Json.asInt(json['totalScore'] ?? json['total_score'], fallback: 0);
+        _Json.asInt(json['totalScore'] ?? json['total_score'], fallback: 0)
+            .clamp(0, 100);
+
     final rank = _Json.asInt(json['rank'], fallback: 0);
 
     final suitability = _Json.asInt(
@@ -121,7 +123,7 @@ class CropSuitabilityDetail {
           json['suitabilityScore'] ??
           json['suitability_score'],
       fallback: 0,
-    );
+    ).clamp(0, 100);
 
     final reason = _Json.asString(json['reason'] ?? json['why'], fallback: '');
 

@@ -135,7 +135,9 @@ class GDDData {
   factory GDDData.fromJson(Map<String, dynamic> json) {
     // date can be ISO string; if missing/invalid, use "today" to avoid crashes.
     final parsedDate = _Json.asNullableDateTime(json['date'] ?? json['day']);
-    final date = (parsedDate ?? DateTime.now().toUtc());
+    final now = DateTime.now().toUtc();
+    final date =
+        (parsedDate == null || parsedDate.isAfter(now)) ? now : parsedDate;
 
     final progressRaw = json['progressPercent'] ??
         json['progressPercentage'] ??
@@ -154,12 +156,18 @@ class GDDData {
           _Json.asNullableString(json['growthStage'] ?? json['growth_stage']),
       totalGDDRequired: _Json.asNullableDouble(
           json['totalGDDRequired'] ?? json['total_gdd_required']),
-      progressPercent: _Json.asDouble(progressRaw, fallback: 0.0),
+      progressPercent:
+          _Json.asDouble(progressRaw, fallback: 0.0).clamp(0.0, 100.0),
       daysElapsed:
           _Json.asInt(json['daysElapsed'] ?? json['days_elapsed'], fallback: 0),
-      estimatedDaysToHarvest: _Json.asNullableDouble(
-        json['estimatedDaysToHarvest'] ?? json['estimated_days_to_harvest'],
-      ),
+      estimatedDaysToHarvest: () {
+        final raw = _Json.asNullableDouble(
+          json['estimatedDaysToHarvest'] ?? json['estimated_days_to_harvest'],
+        );
+
+        if (raw == null) return null;
+        return raw < 0 ? 0.0 : raw;
+      }(),
     );
   }
 

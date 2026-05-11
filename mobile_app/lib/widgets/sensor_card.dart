@@ -229,6 +229,29 @@ class SensorCard extends StatelessWidget {
 
   Widget _buildMainHeader(
       Color statusColor, IconData statusIcon, String statusKey) {
+    if (sensor.vwc == 0.0 && sensor.soilTemp == 0.0) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(children: [
+          const Icon(Icons.sensors_off, color: Colors.grey, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+              child: Text(
+            _isHindi
+                ? '${sensor.fieldName} — सेंसर डेटा उपलब्ध नहीं'
+                : '${sensor.fieldName} — Sensor data unavailable',
+            style: const TextStyle(
+                color: Colors.grey, fontWeight: FontWeight.w600),
+          )),
+        ]),
+      );
+    }
+
     final title = sensor.fieldName.isNotEmpty
         ? sensor.fieldName
         : '${_t('node')} ${sensor.nodeId}';

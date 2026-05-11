@@ -61,6 +61,8 @@ class SensorData {
   });
 
   factory SensorData.initial(int id, String name) {
+    assert(id > 0, 'SensorData.initial: nodeId must be > 0, got $id');
+
     return SensorData(
       nodeId: id,
       fieldName: name,

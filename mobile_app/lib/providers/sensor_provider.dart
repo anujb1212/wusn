@@ -168,6 +168,28 @@ class SensorProvider with ChangeNotifier {
         );
       }
 
+      if (latest.nodeId == 0 && field.nodeId == 0) {
+        return data.copyWith(
+          summary:
+              'Invalid node ID received. Check gateway/backend configuration.',
+          soilStatus: 'unknown',
+          irrigationAdvice: 'Node ID error — cannot fetch advice.',
+        );
+      }
+
+      if (latest.vwc == 0.0 && latest.soilTemp == 0.0) {
+        return data.copyWith(
+          summary:
+              'Sensor returned zero readings. Check node/gateway connection.',
+          soilStatus: 'unknown',
+          irrigationAdvice: field.cropType == null
+              ? 'Please confirm crop to get irrigation advice'
+              : 'Sensor offline — no reliable data available.',
+          fuzzyScores: const FuzzyScores(dry: 0.0, optimal: 0.0, wet: 0.0),
+          cropType: field.cropType ?? '',
+        );
+      }
+
       // Base = latest sensor data, but preserve fieldName from Field list for consistent UI labels.
       data = latest.copyWith(fieldName: field.fieldName);
       data = data.copyWith(cropType: field.cropType ?? '');
@@ -196,41 +218,58 @@ class SensorProvider with ChangeNotifier {
           ),
         );
       } else {
-        data = data.copyWith(
-          soilStatus: _statusFromUrgency(
-            irrigation.urgency,
-            currentVWC: irrigation.currentVWC,
-            targetVWC: irrigation.targetVWC,
-          ),
-          irrigationAdvice: irrigation.reasonEn,
-          confidence: irrigation.urgencyScore,
-          fuzzyScores: _fuzzyFromIrrigation(irrigation),
-        );
+        if (irrigation.currentVWC == 0.0 && irrigation.targetVWC > 0) {
+          data = data.copyWith(
+            irrigationAdvice:
+                'Moisture data unavailable — irrigation advice paused.',
+            soilStatus: 'unknown',
+            confidence: 0.0,
+          );
+        } else {
+          data = data.copyWith(
+            soilStatus: _statusFromUrgency(
+              irrigation.urgency,
+              currentVWC: irrigation.currentVWC,
+              targetVWC: irrigation.targetVWC,
+            ),
+            irrigationAdvice: irrigation.reasonEn,
+            confidence: irrigation.urgencyScore,
+            fuzzyScores: _fuzzyFromIrrigation(irrigation),
+          );
+        }
       }
 
       // ---- Crop recommendation overlay ----
       if (cropRec != null && cropRec.topCrops.isNotEmpty) {
         final top = cropRec.topCrops.first;
 
-        final alternatives = cropRec.topCrops
-            .skip(1)
-            .take(3)
-            .map(
-              (c) => CropSuitability(
-                cropName: c.cropName,
-                suitability: c.totalScore.toDouble(),
-                reason: c.reason,
-              ),
-            )
-            .toList();
+        if (top.totalScore == 0) {
+          data = data.copyWith(
+            summary:
+                'Insufficient data for crop recommendation. Wait for more readings.',
+          );
+        } else {
+          final alternatives = cropRec.topCrops
+              .skip(1)
+              .take(3)
+              .map(
+                (c) => CropSuitability(
+                  cropName: c.cropName,
+                  suitability: c.totalScore.toDouble(),
+                  reason: c.reason,
+                ),
+              )
+              .toList();
 
-        data = data.copyWith(
-          bestCrop: top.cropName,
-          cropConfidence: top.totalScore.toDouble(),
-          alternativeCrops: alternatives,
-          summary:
-              top.reason.isNotEmpty ? top.reason : 'Top crop: ${top.cropName}',
-        );
+          data = data.copyWith(
+            bestCrop: top.cropName,
+            cropConfidence: top.totalScore.toDouble(),
+            alternativeCrops: alternatives,
+            summary: top.reason.isNotEmpty
+                ? top.reason
+                : 'Top crop: ${top.cropName}',
+          );
+        }
       }
 
       // ---- Optional GDD snapshot ----
@@ -281,7 +320,11 @@ class SensorProvider with ChangeNotifier {
     double? currentVWC,
     double? targetVWC,
   }) {
-    if (currentVWC != null && targetVWC != null && targetVWC > 0) {
+    if (currentVWC != null &&
+        targetVWC != null &&
+        !currentVWC.isNaN &&
+        !targetVWC.isNaN &&
+        targetVWC > 0) {
       if (currentVWC > targetVWC * 1.05) return 'too_wet';
     }
 
@@ -370,6 +413,10 @@ class SensorProvider with ChangeNotifier {
   }
 
   FuzzyScores _fuzzyFromIrrigation(IrrigationDecision irrigation) {
+    if (irrigation.currentVWC.isNaN || irrigation.targetVWC <= 0) {
+      return const FuzzyScores(dry: 0.0, optimal: 0.0, wet: 0.0);
+    }
+
     final current = irrigation.currentVWC;
     final target = irrigation.targetVWC <= 0 ? 1.0 : irrigation.targetVWC;
 
