@@ -137,6 +137,35 @@ class SensorCard extends StatelessWidget {
         .join(' ');
   }
 
+  Widget _buildLockedCropBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300, width: 1.2),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.lock, size: 18, color: Colors.grey),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _isHindi
+                  ? 'फसल बोई जा चुकी है: ${_formatCropName(sensor.cropType.trim().toLowerCase())}'
+                  : 'Crop sown: ${_formatCropName(sensor.cropType.trim().toLowerCase())}',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final statusKey = _statusKey(sensor.status);
@@ -179,10 +208,14 @@ class SensorCard extends StatelessWidget {
             const Divider(height: 32, thickness: 1),
             _buildFuzzyAnalysis(),
             const Divider(height: 32, thickness: 1),
-            _buildCropRecommendation(),
-            if (sensor.alternativeCrops.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              _buildAlternativeCrops(),
+            if (sensor.cropType.trim().isEmpty) ...[
+              _buildCropRecommendation(),
+              if (sensor.alternativeCrops.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildAlternativeCrops(),
+              ],
+            ] else ...[
+              _buildLockedCropBanner(),
             ],
             const SizedBox(height: 16),
             _buildIrrigationAdvice(),

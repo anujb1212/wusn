@@ -251,74 +251,101 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
           ],
 
           // ── Recommendation card ───────────────────────────────────────────
-          Card(
-            elevation: 4,
-            color: const Color(0xFFE8F5E9),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.eco,
-                            color: Color(0xFF4CAF50), size: 28),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _t('recommendation'),
-                                  style: const TextStyle(
-                                      fontSize: 12, color: Colors.black54),
-                                ),
-                                Text(
-                                  recommendedLabel.toString().toUpperCase(),
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF2E7D32),
+          if (!widget.isAlreadyConfirmed || widget.isHarvestReset)
+            Card(
+              elevation: 4,
+              color: const Color(0xFFE8F5E9),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.eco,
+                              color: Color(0xFF4CAF50), size: 28),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _t('recommendation'),
+                                    style: const TextStyle(
+                                        fontSize: 12, color: Colors.black54),
                                   ),
-                                ),
-                              ]),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: _getConfidenceColor(
-                                widget.sensorData.cropConfidence),
-                            borderRadius: BorderRadius.circular(20),
+                                  Text(
+                                    recommendedLabel.toString().toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF2E7D32),
+                                    ),
+                                  ),
+                                ]),
                           ),
-                          child: Text(
-                            '${widget.sensorData.cropConfidence.toStringAsFixed(0)}${AppTranslations.translate('percent', widget.language)}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: _getConfidenceColor(
+                                  widget.sensorData.cropConfidence),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '${widget.sensorData.cropConfidence.toStringAsFixed(0)}${AppTranslations.translate('percent', widget.language)}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    const Divider(),
-                    Text(
-                      _t('why'),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      widget.sensorData.summary,
-                      style: const TextStyle(fontSize: 13, height: 1.4),
-                    ),
-                  ]),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(),
+                      Text(
+                        _t('why'),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.sensorData.summary,
+                        style: const TextStyle(fontSize: 13, height: 1.4),
+                      ),
+                    ]),
+              ),
             ),
-          ),
+          if (widget.isAlreadyConfirmed && !widget.isHarvestReset) ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Row(children: [
+                Icon(Icons.check_circle,
+                    color: Colors.green.shade700, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _isHindi
+                        ? 'फसल पहले से बोई है। नीचे से बदल सकते हैं।'
+                        : 'Crop already sown. You may update below.',
+                    style: TextStyle(
+                        color: Colors.green.shade800,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 16),
+          ],
           const SizedBox(height: 20),
 
           // ── Crop dropdown ─────────────────────────────────────────────────

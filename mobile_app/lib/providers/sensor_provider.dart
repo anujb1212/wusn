@@ -18,6 +18,7 @@ class SensorProvider with ChangeNotifier {
   Timer? _pollingTimer;
   bool _disposed = false;
   bool _fetchInFlight = false;
+  DateTime? _lastMqttUiUpdate;
 
   List<SensorData> get sensors => _sensors;
   bool get isLoading => _isLoading;
@@ -139,13 +140,18 @@ class SensorProvider with ChangeNotifier {
       final results = await Future.wait<Object?>(<Future<Object?>>[
         _safeGetLatestSensorData(nodeId),
         _safeGetIrrigationDecision(nodeId),
-        _safeGetCropRecommendations(nodeId),
+        (field.cropType != null && field.cropType!.isNotEmpty)
+            ? Future.value(null)
+            : _safeGetCropRecommendations(nodeId),
         _safeGetGddStatus(nodeId),
       ], eagerError: false);
 
       final SensorData? latest = results[0] as SensorData?;
       final IrrigationDecision? irrigation = results[1] as IrrigationDecision?;
-      final CropRecommendation? cropRec = results[2] as CropRecommendation?;
+      final CropRecommendation? cropRec =
+          field.cropType != null && field.cropType!.isNotEmpty
+              ? null
+              : results[2] as CropRecommendation?;
       final GDDStatus? gddStatus = results[3] as GDDStatus?;
 
       // Without latest sensor data, stop here (keep initial + clear summary).
@@ -253,6 +259,16 @@ class SensorProvider with ChangeNotifier {
     } catch (e) {
       // Keep card usable; do not throw.
       _debugLog('Partial load error for nodeId=$nodeId: $e');
+    }
+
+    if ((field.cropType == null || field.cropType!.isEmpty) &&
+        field.sowingDate == null) {
+      final existingSummary = data.summary;
+      data = data.copyWith(
+        summary: existingSummary.isNotEmpty
+            ? '$existingSummary\n⏳ Collect 3–7 days of readings before confirming crop.'
+            : '⏳ Collect 3–7 days of readings before confirming crop.',
+      );
     }
 
     return data;
@@ -395,6 +411,13 @@ class SensorProvider with ChangeNotifier {
 
   void onMqttDataReceived(int nodeId, Map<String, dynamic> payload) {
     if (_disposed) return;
+
+    final now = DateTime.now();
+    if (_lastMqttUiUpdate != null &&
+        now.difference(_lastMqttUiUpdate!) < const Duration(seconds: 30)) {
+      return;
+    }
+    _lastMqttUiUpdate = now;
 
     final index = _sensors.indexWhere((s) => s.nodeId == nodeId);
     if (index == -1) return;

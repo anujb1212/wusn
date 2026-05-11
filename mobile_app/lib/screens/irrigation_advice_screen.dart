@@ -170,6 +170,10 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
       );
     }
 
+    final isStale = widget.lastSensorTimestamp != null &&
+        DateTime.now().toUtc().difference(widget.lastSensorTimestamp!.toUtc()) >
+            const Duration(hours: 6);
+
     final reason = _isHindi
         ? (_decision!.reasonHi.isNotEmpty
             ? _decision!.reasonHi
@@ -181,6 +185,31 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (isStale) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.shade300),
+              ),
+              child: Row(children: [
+                Icon(Icons.warning_amber,
+                    color: Colors.orange.shade700, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _isHindi
+                        ? '⚠️ डेटा पुराना है : सेंसर से ताज़ा रीडिंग नहीं मिली। सिंचाई निर्णय सटीक नहीं हो सकता।'
+                        : '⚠️ Stale data : no recent reading from sensor. Irrigation advice may be inaccurate.',
+                    style:
+                        TextStyle(fontSize: 13, color: Colors.orange.shade800),
+                  ),
+                ),
+              ]),
+            ),
+          ],
           _buildDecisionCard(_decision!, reason),
           const SizedBox(height: 16),
           if (_weatherData != null) _buildWeatherCard(),
@@ -230,7 +259,16 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
       default:
         color = const Color(0xFF4CAF50);
         icon = Icons.check_circle;
-        title = _isHindi ? 'सिंचाई न करें' : 'SKIP IRRIGATION';
+        // Too wet case — VWC > target
+        final isTooWet = _decision != null &&
+            _decision!.currentVWC > _decision!.targetVWC * 1.05;
+        title = isTooWet
+            ? (_isHindi
+                ? 'मिट्टी गीली है : सिंचाई न करें'
+                : 'SOIL TOO WET : SKIP')
+            : (_isHindi ? 'सिंचाई न करें' : 'SKIP IRRIGATION');
+        icon = isTooWet ? Icons.water_damage : Icons.check_circle;
+        color = isTooWet ? const Color(0xFF2196F3) : const Color(0xFF4CAF50);
         break;
     }
 
@@ -369,8 +407,8 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
                   Expanded(
                     child: Text(
                       _isHindi
-                          ? '${totalRain.toStringAsFixed(0)}mm बारिश अपेक्षित - सिंचाई स्थगित करें'
-                          : '${totalRain.toStringAsFixed(0)}mm rain expected - defer irrigation',
+                          ? '${totalRain.toStringAsFixed(0)}mm बारिश अपेक्षित : सिंचाई स्थगित करें'
+                          : '${totalRain.toStringAsFixed(0)}mm rain expected : defer irrigation',
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w600),
                     ),
@@ -636,7 +674,16 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
           _buildInfoRow(
               _isHindi ? 'नोड ID' : 'Node ID', widget.fieldId.toString()),
           _buildInfoRow(
-              _isHindi ? 'स्थिति' : 'Status', _isHindi ? 'सक्रिय' : 'Active'),
+            _isHindi ? 'स्थिति' : 'Status',
+            widget.lastSensorTimestamp == null
+                ? (_isHindi ? 'अज्ञात' : 'Unknown')
+                : DateTime.now()
+                            .toUtc()
+                            .difference(widget.lastSensorTimestamp!.toUtc()) <
+                        const Duration(hours: 1)
+                    ? (_isHindi ? 'सक्रिय ✅' : 'Active ✅')
+                    : (_isHindi ? 'ऑफलाइन ⚠️' : 'Offline ⚠️'),
+          ),
           _buildInfoRow(
             _isHindi ? 'अंतिम अपडेट' : 'Last Update',
             widget.lastSensorTimestamp != null
@@ -788,9 +835,26 @@ class _IrrigationAdviceScreenState extends State<IrrigationAdviceScreen> {
       'potato': _isHindi ? 'आलू' : 'Potato',
       'lentil': _isHindi ? 'मसूर' : 'Lentil',
       'pea': _isHindi ? 'मटर' : 'Pea',
-      'okra': _isHindi ? 'भिंडी' : 'Okra'
+      'okra': _isHindi ? 'भिंडी' : 'Okra',
+      'radish': _isHindi ? 'मूली' : 'Radish',
+      'carrot': _isHindi ? 'गाजर' : 'Carrot',
+      'tomato': _isHindi ? 'टमाटर' : 'Tomato',
+      'spinach': _isHindi ? 'पालक' : 'Spinach',
+      'mint': _isHindi ? 'पुदीना' : 'Mint',
+      'cucumber': _isHindi ? 'खीरा' : 'Cucumber',
+      'watermelon': _isHindi ? 'तरबूज' : 'Watermelon',
+      'musk_melon': _isHindi ? 'खरबूजा' : 'Musk Melon',
+      'bottle_gourd': _isHindi ? 'लौकी' : 'Bottle Gourd',
+      'bitter_gourd': _isHindi ? 'करेला' : 'Bitter Gourd',
     };
-    return crops[crop.toLowerCase()] ?? crop;
+
+    return crops[crop.trim().toLowerCase()] ??
+        crop
+            .trim()
+            .split('_')
+            .map((w) =>
+                w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+            .join(' ');
   }
 
   Map<String, dynamic>? _asMap(dynamic v) {
