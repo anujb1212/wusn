@@ -4,6 +4,7 @@ import type { Request, Response } from 'express';
 import * as sensorService from '../services/sensor/sensor.service.js';
 import * as sensorRepo from '../repositories/sensor.repository.js';
 import { NotFoundError, ValidationError } from '../utils/errors.js';
+import type { SensorPayload } from '../models/common.types.js';
 
 /*
  * Get latest sensor data for a node
@@ -111,6 +112,27 @@ export async function getSensorReadings(req: Request, res: Response): Promise<vo
     res.json({
         status: 'ok',
         data: readings,
+        timestamp: new Date().toISOString(),
+    });
+}
+
+export async function ingestSensorReading(req: Request, res: Response): Promise<void> {
+    const { node, score, moisture, soil_temp, air_temp, cycle } = req.body;
+
+    const payload: SensorPayload = {
+        nodeId: node,
+        soilMoistureVWC: moisture,
+        soilTemperature: soil_temp,
+        airTemperature: air_temp,
+        airHumidity: 0,
+        fuzzyScore: score,
+    };
+
+    const result = await sensorService.processSensorData(payload);
+
+    res.status(201).json({
+        status: 'ok',
+        data: result,
         timestamp: new Date().toISOString(),
     });
 }

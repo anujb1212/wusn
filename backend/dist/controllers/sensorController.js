@@ -87,4 +87,21 @@ export async function getSensorReadings(req, res) {
         timestamp: new Date().toISOString(),
     });
 }
+export async function ingestSensorReading(req, res) {
+    const { node, score, moisture, soil_temp, air_temp, cycle } = req.body;
+    const payload = {
+        nodeId: node,
+        soilMoistureVWC: moisture,
+        soilTemperature: soil_temp,
+        airTemperature: air_temp,
+        airHumidity: 0,
+        fuzzyScore: score,
+    };
+    const result = await sensorService.processSensorData(payload);
+    res.status(201).json({
+        status: 'ok',
+        data: result,
+        timestamp: new Date().toISOString(),
+    });
+}
 //# sourceMappingURL=sensorController.js.map
