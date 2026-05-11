@@ -86,33 +86,4 @@ export declare function getCachedWeatherForecast(latitude: number, longitude: nu
  * @returns Number of deleted forecast records
  */
 export declare function cleanExpiredForecasts(): Promise<number>;
-/**
- * @deprecated Use getDailyAirTempByNode instead
- *
- * This function queries the deprecated WeatherReading table.
- * Air temperature data is now part of SensorReading.
- *
- * Kept for backward compatibility during migration period.
- */
-export declare function getLatestWeatherReading(gatewayId: string): Promise<{
-    timestamp: Date;
-    gatewayId: string;
-    id: number;
-    airTemperature: number;
-    humidity: number;
-    pressure: number | null;
-} | null>;
-/**
- * @deprecated Use getAirTempReadingsForDateRange instead
- *
- * Queries deprecated WeatherReading table.
- */
-export declare function getWeatherReadingsForDateRange(gatewayId: string, startDate: Date, endDate: Date): Promise<{
-    timestamp: Date;
-    gatewayId: string;
-    id: number;
-    airTemperature: number;
-    humidity: number;
-    pressure: number | null;
-}[]>;
 //# sourceMappingURL=weather.repository.d.ts.map

@@ -26,17 +26,9 @@ export function startGDDCalculationJob() {
             logger.info({ count: fields.length }, 'Fields needing GDD update');
             let successCount = 0;
             let failCount = 0;
-            for (const field of fields) {
-                try {
-                    const calculated = await calculateMissingGDD(field.nodeId);
-                    logger.info({ nodeId: field.nodeId, calculated }, 'GDD calculation completed for field');
-                    successCount++;
-                }
-                catch (error) {
-                    logger.error({ error, nodeId: field.nodeId }, 'GDD calculation failed for field');
-                    failCount++;
-                }
-            }
+            const results = await Promise.allSettled(fields.map(f => calculateMissingGDD(f.nodeId)));
+            successCount = results.filter(r => r.status === 'fulfilled').length;
+            failCount = results.filter(r => r.status === 'rejected').length;
             logger.info({ total: fields.length, success: successCount, failed: failCount }, 'Daily GDD calculation job completed');
         }
         catch (error) {

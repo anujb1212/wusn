@@ -211,8 +211,10 @@ async function _triggerAggregation(triggerNodeId, timestamp) {
     const snapshots = [];
     let bestNodeId = triggerNodeId;
     let bestScore = -1;
-    for (const n of nodes) {
-        const latest = await getLatestReading(n.nodeId);
+    const readings = await Promise.all(nodes.map(n => getLatestReading(n.nodeId)));
+    for (let i = 0; i < nodes.length; i++) {
+        const latest = readings[i];
+        const n = nodes[i];
         if (!latest)
             continue;
         const isStale = latest.timestamp < staleThreshold;

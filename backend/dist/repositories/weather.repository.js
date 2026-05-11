@@ -247,45 +247,4 @@ export async function cleanExpiredForecasts() {
         throw new DatabaseError('cleanExpiredForecasts', error);
     }
 }
-/**
- * @deprecated Use getDailyAirTempByNode instead
- *
- * This function queries the deprecated WeatherReading table.
- * Air temperature data is now part of SensorReading.
- *
- * Kept for backward compatibility during migration period.
- */
-export async function getLatestWeatherReading(gatewayId) {
-    try {
-        return await prisma.weatherReading.findFirst({
-            where: { gatewayId },
-            orderBy: { timestamp: 'desc' },
-        });
-    }
-    catch (error) {
-        throw new DatabaseError('getLatestWeatherReading', error);
-    }
-}
-/**
- * @deprecated Use getAirTempReadingsForDateRange instead
- *
- * Queries deprecated WeatherReading table.
- */
-export async function getWeatherReadingsForDateRange(gatewayId, startDate, endDate) {
-    try {
-        return await prisma.weatherReading.findMany({
-            where: {
-                gatewayId,
-                timestamp: {
-                    gte: startDate,
-                    lte: endDate,
-                },
-            },
-            orderBy: { timestamp: 'asc' },
-        });
-    }
-    catch (error) {
-        throw new DatabaseError('getWeatherReadingsForDateRange', error);
-    }
-}
 //# sourceMappingURL=weather.repository.js.map
