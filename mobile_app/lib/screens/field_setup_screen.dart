@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/api_service.dart';
+import 'node_setup_screen.dart';
 
 class FieldSetupScreen extends StatefulWidget {
-  final int nodeId;
-
-  const FieldSetupScreen({super.key, required this.nodeId});
+  const FieldSetupScreen({super.key});
 
   @override
   State<FieldSetupScreen> createState() => _FieldSetupScreenState();
@@ -48,25 +47,24 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
 
     try {
       final fieldData = <String, dynamic>{
-        'nodeId': widget.nodeId,
         'fieldName': _fieldNameController.text.trim(),
         'latitude': double.parse(_latController.text.trim()),
         'longitude': double.parse(_lngController.text.trim()),
         'soilTexture': _soilTexture,
       };
 
-      await ApiService.createField(fieldData);
+      final field = await ApiService.createField(fieldData);
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Field created! Now confirm your crop.'),
-          backgroundColor: Color(0xFF4CAF50),
-          duration: Duration(seconds: 2),
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => NodeSetupScreen(fieldId: field.id),
         ),
       );
 
+      if (!mounted) return;
       Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       setState(() => _errorMessage = 'Failed to create field: ${e.message}');
@@ -161,18 +159,18 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                             color: Color(0xFF4CAF50), size: 28),
                       ),
                       const SizedBox(width: 16),
-                      Expanded(
+                      const Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Step 2 of 2',
+                            Text('Step 1 of 2',
                                 style: TextStyle(
                                     fontSize: 12, color: Colors.grey)),
-                            const Text('Field Configuration',
+                            Text('Field Setup',
                                 style: TextStyle(
                                     fontSize: 16, fontWeight: FontWeight.bold)),
-                            Text('Node ID: ${widget.nodeId}',
-                                style: const TextStyle(
+                            Text('Set up your field details',
+                                style: TextStyle(
                                     fontSize: 13, color: Colors.black54)),
                           ],
                         ),

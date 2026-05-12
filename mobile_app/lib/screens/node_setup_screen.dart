@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import 'field_setup_screen.dart';
 
 class NodeSetupScreen extends StatefulWidget {
-  const NodeSetupScreen({super.key});
+  final int fieldId;
+
+  const NodeSetupScreen({super.key, required this.fieldId});
 
   @override
   State<NodeSetupScreen> createState() => _NodeSetupScreenState();
@@ -49,24 +50,25 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
             'location': n.locationCtrl.text.trim(),
           if (n.depthCtrl.text.trim().isNotEmpty)
             'burialDepth': int.parse(n.depthCtrl.text.trim()),
+          if (n.distanceCtrl.text.trim().isNotEmpty)
+            'distanceToGW': int.parse(n.distanceCtrl.text.trim()),
         };
-        await ApiService.createNode(nodeData);
-      }
-
-      if (!mounted) return;
-
-      for (int i = 0; i < _nodes.length; i++) {
-        final nodeId = int.parse(_nodes[i].nodeIdCtrl.text.trim());
-        if (!mounted) return;
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => FieldSetupScreen(nodeId: nodeId),
-          ),
+        final node = await ApiService.createNode(nodeData);
+        await ApiService.assignNodeToField(
+          fieldId: widget.fieldId,
+          nodeId: node.nodeId,
         );
       }
 
       if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Setup complete! Nodes added to field.'),
+          backgroundColor: Color(0xFF4CAF50),
+        ),
+      );
+
       Navigator.of(context).popUntil((r) => r.isFirst);
     } on ApiException catch (e) {
       setState(() => _errorMessage = 'Failed to create node: ${e.message}');
@@ -118,13 +120,13 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Step 1 of 2',
+                          Text('Step 2 of 2',
                               style:
                                   TextStyle(fontSize: 12, color: Colors.grey)),
-                          Text('Node Configuration',
+                          Text('Add Sensor Nodes',
                               style: TextStyle(
                                   fontSize: 16, fontWeight: FontWeight.bold)),
-                          Text('Register one or more sensor nodes',
+                          Text('Register nodes for your field',
                               style: TextStyle(
                                   fontSize: 13, color: Colors.black54)),
                         ],
@@ -274,6 +276,21 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
                   return null;
                 },
               ),
+              const SizedBox(height: 12),
+              _buildLabel('Distance from Gateway in m (optional)'),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: n.distanceCtrl,
+                keyboardType: TextInputType.number,
+                decoration: _inputDecoration(
+                    hint: 'e.g. 50', icon: Icons.settings_input_antenna),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  final num = int.tryParse(v.trim());
+                  if (num == null || num <= 0) return 'Enter a valid distance';
+                  return null;
+                },
+              ),
             ],
           ),
         ),
@@ -313,11 +330,13 @@ class _NodeEntry {
   final nodeIdCtrl = TextEditingController();
   final locationCtrl = TextEditingController();
   final depthCtrl = TextEditingController();
+  final distanceCtrl = TextEditingController();
   final formKey = GlobalKey<FormState>();
 
   void dispose() {
     nodeIdCtrl.dispose();
     locationCtrl.dispose();
     depthCtrl.dispose();
+    distanceCtrl.dispose();
   }
 }

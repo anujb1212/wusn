@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../models/field_model.dart';
 
 class AddNodeToFieldScreen extends StatefulWidget {
   const AddNodeToFieldScreen({super.key});
@@ -17,6 +18,33 @@ class _AddNodeToFieldScreenState extends State<AddNodeToFieldScreen> {
   bool _isLoading = false;
   String? _errorMessage;
 
+  List<Field> _fields = [];
+  int? _selectedFieldId;
+  bool _isFieldsLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFields();
+  }
+
+  Future<void> _loadFields() async {
+    try {
+      final fields = await ApiService.getFields();
+      if (!mounted) return;
+      setState(() {
+        _fields = fields;
+        _isFieldsLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isFieldsLoading = false;
+        _errorMessage = 'Could not load fields: $e';
+      });
+    }
+  }
+
   @override
   void dispose() {
     _nodeIdCtrl.dispose();
@@ -27,6 +55,11 @@ class _AddNodeToFieldScreenState extends State<AddNodeToFieldScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_selectedFieldId == null) {
+      setState(() => _errorMessage = 'Please select a field');
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -44,7 +77,11 @@ class _AddNodeToFieldScreenState extends State<AddNodeToFieldScreen> {
         nodeData['burialDepth'] = int.parse(_depthCtrl.text.trim());
       }
 
-      await ApiService.createNode(nodeData);
+      final node = await ApiService.createNode(nodeData);
+      await ApiService.assignNodeToField(
+        fieldId: _selectedFieldId!,
+        nodeId: node.nodeId,
+      );
 
       if (!mounted) return;
 
@@ -119,6 +156,23 @@ class _AddNodeToFieldScreenState extends State<AddNodeToFieldScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+              _buildLabel('Select Field *'),
+              const SizedBox(height: 8),
+              _isFieldsLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : DropdownButtonFormField<int>(
+                      initialValue: _selectedFieldId,
+                      decoration: _inputDeco(
+                          hint: 'Select field', icon: Icons.landscape),
+                      items: _fields
+                          .map((f) => DropdownMenuItem<int>(
+                                value: f.id,
+                                child: Text(f.fieldName),
+                              ))
+                          .toList(),
+                      onChanged: (v) => setState(() => _selectedFieldId = v),
+                    ),
+              const SizedBox(height: 16),
               _buildLabel('Node ID *'),
               const SizedBox(height: 8),
               TextFormField(

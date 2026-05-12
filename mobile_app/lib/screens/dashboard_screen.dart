@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/screens/add_node_to_field_screen.dart';
+import 'package:mobile_app/screens/field_setup_screen.dart';
 import 'package:mobile_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 
@@ -11,7 +12,6 @@ import '../l10n/translations.dart';
 
 import '../models/sensor_data.dart';
 
-import 'node_setup_screen.dart';
 import 'crop_confirmation_screen.dart';
 import 'irrigation_advice_screen.dart';
 
@@ -80,7 +80,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   final provider =
                       Provider.of<SensorProvider>(context, listen: false);
                   await navigator.push(MaterialPageRoute(
-                      builder: (_) => const NodeSetupScreen()));
+                      builder: (_) => const FieldSetupScreen()));
                   if (!mounted) return;
                   provider.fetchData();
                 },
@@ -248,7 +248,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         context,
                                         MaterialPageRoute(
                                             builder: (_) =>
-                                                const NodeSetupScreen()),
+                                                const FieldSetupScreen()),
                                       );
                                       if (!context.mounted) return;
                                       Provider.of<SensorProvider>(context,
@@ -372,22 +372,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       if (!mounted) return;
 
-      final result = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (_) => CropConfirmationScreen(
-            sensorData: sensor,
-            language: widget.language,
-            isAlreadyConfirmed: false,
-            isHarvestReset: true,
-            confirmedSowingDate: null,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.language == 'hi'
+                ? 'फसल काट ली गई। नई सिफारिश जल्द आएगी।'
+                : 'Harvest recorded. New crop recommendation will appear shortly.',
           ),
+          backgroundColor: const Color(0xFF4CAF50),
+          duration: const Duration(seconds: 4),
         ),
       );
 
-      if (result == true && mounted) {
-        Provider.of<SensorProvider>(context, listen: false).fetchData();
-      }
+      Provider.of<SensorProvider>(context, listen: false).fetchData();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

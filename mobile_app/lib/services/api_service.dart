@@ -111,6 +111,13 @@ class ApiService {
     return fb;
   }
 
+  static Future<void> assignNodeToField({
+    required int fieldId,
+    required int nodeId,
+  }) async {
+    await _postJson('/fields/$fieldId/nodes/$nodeId', body: {});
+  }
+
   static Future<dynamic> _getJson(
     String endpoint, {
     Map<String, String>? queryParameters,
