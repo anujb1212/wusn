@@ -46,14 +46,20 @@ export async function getDailyAverageAirTemp(
         // First, find all nodes associated with this gateway
         const fields = await prisma.field.findMany({
             where: { gatewayId },
-            select: { nodeId: true },
+            include: {
+                nodes: {
+                    select: {
+                        nodeId: true
+                    }
+                }
+            },
         });
 
         if (fields.length === 0) {
             return null;
         }
 
-        const nodeIds = fields.map(f => f.nodeId);
+        const nodeIds = fields.flatMap(f => f.nodes.map(n => n.nodeId));
 
         // Query SensorReading.airTemperature for these nodes
         const readings = await prisma.sensorReading.findMany({

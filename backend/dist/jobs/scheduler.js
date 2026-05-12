@@ -26,7 +26,7 @@ export function startGDDCalculationJob() {
             logger.info({ count: fields.length }, 'Fields needing GDD update');
             let successCount = 0;
             let failCount = 0;
-            const results = await Promise.allSettled(fields.map(f => calculateMissingGDD(f.nodeId)));
+            const results = await Promise.allSettled(fields.flatMap(f => f.nodes.map(n => calculateMissingGDD(n.nodeId))));
             successCount = results.filter(r => r.status === 'fulfilled').length;
             failCount = results.filter(r => r.status === 'rejected').length;
             logger.info({ total: fields.length, success: successCount, failed: failCount }, 'Daily GDD calculation job completed');

@@ -103,7 +103,7 @@ export async function getIrrigationRecommendationsController(req: Request, res: 
 
         const nodeIds = fields
             .filter(f => f.cropConfirmed)
-            .map(f => f.nodeId);
+            .flatMap(f => f.nodes.map(n => n.nodeId));
 
         logger.debug({ totalFields: fields.length, confirmedCrops: nodeIds.length }, 'Fields filtered');
 

@@ -33,6 +33,7 @@ enum GrowthStage {
 model Node {
   id           Int      @id @default(autoincrement())
   nodeId       Int      @unique
+  fieldId      Int? //(many-to-one)
   location     String?
   burialDepth  Int?
   distanceToGW Float?
@@ -43,9 +44,10 @@ model Node {
   readings SensorReading[]
 
   // Field config for this node (one-to-one)
-  field Field?
+  field Field? @relation(fields: [fieldId], references: [id], onDelete: SetNull)
 
   @@index([nodeId])
+  @@index([fieldId])
 }
 
 model SensorReading {
@@ -162,7 +164,6 @@ model CropRecommendation {
 
 model Field {
   id        Int    @id @default(autoincrement())
-  nodeId    Int    @unique // One field per sensor node
   gatewayId String // Gateway identifier for this field's sensor
 
   fieldName String
@@ -170,7 +171,7 @@ model Field {
   latitude  Float
   longitude Float
 
-  // ✅ Soil properties (restricted)
+  // Soil properties (restricted)
   soilTexture SoilTexture @default(SANDY_LOAM)
 
   // Crop information (null until crop confirmed by farmer)
@@ -179,8 +180,7 @@ model Field {
   expectedHarvestDate DateTime?
   cropConfirmed       Boolean   @default(false)
 
-  // ✅ Relations (integrity)
-  node Node @relation(fields: [nodeId], references: [nodeId], onDelete: Cascade)
+  nodes Node[]
 
   // Ensure cropType (if set) must exist in CropParameters
   crop CropParameters? @relation(fields: [cropType], references: [cropName], onDelete: SetNull)
@@ -201,7 +201,6 @@ model Field {
 
   gddHistory GDDRecord[]
 
-  @@index([nodeId])
   @@index([gatewayId])
   @@index([cropType])
   @@index([cropConfirmed, lastGDDUpdate])

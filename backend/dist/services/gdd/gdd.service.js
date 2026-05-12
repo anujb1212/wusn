@@ -248,7 +248,7 @@ export async function getGDDStatus(nodeId) {
         }
         return {
             fieldId: field.id,
-            nodeId: field.nodeId,
+            nodeId: nodeId,
             cropType: field.cropType,
             sowingDate: field.sowingDate,
             accumulatedGDD: accumulatedGDD,

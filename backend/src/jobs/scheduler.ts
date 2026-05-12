@@ -34,7 +34,7 @@ export function startGDDCalculationJob(): void {
             let failCount = 0;
 
             const results = await Promise.allSettled(
-                fields.map(f => calculateMissingGDD(f.nodeId))
+                fields.flatMap(f => f.nodes.map(n => calculateMissingGDD(n.nodeId)))
             );
             successCount = results.filter(r => r.status === 'fulfilled').length;
             failCount = results.filter(r => r.status === 'rejected').length;

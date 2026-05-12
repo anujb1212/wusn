@@ -314,7 +314,7 @@ export async function getGDDStatus(nodeId: number): Promise<GDDStatus> {
 
         return {
             fieldId: field.id,
-            nodeId: field.nodeId,
+            nodeId: nodeId,
             cropType: field.cropType as CropName | null,
             sowingDate: field.sowingDate,
             accumulatedGDD: accumulatedGDD,

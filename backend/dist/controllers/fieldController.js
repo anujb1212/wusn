@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import * as fieldRepo from '../repositories/field.repository.js';
-import { NotFoundError } from '../utils/errors.js';
 function normalizeSoilTexture(v) {
     if (typeof v !== 'string')
         return v;
@@ -14,15 +13,16 @@ function normalizeCropType(v) {
         .toLowerCase()
         .replace(/[\s-]+/g, '_');
 }
-/**
- * Zod schemas
- */
-const nodeIdSchema = z.object({
+// Zod schemas
+const fieldIdSchema = z.object({
+    fieldId: z.coerce.number().int().positive(),
+});
+// For assign node to field
+const nodeIdParamSchema = z.object({
     nodeId: z.coerce.number().int().positive(),
 });
 const soilTextureSchema = z.preprocess(normalizeSoilTexture, z.enum(['SANDY', 'SANDY_LOAM', 'LOAM', 'CLAY_LOAM', 'CLAY']));
 const createFieldSchema = z.object({
-    nodeId: z.coerce.number().int().positive(),
     gatewayId: z.string().min(1).optional().default("gateway-1"),
     fieldName: z.string().min(1),
     latitude: z.coerce.number().min(-90).max(90),
@@ -54,13 +54,10 @@ export async function createFieldController(req, res) {
         timestamp: new Date().toISOString(),
     });
 }
-// GET /api/fields/:nodeId
+// GET /api/fields/:fieldId
 export async function getFieldController(req, res) {
-    const { nodeId } = nodeIdSchema.parse(req.params);
-    const field = await fieldRepo.getFieldByNodeId(nodeId);
-    if (!field) {
-        throw new NotFoundError('Field', `nodeId=${nodeId}`);
-    }
+    const { fieldId } = fieldIdSchema.parse(req.params);
+    const field = await fieldRepo.getFieldById(fieldId);
     res.json({
         status: 'ok',
         data: field,
@@ -80,9 +77,9 @@ export async function getAllFieldsController(_req, res) {
         timestamp: new Date().toISOString(),
     });
 }
-// PATCH /api/fields/:nodeId
+// PATCH /api/fields/:fieldId
 export async function updateFieldController(req, res) {
-    const { nodeId } = nodeIdSchema.parse(req.params);
+    const { fieldId } = fieldIdSchema.parse(req.params);
     const updates = updateFieldSchema.parse(req.body);
     if (updates.fieldName === undefined &&
         updates.latitude === undefined &&
@@ -96,7 +93,6 @@ export async function updateFieldController(req, res) {
         });
         return;
     }
-    const { prisma } = await import('../config/database.js');
     const updateData = {};
     if (updates.fieldName !== undefined)
         updateData.fieldName = updates.fieldName;
@@ -108,22 +104,16 @@ export async function updateFieldController(req, res) {
         updateData.soilTexture = updates.soilTexture;
     if (updates.location !== undefined)
         updateData.location = updates.location;
-    const field = await prisma.field.update({
-        where: { nodeId },
-        data: updateData,
-    });
+    const field = await fieldRepo.updateField(fieldId, updates);
     res.json({
         status: 'ok',
         data: field,
         timestamp: new Date().toISOString(),
     });
 }
-/**
- * POST /api/fields/:nodeId/crop
- * DB-driven validation: cropType must exist in CropParameters.cropName (validForUP=true).
- */
+// POST /api/fields/:fieldId/crop
 export async function setCropController(req, res) {
-    const { nodeId } = nodeIdSchema.parse(req.params);
+    const { fieldId } = fieldIdSchema.parse(req.params);
     const { cropType, sowingDate } = setCropSchema.parse(req.body);
     const { prisma } = await import('../config/database.js');
     const crop = await prisma.cropParameters.findUnique({
@@ -137,7 +127,7 @@ export async function setCropController(req, res) {
         });
         return;
     }
-    const field = await fieldRepo.updateFieldCrop(nodeId, {
+    const field = await fieldRepo.updateFieldCrop(fieldId, {
         cropType: crop.cropName,
         sowingDate,
         baseTemperature: crop.baseTemperature,
@@ -149,21 +139,21 @@ export async function setCropController(req, res) {
         timestamp: new Date().toISOString(),
     });
 }
-//POST /api/fields/:nodeId/harvest
+//POST /api/fields/:fieldId/harvest
 export async function harvestCropController(req, res) {
-    const { nodeId } = nodeIdSchema.parse(req.params);
+    const { fieldId } = fieldIdSchema.parse(req.params);
     const { prisma } = await import('../config/database.js');
-    const field = await fieldRepo.getFieldByNodeId(nodeId);
+    const field = await fieldRepo.getFieldByNodeId(fieldId);
     if (!field.cropConfirmed) {
         res.status(400).json({
             success: false,
-            error: `No confirmed crop on nodeId=${nodeId}. Confirm crop before harvesting.`,
+            error: `No confirmed crop on fieldId=${fieldId}. Confirm crop before harvesting.`,
             timestamp: new Date().toISOString(),
         });
         return;
     }
     const updated = await prisma.field.update({
-        where: { nodeId },
+        where: { id: fieldId },
         data: {
             cropType: null,
             sowingDate: null,
@@ -181,16 +171,39 @@ export async function harvestCropController(req, res) {
         timestamp: new Date().toISOString(),
     });
 }
-// DELETE /api/fields/:nodeId
+// DELETE /api/fields/:fieldId
 export async function deleteFieldController(req, res) {
-    const { nodeId } = nodeIdSchema.parse(req.params);
-    const { prisma } = await import('../config/database.js');
-    await prisma.field.delete({
-        where: { nodeId },
-    });
+    const { fieldId } = fieldIdSchema.parse(req.params);
+    await fieldRepo.deleteField(fieldId);
     res.json({
         status: 'ok',
-        data: { nodeId, deleted: true },
+        data: {
+            fieldId,
+            deleted: true
+        },
+        timestamp: new Date().toISOString(),
+    });
+}
+// POST /api/fields/:fieldId/nodes/:nodeId
+export async function assignNodeToFieldController(req, res) {
+    const { fieldId } = fieldIdSchema.parse(req.params);
+    const { nodeId } = nodeIdParamSchema.parse(req.params);
+    // Verify field exists
+    await fieldRepo.getFieldById(fieldId);
+    const node = await fieldRepo.assignNodeToField(nodeId, fieldId);
+    res.json({
+        status: 'ok',
+        data: node,
+        timestamp: new Date().toISOString(),
+    });
+}
+// GET /api/fields/:fieldId/nodes
+export async function getFieldNodesController(req, res) {
+    const { fieldId } = fieldIdSchema.parse(req.params);
+    const nodes = await fieldRepo.getFieldNodes(fieldId);
+    res.json({
+        status: 'ok',
+        data: nodes,
         timestamp: new Date().toISOString(),
     });
 }

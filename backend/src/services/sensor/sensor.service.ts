@@ -52,7 +52,6 @@ export async function processSensorData(payload: SensorPayload): Promise<Process
             });
 
             field = await createField({
-                nodeId: payload.nodeId,
                 gatewayId: `gateway-${payload.nodeId}`,
                 fieldName: `Field ${payload.nodeId}`,
                 latitude: 26.8467,
