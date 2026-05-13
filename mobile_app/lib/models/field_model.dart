@@ -6,6 +6,9 @@ class Field {
   final double longitude;
   final String soilTexture;
 
+  final int? nodesCount;
+  final DateTime? lastIrrigationCheck;
+
   final String? cropType;
   final DateTime? sowingDate;
 
@@ -30,6 +33,8 @@ class Field {
     this.expectedGDDTotal,
     this.currentGrowthStage,
     this.createdAt,
+    this.nodesCount,
+    this.lastIrrigationCheck,
   });
 
   factory Field.fromJson(Map<String, dynamic> json) {
@@ -65,6 +70,15 @@ class Field {
       ),
       createdAt:
           _Json.asNullableDateTime(json['createdAt'] ?? json['created_at']),
+      nodesCount: _Json.asInt(
+        json['nodesCount'] ??
+            json['nodes_count'] ??
+            (json['nodes'] is List ? (json['nodes'] as List).length : 0),
+        fallback: 0,
+      ),
+      lastIrrigationCheck: _Json.asNullableDateTime(
+        json['lastIrrigationCheck'] ?? json['last_irrigation_check'],
+      ),
     );
   }
 

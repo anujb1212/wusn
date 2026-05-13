@@ -241,7 +241,7 @@ class SensorCard extends StatelessWidget {
 
   Widget _buildMainHeader(
       Color statusColor, IconData statusIcon, String statusKey) {
-    if (sensor.vwc == 0.0 && sensor.soilTemp == 0.0) {
+    if (!sensor.hasValidReading) {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -255,8 +255,8 @@ class SensorCard extends StatelessWidget {
           Expanded(
               child: Text(
             _isHindi
-                ? '${sensor.fieldName} — सेंसर डेटा उपलब्ध नहीं'
-                : '${sensor.fieldName} — Sensor data unavailable',
+                ? '${sensor.fieldName} — सेंसर डेटा अभी उपलब्ध नहीं'
+                : '${sensor.fieldName} — Sensor data not available yet',
             style: const TextStyle(
                 color: Colors.grey, fontWeight: FontWeight.w600),
           )),
@@ -342,22 +342,36 @@ class SensorCard extends StatelessWidget {
     final soilTemp = sensor.soilTemp;
     final airTemp = sensor.airTemp;
 
+    final hasReading = sensor.hasValidReading;
+    final noDataLabel = _isHindi ? 'डेटा उपलब्ध नहीं' : 'No data yet';
+
     return Column(
       children: [
         _buildDataRow(
           Icons.water_drop,
           _t('moisture'),
-          '${vwc.toStringAsFixed(1)}%',
+          hasReading ? '${vwc.toStringAsFixed(1)}%' : '--',
           Colors.blue,
         ),
+        if (!hasReading)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                noDataLabel,
+                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              ),
+            ),
+          ),
         const SizedBox(height: 18),
         _buildDataRow(
           Icons.thermostat,
           _t('temperature'),
-          '${soilTemp.toStringAsFixed(1)}${_t('celsius')}',
+          hasReading ? '${soilTemp.toStringAsFixed(1)}${_t('celsius')}' : '--',
           Colors.orange,
         ),
-        if (airTemp != null) ...[
+        if (airTemp != null && hasReading) ...[
           const SizedBox(height: 18),
           _buildDataRow(
             Icons.wb_sunny_outlined,
@@ -472,6 +486,29 @@ class SensorCard extends StatelessWidget {
   }
 
   Widget _buildFuzzyAnalysis() {
+    if (!sensor.hasValidReading) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _t('fuzzyAnalysis'),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _isHindi
+                ? 'पहली रीडिंग आने के बाद नमी विश्लेषण दिखाई देगा।'
+                : 'Moisture analysis will appear after the first reading.',
+            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+          ),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -516,14 +553,21 @@ class SensorCard extends StatelessWidget {
 
   Widget _buildCropRecommendation() {
     final cropConfidence = sensor.cropConfidence.clamp(0.0, 100.0).toDouble();
-    final bestCrop = sensor.bestCrop.trim().isEmpty
-        ? '-'
+    final hasReading = sensor.hasValidReading;
+
+    final bestCrop = (!hasReading || sensor.bestCrop.trim().isEmpty)
+        ? (_isHindi ? 'अभी निर्धारित नहीं' : 'Not determined yet')
         : _formatCropName(sensor.bestCrop.trim().toLowerCase()).toUpperCase();
-    final summary = _resolveAdvice(
-      sensor.summary.trim().isEmpty
-          ? (_isHindi ? 'जानकारी उपलब्ध नहीं' : 'No details available')
-          : sensor.summary,
-    );
+
+    final summary = !hasReading
+        ? (_isHindi
+            ? 'पहले कुछ दिनों की सेंसर रीडिंग इकट्ठा होने के बाद फसल की सिफारिश दिखाई जाएगी।'
+            : 'Crop recommendation will be shown after a few days of sensor readings.')
+        : _resolveAdvice(
+            sensor.summary.trim().isEmpty
+                ? (_isHindi ? 'जानकारी उपलब्ध नहीं' : 'No details available')
+                : sensor.summary,
+          );
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -556,7 +600,8 @@ class SensorCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade700,
+                  color:
+                      hasReading ? Colors.green.shade700 : Colors.grey.shade500,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -645,10 +690,19 @@ class SensorCard extends StatelessWidget {
   }
 
   Widget _buildIrrigationAdvice() {
-    final rawAdvice = sensor.irrigationAdvice.trim().isEmpty
-        ? (_isHindi ? 'कोई सलाह उपलब्ध नहीं' : 'No advice available')
-        : sensor.irrigationAdvice;
-    final advice = _resolveAdvice(rawAdvice);
+    final hasReading = sensor.hasValidReading;
+
+    String advice;
+    if (!hasReading) {
+      advice = _isHindi
+          ? 'जैसे ही सेंसर से पहली नमी रीडिंग आएगी, सिंचाई सलाह यहाँ दिखाई देगी।'
+          : 'Irrigation advice will appear here once the sensor sends the first moisture reading.';
+    } else {
+      final rawAdvice = sensor.irrigationAdvice.trim().isEmpty
+          ? (_isHindi ? 'कोई सलाह उपलब्ध नहीं' : 'No advice available')
+          : sensor.irrigationAdvice;
+      advice = _resolveAdvice(rawAdvice);
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),

@@ -179,7 +179,7 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // Field Name
               _buildLabel('Field Name *'),
@@ -194,7 +194,7 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                     ? 'Field name is required'
                     : null,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // Soil Texture
               _buildLabel('Soil Texture *'),
@@ -213,36 +213,10 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                     .toList(),
                 onChanged: (v) => setState(() => _soilTexture = v!),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // GPS button
+              // Latitude
               _buildLabel('Latitude *'),
-              const SizedBox(height: 4),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed:
-                      (_isLoading || _isGpsLoading) ? null : _fetchGpsLocation,
-                  icon: _isGpsLoading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.gps_fixed, color: Color(0xFF4CAF50)),
-                  label: Text(
-                    _isGpsLoading
-                        ? 'Getting location...'
-                        : 'Auto-fill from GPS',
-                    style: const TextStyle(color: Color(0xFF4CAF50)),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF4CAF50)),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-              ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _latController,
@@ -283,7 +257,35 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
+
+              // GPS button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed:
+                      (_isLoading || _isGpsLoading) ? null : _fetchGpsLocation,
+                  icon: _isGpsLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.gps_fixed, color: Color(0xFF4CAF50)),
+                  label: Text(
+                    _isGpsLoading
+                        ? 'Getting location...'
+                        : 'Auto-fill from GPS',
+                    style: const TextStyle(color: Color(0xFF4CAF50)),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF4CAF50)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
 
               // Error
               if (_errorMessage != null) ...[
@@ -306,10 +308,11 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
               ],
 
               // Submit
+              const SizedBox(height: 4),
               SizedBox(
                 width: double.infinity,
                 height: 52,

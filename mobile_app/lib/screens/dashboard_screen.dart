@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/screens/add_node_to_field_screen.dart';
 import 'package:mobile_app/screens/field_setup_screen.dart';
+import 'package:mobile_app/screens/fields_list_screen.dart';
 import 'package:mobile_app/services/api_service.dart';
 import 'package:provider/provider.dart';
 
@@ -166,12 +167,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: Center(
-                  child: StatusIndicator(
-                    isConnected: provider.isWebSocketConnected,
-                    label: provider.isWebSocketConnected ? 'Live' : 'Polling',
-                  ),
-                ),
+                child: () {
+                  final state = provider.connectionStateLabel;
+                  switch (state) {
+                    case 'live':
+                      return const StatusIndicator(
+                        isConnected: true,
+                        label: 'Live',
+                      );
+                    case 'polling':
+                      return const StatusIndicator(
+                        isConnected: false,
+                        label: 'Polling',
+                      );
+                    default:
+                      return const StatusIndicator(
+                        isConnected: false,
+                        label: 'Offline',
+                      );
+                  }
+                }(),
+              ),
+              IconButton(
+                icon: const Icon(Icons.list_alt),
+                tooltip: 'Manage Fields',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FieldsListScreen(),
+                    ),
+                  );
+                },
               ),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.language, size: 28),
@@ -256,7 +283,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           .fetchData();
                                     },
                                     icon: const Icon(Icons.add),
-                                    label: const Text('Add Sensor Node'),
+                                    label: const Text('Add Field'),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF4CAF50),
                                       foregroundColor: Colors.white,
@@ -398,6 +425,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Future<void> _confirmDeleteNode(SensorData sensor) async {
+    final nodeId = sensor.nodeId;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          widget.language == 'hi' ? 'नोड हटाएं?' : 'Delete node?',
+        ),
+        content: Text(
+          widget.language == 'hi'
+              ? 'क्या आप वाकई इस सेंसर नोड (ID: $nodeId) को ऐप से हटाना चाहते हैं? इससे इस नोड के सभी सहेजे गए रीडिंग भी हट जाएंगी।'
+              : 'Are you sure you want to remove this sensor node (ID: $nodeId) from the app? All saved readings for this node will also be deleted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              widget.language == 'hi' ? 'रद्द करें' : 'Cancel',
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(
+              widget.language == 'hi' ? 'हटाएं' : 'Delete',
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await ApiService.deleteNode(nodeId);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.language == 'hi'
+                ? 'नोड सफलतापूर्वक हटा दिया गया।'
+                : 'Node deleted successfully.',
+          ),
+        ),
+      );
+
+      Provider.of<SensorProvider>(context, listen: false).fetchData();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.language == 'hi'
+                ? 'नोड हटाने में त्रुटि: $e'
+                : 'Failed to delete node: $e',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Widget _buildHarvestDateChip(SensorData sensor) {
     final daysToHarvest = sensor.estimatedDaysToHarvest ?? 0;
     final days = daysToHarvest.round();
@@ -455,7 +549,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'deleteNode') {
+                      _confirmDeleteNode(sensor);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'deleteNode',
+                      child: Text(
+                        widget.language == 'hi'
+                            ? 'इस नोड को हटाएं'
+                            : 'Delete this node',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
             // Harvest date indicator
             if (sensor.cropType.isNotEmpty &&
                 sensor.estimatedDaysToHarvest != null &&

@@ -6,6 +6,7 @@ plugins {
 }
 
 android {
+    setProperty("archivesBaseName", "WUSN")
     namespace = "com.example.mobile_app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion

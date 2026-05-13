@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/dashboard_screen.dart';
 import 'providers/sensor_provider.dart';
@@ -35,6 +36,8 @@ class _MyAppState extends State<MyApp> {
 
     _sensorProvider = SensorProvider();
 
+    _loadSavedLanguage();
+
     _mqttService = MqttService(
       onMessageReceived: (nodeId, data) {
         if (_disposed) return;
@@ -47,6 +50,18 @@ class _MyAppState extends State<MyApp> {
     );
 
     _mqttService.connect();
+  }
+
+  Future<void> _loadSavedLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('app_language');
+    if (!mounted) return;
+    if (saved == null || (saved != 'en' && saved != 'hi')) {
+      return;
+    }
+    setState(() {
+      _language = saved;
+    });
   }
 
   @override
@@ -63,6 +78,9 @@ class _MyAppState extends State<MyApp> {
   void _changeLanguage(String lang) {
     setState(() {
       _language = lang;
+    });
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString('app_language', lang);
     });
   }
 

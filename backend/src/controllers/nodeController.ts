@@ -9,6 +9,10 @@ const createNodeSchema = z.object({
     distanceToGW: z.number().optional(),
 });
 
+const nodeIdParamSchema = z.object({
+    nodeId: z.coerce.number().int().positive(),
+});
+
 export async function createNodeController(req: Request, res: Response): Promise<void> {
     const data = createNodeSchema.parse(req.body);
 
@@ -97,6 +101,30 @@ export async function getNodeController(req: Request, res: Response): Promise<vo
     res.json({
         status: 'ok',
         data: node,
+        timestamp: new Date().toISOString(),
+    });
+}
+
+// DELETE /api/nodes/:nodeId
+export async function deleteNodeController(req: Request, res: Response): Promise<void> {
+    const { nodeId } = nodeIdParamSchema.parse(req.params);
+
+    // First, delete all sensor readings for this node to avoid FK issues.
+    await prisma.sensorReading.deleteMany({
+        where: { nodeId },
+    });
+
+    // Then delete the node itself.
+    await prisma.node.delete({
+        where: { nodeId },
+    });
+
+    res.json({
+        status: 'ok',
+        data: {
+            nodeId,
+            deleted: true,
+        },
         timestamp: new Date().toISOString(),
     });
 }

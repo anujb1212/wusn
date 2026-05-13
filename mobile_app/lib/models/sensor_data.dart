@@ -217,6 +217,15 @@ class SensorData {
 
   double get moistureVWC => vwc;
 
+  bool get hasValidReading {
+    final now = DateTime.now().toUtc();
+    if (timestamp.isAfter(now.add(const Duration(minutes: 5)))) {
+      return false;
+    }
+
+    return !(vwc == 0.0 && soilTemp == 0.0);
+  }
+
   String _normStatus(String s) =>
       s.trim().toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
 

@@ -118,6 +118,52 @@ class ApiService {
     await _postJson('/fields/$fieldId/nodes/$nodeId', body: {});
   }
 
+  static Future<dynamic> _delete(
+    String endpoint, {
+    Map<String, String>? queryParameters,
+  }) async {
+    final uri = _buildUri(endpoint, queryParameters: queryParameters);
+
+    try {
+      final response = await http
+          .delete(uri, headers: _headers)
+          .timeout(AppConfig.httpTimeout);
+
+      final decoded = _decodeJsonOrNull(response.body);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        if (decoded == null) {
+          throw ApiException(
+            message: 'Empty JSON response',
+            method: 'DELETE',
+            uri: uri,
+            statusCode: response.statusCode,
+            responseBody: response.body,
+          );
+        }
+        return _unwrapDataEnvelope(decoded);
+      }
+
+      throw ApiException(
+        message: 'HTTP error',
+        method: 'DELETE',
+        uri: uri,
+        statusCode: response.statusCode,
+        responseBody: response.body,
+        decodedBody: decoded,
+      );
+    } on TimeoutException catch (e, st) {
+      _debugLog('DELETE timeout: $uri', error: e, stackTrace: st);
+      throw ApiException(
+          message: 'Request timed out', method: 'DELETE', uri: uri);
+    } catch (e, st) {
+      _debugLog('DELETE failed: $uri', error: e, stackTrace: st);
+      if (e is ApiException) rethrow;
+      throw ApiException(
+          message: 'Request failed: $e', method: 'DELETE', uri: uri);
+    }
+  }
+
   static Future<dynamic> _getJson(
     String endpoint, {
     Map<String, String>? queryParameters,
@@ -215,6 +261,15 @@ class ApiService {
   // -----------------------------
   // Public API methods
   // -----------------------------
+
+  // DELETE helpers
+  static Future<void> deleteField(int fieldId) async {
+    await _delete('/fields/$fieldId');
+  }
+
+  static Future<void> deleteNode(int nodeId) async {
+    await _delete('/nodes/$nodeId');
+  }
 
   // FIELDS
   static Future<List<Field>> getFields() async {

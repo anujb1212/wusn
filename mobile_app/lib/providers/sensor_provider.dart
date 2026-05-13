@@ -14,6 +14,7 @@ class SensorProvider with ChangeNotifier {
   static const String kInsufficientReadings = 'INSUFFICIENT_READINGS';
   static const String kMoistureUnavailable = 'MOISTURE_UNAVAILABLE';
 
+  List<Field> _fields = <Field>[];
   List<SensorData> _sensors = <SensorData>[];
   bool _isLoading = false;
   String _errorMessage = '';
@@ -25,11 +26,27 @@ class SensorProvider with ChangeNotifier {
   bool _fetchInFlight = false;
   DateTime? _lastMqttUiUpdate;
 
+  List<Field> get fields => _fields;
   List<SensorData> get sensors => _sensors;
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
   bool get isWebSocketConnected => _isWebSocketConnected;
   DateTime? get lastFetchedAt => _lastFetchedAt;
+
+  /// - 'live'     : MQTT connected
+  /// - 'polling'  : MQTT off but recent HTTP fetch succeeded
+  /// - 'offline'  : neither MQTT nor recent HTTP activity
+  String get connectionStateLabel {
+    if (_isWebSocketConnected) return 'live';
+
+    if (_lastFetchedAt != null) {
+      final diff = DateTime.now().difference(_lastFetchedAt!);
+      // If we have fetched data within the last 15 minutes, treat as polling.
+      if (diff.inMinutes < 15) return 'polling';
+    }
+
+    return 'offline';
+  }
 
   SensorProvider() {
     fetchData();
@@ -70,6 +87,7 @@ class SensorProvider with ChangeNotifier {
 
     try {
       final fields = await ApiService.getFields(); // List<Field>
+      _fields = fields;
 
       if (fields.isEmpty) {
         _sensors = <SensorData>[];
@@ -83,7 +101,7 @@ class SensorProvider with ChangeNotifier {
 
       _errorMessage = '';
     } catch (e) {
-      _errorMessage = 'Connection Error: Please check server.';
+      _errorMessage = 'Unable to fetch data. Please check internet or server.';
       _debugLog('fetchData error: $e');
     } finally {
       _isLoading = false;
@@ -162,11 +180,11 @@ class SensorProvider with ChangeNotifier {
       // Without latest sensor data, stop here (keep initial + clear summary).
       if (latest == null) {
         return data.copyWith(
-          summary: 'No recent sensor data. Check node/gateway connection.',
+          summary: 'No sensor reading received yet for this field.',
           soilStatus: 'unknown',
           irrigationAdvice: field.cropType == null
-              ? 'Please confirm crop to get irrigation advice'
-              : 'Waiting for sensor data...',
+              ? 'Confirm crop to unlock irrigation advice.'
+              : 'Waiting for first sensor reading...',
           confidence: 0.0,
           fuzzyScores: const FuzzyScores(dry: 0.0, optimal: 0.0, wet: 0.0),
           cropType: field.cropType ?? '',
@@ -183,9 +201,12 @@ class SensorProvider with ChangeNotifier {
 
       if (latest.vwc == 0.0 && latest.soilTemp == 0.0) {
         return data.copyWith(
-          summary: SensorProvider.kSensorZeroReading,
+          summary:
+              'Sensor is connected but has not reported valid readings yet.',
           soilStatus: 'unknown',
-          irrigationAdvice: SensorProvider.kSensorZeroReading,
+          irrigationAdvice: field.cropType == null
+              ? 'Confirm crop to unlock irrigation advice.'
+              : 'Waiting for valid sensor readings...',
           fuzzyScores: const FuzzyScores(dry: 0.0, optimal: 0.0, wet: 0.0),
           cropType: field.cropType ?? '',
         );
@@ -304,8 +325,8 @@ class SensorProvider with ChangeNotifier {
       final existingSummary = data.summary;
       data = data.copyWith(
         summary: existingSummary.isNotEmpty
-            ? '$existingSummary\n⏳ Collect 3–7 days of readings before confirming crop.'
-            : '⏳ Collect 3–7 days of readings before confirming crop.',
+            ? '$existingSummary\nCollect 3–7 days of readings before confirming crop.'
+            : 'Collect 3–7 days of readings before confirming crop.',
       );
     }
 
