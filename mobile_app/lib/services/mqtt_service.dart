@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:mqtt_client/mqtt_client.dart';
@@ -32,8 +33,7 @@ class MqttService {
   bool get isConnected => _isConnected;
 
   void _log(String msg) {
-    // Avoid noisy logs in release.
-    if (kDebugMode) debugPrint(msg);
+    debugPrint('[MQTT] $msg');
   }
 
   Future<bool> connect() async {
@@ -57,7 +57,13 @@ class MqttService {
     client.port = port;
     client.secure = true;
     client.keepAlivePeriod = 60;
-    client.logging(on: false);
+    client.logging(on: true);
+
+    client.securityContext = SecurityContext.defaultContext;
+    client.onBadCertificate = (cert) {
+      _log('Bad certificate received: ${cert.subject}');
+      return true;
+    };
 
     // Let mqtt_client handle reconnects.
     client.autoReconnect = true;
@@ -87,8 +93,10 @@ class MqttService {
     try {
       _log('Connecting to MQTT: $host:$port');
       await client.connect();
-    } catch (e) {
+      _log('Post-connect status: ${client.connectionStatus}');
+    } catch (e, st) {
       _log('MQTT connection error: $e');
+      _log('Stack: $st');
       _setConnected(false);
       _connectInFlight = false;
       try {

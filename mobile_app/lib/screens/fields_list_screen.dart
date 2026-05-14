@@ -26,13 +26,13 @@ class FieldsListScreen extends StatelessWidget {
           ),
           backgroundColor: const Color(0xFFF5F5F5),
           body: fields.isEmpty
-              ? Center(
+              ? const Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.all(24),
                     child: Text(
                       'No fields created yet.\nAdd a field from the dashboard to see it here.',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         color: Colors.grey,
                       ),

@@ -159,14 +159,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           appBar: AppBar(
             title: Text(
               _t('appTitle'),
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
             ),
             backgroundColor: const Color(0xFF4CAF50),
             foregroundColor: Colors.white,
             elevation: 2,
             actions: [
               Padding(
-                padding: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.only(right: 8),
                 child: () {
                   final state = provider.connectionStateLabel;
                   switch (state) {

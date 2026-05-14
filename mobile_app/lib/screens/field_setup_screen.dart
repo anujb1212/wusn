@@ -13,8 +13,8 @@ class FieldSetupScreen extends StatefulWidget {
 class _FieldSetupScreenState extends State<FieldSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _fieldNameController = TextEditingController();
-  final _latController = TextEditingController(text: '26.8467');
-  final _lngController = TextEditingController(text: '80.9462');
+  final _latController = TextEditingController();
+  final _lngController = TextEditingController();
 
   String _soilTexture = 'SANDY_LOAM';
   bool _isLoading = false;
@@ -188,7 +188,7 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                 controller: _fieldNameController,
                 decoration: _inputDecoration(
                   hint: 'e.g. North Field, Plot A',
-                  icon: Icons.edit_outlined,
+                  icon: Icons.landscape,
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty)
                     ? 'Field name is required'
@@ -203,7 +203,7 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                 initialValue: _soilTexture,
                 decoration: _inputDecoration(
                   hint: 'Select soil type',
-                  icon: Icons.terrain,
+                  icon: Icons.layers,
                 ),
                 items: _soilOptions
                     .map((o) => DropdownMenuItem<String>(
@@ -224,7 +224,7 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                     decimal: true, signed: true),
                 decoration: _inputDecoration(
                   hint: 'e.g. 26.8467',
-                  icon: Icons.my_location,
+                  icon: Icons.public,
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Required';
@@ -246,7 +246,7 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                     decimal: true, signed: true),
                 decoration: _inputDecoration(
                   hint: 'e.g. 80.9462',
-                  icon: Icons.location_on_outlined,
+                  icon: Icons.location_on,
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Required';
@@ -283,6 +283,14 @@ class _FieldSetupScreenState extends State<FieldSetupScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'You can either type latitude and longitude, or use GPS to fill your field location automatically.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade700,
                 ),
               ),
               const SizedBox(height: 16),
