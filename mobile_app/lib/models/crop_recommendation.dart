@@ -98,7 +98,6 @@ class CropSuitabilityDetail {
     this.seasonMatch,
   });
 
-  /// Accepts dynamic to avoid crashes when list entries are not typed as Map<String,dynamic>.
   static CropSuitabilityDetail? fromAny(dynamic value) {
     final map = _Json.asNullableMap(value);
     if (map == null) return null;
@@ -175,7 +174,6 @@ class CropSuitabilityDetail {
     return 'Not Recommended';
   }
 
-  // Kept as-is to avoid UI behavior change.
   String getSuitabilityIcon() {
     if (totalScore >= 80 || suitability >= 80) return '🌟';
     if (totalScore >= 60 || suitability >= 60) return '✅';

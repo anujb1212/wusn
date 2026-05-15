@@ -1,10 +1,6 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AppConfig {
-  // Note:
-  // - Uses flutter_dotenv typed getters with fallback to avoid null issues.
-  // - Accepts both MQTT_BROKER (correct) and MQTT_BROCKER (legacy typo) for robustness.
-
   static String get backendUrl {
     final raw =
         dotenv.get('BACKEND_URL', fallback: 'http://127.0.0.1:3000/api').trim();
@@ -17,18 +13,12 @@ class AppConfig {
     final broker = dotenv.maybeGet('MQTT_BROKER')?.trim();
     if (broker != null && broker.isNotEmpty) return broker;
 
-    // // Backward-compatible support for the current .env typo.
-    // final legacy = dotenv.maybeGet('MQTT_BROCKER')?.trim();
-    // if (legacy != null && legacy.isNotEmpty) return legacy;
-
     return '127.0.0.1';
   }
 
-  static String get mqttUsername =>
-      dotenv.get('MQTT_USERNAME', fallback: '');
+  static String get mqttUsername => dotenv.get('MQTT_USERNAME', fallback: '');
 
-  static String get mqttPassword =>
-      dotenv.get('MQTT_PASSWORD', fallback: '');
+  static String get mqttPassword => dotenv.get('MQTT_PASSWORD', fallback: '');
 
   static int get mqttPort => dotenv.getInt('MQTT_PORT', fallback: 1883);
 

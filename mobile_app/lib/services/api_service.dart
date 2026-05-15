@@ -11,11 +11,6 @@ import '../models/gdd_status.dart';
 import '../models/irrigation_decision.dart';
 import '../models/sensor_data.dart';
 
-/// Robust HTTP client wrapper for the mobile app.
-///
-/// IMPORTANT:
-/// - AppConfig.backendUrl already includes `/api` (e.g. http://host:3000/api),
-///   so endpoints passed here must NOT start with `/api`.
 class ApiService {
   static const Map<String, String> _headers = <String, String>{
     'Content-Type': 'application/json',
@@ -505,8 +500,6 @@ class ApiService {
 
   // FIELD/CROP MANAGEMENT
   static Future<Field> createNode(Map<String, dynamic> nodeData) async {
-    // NOTE: This endpoint likely returns a Node, but the app currently models it as Field.
-    // Keeping return type for backward compatibility; validates shape.
     final uri = _buildUri('/nodes');
     final res = await _postJson('/nodes', body: nodeData);
 

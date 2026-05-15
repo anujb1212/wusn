@@ -25,6 +25,8 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
   }
 
   Future<void> _submit() async {
+    setState(() => _errorMessage = null);
+
     bool allValid = true;
     for (final n in _nodes) {
       if (!n.formKey.currentState!.validate()) allValid = false;
@@ -44,16 +46,28 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
 
     try {
       for (final n in _nodes) {
+        final nodeId = int.tryParse(n.nodeIdCtrl.text.trim());
+        final burialDepth = n.depthCtrl.text.trim().isNotEmpty
+            ? int.tryParse(n.depthCtrl.text.trim())
+            : null;
+        final distanceToGW = n.distanceCtrl.text.trim().isNotEmpty
+            ? int.tryParse(n.distanceCtrl.text.trim())
+            : null;
+
+        if (nodeId == null) {
+          throw Exception('Invalid node ID');
+        }
+
         final nodeData = <String, dynamic>{
-          'nodeId': int.parse(n.nodeIdCtrl.text.trim()),
+          'nodeId': nodeId,
           if (n.locationCtrl.text.trim().isNotEmpty)
             'location': n.locationCtrl.text.trim(),
-          if (n.depthCtrl.text.trim().isNotEmpty)
-            'burialDepth': int.parse(n.depthCtrl.text.trim()),
-          if (n.distanceCtrl.text.trim().isNotEmpty)
-            'distanceToGW': int.parse(n.distanceCtrl.text.trim()),
+          if (burialDepth != null) 'burialDepth': burialDepth,
+          if (distanceToGW != null) 'distanceToGW': distanceToGW,
         };
+
         final node = await ApiService.createNode(nodeData);
+
         await ApiService.assignNodeToField(
           fieldId: widget.fieldId,
           nodeId: node.nodeId,
@@ -193,7 +207,7 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
                       )
                     : const Icon(Icons.arrow_forward),
                 label: Text(
-                  _isLoading ? 'Creating Nodes...' : 'Continue to Field Setup',
+                  _isLoading ? 'Creating Nodes...' : 'Complete Setup',
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold),
                 ),
@@ -233,7 +247,12 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
                     IconButton(
                       icon: const Icon(Icons.remove_circle_outline,
                           color: Colors.red),
-                      onPressed: () => setState(() => _nodes.removeAt(index)),
+                      onPressed: () {
+                        final removed = _nodes.removeAt(index);
+                        removed.dispose();
+
+                        setState(() {});
+                      },
                     ),
                 ],
               ),

@@ -101,7 +101,8 @@ class SensorProvider with ChangeNotifier {
 
       _errorMessage = '';
     } catch (e) {
-      _errorMessage = 'Unable to fetch data. Please check internet or server.';
+      _errorMessage =
+          'Unable to fetch data. Please check your internet connection.';
       _debugLog('fetchData error: $e');
     } finally {
       _isLoading = false;
