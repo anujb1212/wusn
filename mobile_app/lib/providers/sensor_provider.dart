@@ -123,12 +123,12 @@ class SensorProvider with ChangeNotifier {
     }
   }
 
-  Future<IrrigationDecision?> _safeGetIrrigationDecision(int nodeId) async {
+  Future<IrrigationDecision?> _safeGetIrrigationDecision(int fieldId) async {
     try {
-      return await ApiService.getIrrigationDecision(nodeId);
+      return await ApiService.getIrrigationDecision(fieldId);
     } catch (e) {
       // Often fails if crop not confirmed; treat as "no irrigation decision yet".
-      _debugLog('Irrigation decision unavailable for nodeId=$nodeId: $e');
+      _debugLog('Irrigation decision unavailable for nodeId=$fieldId: $e');
       return null;
     }
   }
@@ -142,11 +142,11 @@ class SensorProvider with ChangeNotifier {
     }
   }
 
-  Future<GDDStatus?> _safeGetGddStatus(int nodeId) async {
+  Future<GDDStatus?> _safeGetGddStatus(int fieldId) async {
     try {
-      return await ApiService.getGDDStatus(nodeId);
+      return await ApiService.getGDDStatus(fieldId);
     } catch (e) {
-      _debugLog('GDD status unavailable for nodeId=$nodeId: $e');
+      _debugLog('GDD status unavailable for nodeId=$fieldId: $e');
       return null;
     }
   }
@@ -155,19 +155,28 @@ class SensorProvider with ChangeNotifier {
 
   Future<SensorData> _buildDataForField(Field field) async {
     final nodeId = field.nodeId;
+    final fieldId = field.id;
 
     // Always return a safe object (UI should never break).
-    SensorData data = SensorData.initial(nodeId, field.fieldName);
+    SensorData data = SensorData.initial(
+      field.id,
+      nodeId,
+      field.fieldName,
+    );
 
     try {
       // Run in parallel, but each is individually safe.
       final results = await Future.wait<Object?>(<Future<Object?>>[
         _safeGetLatestSensorData(nodeId),
-        _safeGetIrrigationDecision(nodeId),
+
+        // field-scoped APIs
+        _safeGetIrrigationDecision(fieldId),
+
         (field.cropType != null && field.cropType!.isNotEmpty)
             ? Future.value(null)
             : _safeGetCropRecommendations(nodeId),
-        _safeGetGddStatus(nodeId),
+
+        _safeGetGddStatus(fieldId),
       ], eagerError: false);
 
       final SensorData? latest = results[0] as SensorData?;
@@ -214,7 +223,11 @@ class SensorProvider with ChangeNotifier {
       }
 
       // Base = latest sensor data, but preserve fieldName from Field list for consistent UI labels.
-      data = latest.copyWith(fieldName: field.fieldName);
+      data = latest.copyWith(
+        fieldId: field.id,
+        fieldName: field.fieldName,
+      );
+
       data = data.copyWith(cropType: field.cropType ?? '');
 
       // ---- Irrigation overlay ----

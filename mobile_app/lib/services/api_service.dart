@@ -364,6 +364,7 @@ class ApiService {
 
     return SensorData(
       nodeId: (map['nodeId'] is int) ? (map['nodeId'] as int) : nodeId,
+      fieldId: (map['fieldId'] is int) ? (map['fieldId'] as int) : 0,
       fieldName: (map['fieldName'] is String &&
               (map['fieldName'] as String).trim().isNotEmpty)
           ? (map['fieldName'] as String)
@@ -399,12 +400,12 @@ class ApiService {
   }
 
   // GDD STATUS (supports ?date=YYYY-MM-DD)
-  static Future<GDDStatus> getGDDStatus(int nodeId, {String? date}) async {
+  static Future<GDDStatus> getGDDStatus(int fieldId, {String? date}) async {
     final qp = <String, String>{};
     if (date != null && date.trim().isNotEmpty) qp['date'] = date.trim();
 
-    final uri = _buildUri('/gdd/$nodeId/status', queryParameters: qp);
-    final res = await _getJson('/gdd/$nodeId/status', queryParameters: qp);
+    final uri = _buildUri('/gdd/$fieldId/status', queryParameters: qp);
+    final res = await _getJson('/gdd/$fieldId/status', queryParameters: qp);
 
     final map = _expectMap(
       res,
@@ -418,7 +419,7 @@ class ApiService {
 
   // IRRIGATION DECISION (supports ?minUrgency=HIGH&includeNone=false)
   static Future<IrrigationDecision> getIrrigationDecision(
-    int nodeId, {
+    int fieldId, {
     String minUrgency = 'NONE',
     bool includeNone = true,
   }) async {
@@ -430,9 +431,9 @@ class ApiService {
       qp['includeNone'] = 'false';
     }
 
-    final uri = _buildUri('/irrigation/decision/$nodeId', queryParameters: qp);
+    final uri = _buildUri('/irrigation/decision/$fieldId', queryParameters: qp);
     final res =
-        await _getJson('/irrigation/decision/$nodeId', queryParameters: qp);
+        await _getJson('/irrigation/decision/$fieldId', queryParameters: qp);
 
     final map = _expectMap(
       res,
@@ -498,7 +499,7 @@ class ApiService {
     return CropRecommendation.fromJson(map);
   }
 
-  // FIELD/CROP MANAGEMENT
+  // NODE MANAGEMENT
   static Future<Field> createNode(Map<String, dynamic> nodeData) async {
     final uri = _buildUri('/nodes');
     final res = await _postJson('/nodes', body: nodeData);
@@ -515,7 +516,7 @@ class ApiService {
   }
 
   static Future<Field> confirmCrop({
-    required int nodeId,
+    required int fieldId,
     required String cropName,
     required DateTime sowingDate,
   }) async {
@@ -527,8 +528,8 @@ class ApiService {
       'sowingDate': formattedDate,
     };
 
-    final uri = _buildUri('/fields/$nodeId/crop');
-    final res = await _postJson('/fields/$nodeId/crop', body: body);
+    final uri = _buildUri('/fields/$fieldId/crop');
+    final res = await _postJson('/fields/$fieldId/crop', body: body);
 
     final map = _expectMap(
       res,
@@ -540,9 +541,9 @@ class ApiService {
     return Field.fromJson(map);
   }
 
-  static Future<Field> harvestCrop({required int nodeId}) async {
-    final uri = _buildUri('/fields/$nodeId/harvest');
-    final res = await _postJson('/fields/$nodeId/harvest', body: {});
+  static Future<Field> harvestCrop({required int fieldId}) async {
+    final uri = _buildUri('/fields/$fieldId/harvest');
+    final res = await _postJson('/fields/$fieldId/harvest', body: {});
     final map = _expectMap(
       res,
       method: 'POST',

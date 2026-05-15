@@ -397,7 +397,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (confirmed != true || !mounted) return;
 
     try {
-      await ApiService.harvestCrop(nodeId: sensor.nodeId);
+      await ApiService.harvestCrop(fieldId: sensor.fieldId);
 
       if (!mounted) return;
 

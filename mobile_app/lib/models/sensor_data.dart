@@ -1,5 +1,7 @@
 class SensorData {
   final int nodeId;
+  final int fieldId;
+
   final String fieldName;
 
   final String cropType;
@@ -37,6 +39,7 @@ class SensorData {
 
   SensorData({
     required this.nodeId,
+    this.fieldId = 0,
     this.fieldName = 'Field',
     this.cropType = '',
     this.vwc = 0.0,
@@ -60,11 +63,16 @@ class SensorData {
     this.estimatedDaysToHarvest,
   });
 
-  factory SensorData.initial(int id, String name) {
-    assert(id > 0, 'SensorData.initial: nodeId must be > 0, got $id');
+  factory SensorData.initial(
+    int fieldId,
+    int nodeId,
+    String name,
+  ) {
+    assert(nodeId > 0, 'SensorData.initial: nodeId must be > 0, got $nodeId');
 
     return SensorData(
-      nodeId: id,
+      nodeId: nodeId,
+      fieldId: fieldId,
       fieldName: name,
       cropType: '',
       timestamp: DateTime.now().toUtc(),
@@ -82,6 +90,7 @@ class SensorData {
 
     return SensorData(
       nodeId: _Json.asInt(json['nodeId'] ?? json['node_id'], fallback: 0),
+      fieldId: _Json.asInt(json['fieldId'] ?? json['field_id'], fallback: 0),
       fieldName: _Json.asString(json['fieldName'] ?? json['field_name'],
           fallback: 'Field'),
       cropType:
@@ -157,6 +166,7 @@ class SensorData {
   static const Object _unset = _Unset();
 
   SensorData copyWith({
+    int? fieldId,
     String? fieldName,
     String? cropType,
     double? vwc,
@@ -181,6 +191,7 @@ class SensorData {
   }) {
     return SensorData(
       nodeId: nodeId,
+      fieldId: fieldId ?? this.fieldId,
       fieldName: fieldName ?? this.fieldName,
       cropType: cropType ?? this.cropType,
       vwc: vwc ?? this.vwc,

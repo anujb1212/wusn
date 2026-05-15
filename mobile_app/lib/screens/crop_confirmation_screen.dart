@@ -160,7 +160,7 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
 
     try {
       final Field updatedField = await ApiService.confirmCrop(
-        nodeId: widget.sensorData.nodeId,
+        fieldId: widget.sensorData.fieldId,
         cropName: _selectedCrop!,
         sowingDate: _sowingDate,
       );

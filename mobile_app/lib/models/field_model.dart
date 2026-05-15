@@ -41,7 +41,23 @@ class Field {
     final id = _Json.asInt(json['id'] ?? json['fieldId'] ?? json['field_id'],
         fallback: 0);
 
-    final nodeId = _Json.asInt(json['nodeId'] ?? json['node_id'], fallback: 0);
+    int nodeId = _Json.asInt(
+      json['nodeId'] ?? json['node_id'],
+      fallback: 0,
+    );
+
+    // Backend may return nodeId inside nodes array instead of top-level nodeId
+    if (nodeId == 0 && json['nodes'] is List) {
+      final nodes = json['nodes'] as List;
+
+      if (nodes.isNotEmpty) {
+        final first = nodes.first;
+
+        if (first is Map<String, dynamic>) {
+          nodeId = _Json.asInt(first['nodeId'], fallback: 0);
+        }
+      }
+    }
 
     final fieldName = _Json.asString(
       json['fieldName'] ?? json['field_name'],

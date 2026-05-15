@@ -173,7 +173,7 @@ export async function harvestCropController(req: Request, res: Response): Promis
 
     const { prisma } = await import('../config/database.js');
 
-    const field = await fieldRepo.getFieldByNodeId(fieldId);
+    const field = await fieldRepo.getFieldById(fieldId);
     if (!field.cropConfirmed) {
         res.status(400).json({
             success: false,
