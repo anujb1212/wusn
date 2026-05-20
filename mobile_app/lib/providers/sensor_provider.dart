@@ -24,7 +24,6 @@ class SensorProvider with ChangeNotifier {
   Timer? _pollingTimer;
   bool _disposed = false;
   bool _fetchInFlight = false;
-  DateTime? _lastMqttUiUpdate;
 
   List<Field> get fields => _fields;
   List<SensorData> get sensors => _sensors;
@@ -492,13 +491,6 @@ class SensorProvider with ChangeNotifier {
 
   void onMqttDataReceived(int nodeId, Map<String, dynamic> payload) {
     if (_disposed) return;
-
-    final now = DateTime.now();
-    if (_lastMqttUiUpdate != null &&
-        now.difference(_lastMqttUiUpdate!) < const Duration(seconds: 30)) {
-      return;
-    }
-    _lastMqttUiUpdate = now;
 
     final index = _sensors.indexWhere((s) => s.nodeId == nodeId);
     if (index == -1) return;
