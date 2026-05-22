@@ -10,6 +10,22 @@ import { cacheWeatherForecast, getCachedWeatherForecast, } from '../../repositor
 import { ExternalServiceError } from '../../utils/errors.js';
 const logger = createLogger({ service: 'weather' });
 const OWM_BASE_URL = 'https://api.openweathermap.org/data/2.5/forecast';
+// Monthly empirical coefficients for simplified Hargreaves ET estimation
+// Adapted for North Indian seasonal conditions
+const HARGREAVES_MONTHLY_C = [
+    0.015, // Jan
+    0.017, // Feb
+    0.019, // Mar
+    0.021, // Apr
+    0.023, // May
+    0.022, // Jun
+    0.018, // Jul
+    0.017, // Aug
+    0.018, // Sep
+    0.018, // Oct
+    0.016, // Nov
+    0.014, // Dec
+];
 // Fetch weather forecast from OpenWeatherMap API
 async function fetchFromAPI(latitude, longitude) {
     try {
@@ -162,8 +178,11 @@ export async function estimateDailyET(latitude, longitude) {
         }
         const tempDiff = Math.max(today.tempMax - today.tempMin, 1);
         const tempMean = today.tempAvg;
-        // Simplified Hargreaves formula (without Ra calculation)
-        const et0 = 0.0135 * (tempMean + 17.8) * tempDiff;
+        const forecastDate = new Date(today.date);
+        const monthIndex = forecastDate.getMonth();
+        const C = HARGREAVES_MONTHLY_C[monthIndex] ?? 0.018;
+        // Modified simplified Hargreaves equation
+        const et0 = C * (tempMean + 17.8) * Math.sqrt(tempDiff);
         return Number(Math.max(et0, 1.0).toFixed(2)); // Minimum 1mm/day
     }
     catch (error) {
